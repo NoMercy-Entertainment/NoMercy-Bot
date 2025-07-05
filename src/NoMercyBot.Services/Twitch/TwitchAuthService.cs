@@ -66,7 +66,7 @@ public class TwitchAuthService : IAuthService
     }
     
     public async Task<(User, TokenResponse)> ValidateToken(string accessToken)
-    {        
+    {
         RestClient client = new(TwitchConfig.AuthUrl);
         RestRequest request = new("validate");
                     request.AddHeader("Authorization", $"Bearer {accessToken}");

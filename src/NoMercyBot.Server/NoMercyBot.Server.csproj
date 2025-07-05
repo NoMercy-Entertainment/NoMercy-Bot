@@ -87,8 +87,8 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\NoMercyBot.Api\NoMercyBot.Api.csproj" />
-      <ProjectReference Include="..\..\NoMercyBot.Globals\NoMercyBot.Globals.csproj" />
+      <ProjectReference Include="..\NoMercyBot.Api\NoMercyBot.Api.csproj" />
+      <ProjectReference Include="..\NoMercyBot.Globals\NoMercyBot.Globals.csproj" />
       <ProjectReference Include="..\NoMercyBot.Api\NoMercyBot.Api.csproj" />
       <ProjectReference Include="..\NoMercyBot.Database\NoMercyBot.Database.csproj" />
       <ProjectReference Include="..\NoMercyBot.Globals\NoMercyBot.Globals.csproj" />

@@ -24,7 +24,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\NoMercyBot.Globals\NoMercyBot.Globals.csproj" />
       <ProjectReference Include="..\NoMercyBot.Globals\NoMercyBot.Globals.csproj" />
     </ItemGroup>
 </Project>
