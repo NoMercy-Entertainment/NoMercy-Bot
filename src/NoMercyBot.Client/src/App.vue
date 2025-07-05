@@ -1,16 +1,18 @@
 <script lang="ts" setup>
 import { onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+
 import { initializeUserSession } from '@/store/user';
 
-import AppLayout from '@/components/AppLayout.vue';
+const route = useRoute();
 
 onMounted(async () => {
-	await initializeUserSession();
+	await initializeUserSession(route.params.provider);
 });
 </script>
 
 <template>
-	<AppLayout />
+	<router-view />
 </template>
 
 <style lang="scss" scoped>

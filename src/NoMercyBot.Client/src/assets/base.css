@@ -1,9 +1,13 @@
 @import "tailwindcss";
 
+@property --theme {
+    syntax: '<color>';
+    initial-value: #431987;
+    inherits: true;
+}
+
 @theme {
     --font-sans: InterVariable, sans-serif;
-
-    --theme: hsl(263, 69.30%, 31.37%);
 
     --color-theme-50: hsl(from var(--theme) h 100% 92.2%);
     --color-theme-100: hsl(from var(--theme) h 100% 87.6%);
@@ -22,10 +26,8 @@
 
 :root {
     interpolate-size: allow-keywords;
-    
+
     color-scheme: dark;
-    
-    --theme: hsl(263, 69.30%, 42.20%);
 }
 
 body {
@@ -33,7 +35,7 @@ body {
 }
 
 .dark-scrollbar {
-    scrollbar-color:  var(--color-neutral-500)  var(--color-neutral-800);
+    scrollbar-color: var(--color-neutral-500) var(--color-neutral-800);
 }
 
 .dark-scrollbar::-webkit-scrollbar {

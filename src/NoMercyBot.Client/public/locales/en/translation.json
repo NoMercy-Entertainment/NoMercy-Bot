@@ -1,18 +1,21 @@
 {
   "auth": {
     "welcome": "Welcome to {{name}}",
-    "subtitle": "Manage your Twitch community with ease",
+    "loading": "Loading...",
     "login": {
       "title": "Sign in",
       "processing": "Processing your authentication",
       "pleaseSignIn": "Please sign in to continue",
-      "connectingToTwitch": "Connecting to Twitch",
-      "connectWithTwitch": "Connect with Twitch",
+      "connecting": "Connecting to {{provider}}",
+      "connect": "Connect with {{provider}}",
       "loading": "Loading...",
       "terms": "By connecting, you agree to our",
       "termsLink": "Terms of Service",
       "privacyLink": "Privacy Policy",
       "and": "and",
+      "retry": "Retry connecting to {{provider}}",
+      "cancel": "Cancel",
+      "back": "Back",
       "error": {
         "authFailed": "Authentication failed"
       }
@@ -25,6 +28,38 @@
       "loading": "Signing out..."
     },
     "validating": "Validating session..."
+  },
+  "providers": {
+    "twitch": {
+      "name": "Twitch",
+      "welcome": "Welcome to NoMercy Bot",
+      "description": "Connect your Twitch account to manage your stream."
+    },
+    "spotify": {
+      "name": "Spotify",
+      "welcome": "Link your Spotify account",
+      "description": "Connect your Spotify account to enjoy music integration and control playback."
+    },
+    "discord": {
+      "name": "Discord",
+      "welcome": "Link your Discord account",
+      "description": "Connect your Discord account to manage your community and access exclusive features."
+    },
+    "obs": {
+      "name": "OBS",
+      "welcome": "Connect OBS",
+      "description": "Connect OBS to control your stream settings and access advanced features."
+    },
+    "youtube": {
+      "name": "YouTube",
+      "welcome": "Link your YouTube account",
+      "description": "Connect your YouTube account to manage your videos and live streams."
+    },
+    "github": {
+      "name": "GitHub",
+      "welcome": "Link your GitHub account",
+      "description": "Connect your GitHub account to manage your repositories and access development tools."
+    }
   },
   "layout": {
     "home": "Home",

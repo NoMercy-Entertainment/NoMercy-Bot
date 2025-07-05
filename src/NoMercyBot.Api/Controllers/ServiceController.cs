@@ -8,8 +8,8 @@ using NoMercyBot.Services;
 namespace NoMercyBot.Api.Controllers;
 
 [ApiController]
-[Tags("Services")]
-[Route("api/services")]
+[Tags("Providers")]
+[Route("api/settings/providers")]
 public class ServiceController : BaseController
 {
     private readonly AppDbContext _dbContext;
@@ -22,10 +22,10 @@ public class ServiceController : BaseController
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetServices()
+    public async Task<IActionResult> GetProviders()
     {
-        List<Service> services = await _dbContext.Services.ToListAsync();
-        return Ok(services);
+        List<Service> providers = await _dbContext.Services.ToListAsync();
+        return Ok(providers);
     }
 
     [HttpGet("{name}")]

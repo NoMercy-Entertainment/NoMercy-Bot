@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
+using NoMercyBot.Globals.Extensions;
 
 namespace NoMercyBot.Database.Models;
 
@@ -12,6 +13,9 @@ public class Service : Timestamps
     public Ulid Id { get; init; } = Ulid.NewUlid();
 
     public string Name { get; set; } = null!;
+    
+    [NotMapped]
+    public Uri Link => new($"/settings/providers/{Name.ToLower()}", UriKind.Relative);
 
     public bool Enabled { get; set; }
     

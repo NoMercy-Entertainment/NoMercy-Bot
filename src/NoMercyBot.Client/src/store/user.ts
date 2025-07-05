@@ -1,78 +1,85 @@
-import { ref, watch } from 'vue';
+import { computed, ref } from 'vue';
+import { useLocalStorage } from '@vueuse/core';
 
 import authService from '@/services/authService';
 import router from '@/router';
 
 import type { User } from '@/types/auth';
 
-export const user = ref<User>(<User>{
-	access_token: localStorage.getItem('access_token') || '',
-	refresh_token: localStorage.getItem('refresh_token') || '',
-	token_expiry: localStorage.getItem('tokenExpiry') || '',
-	username: localStorage.getItem('username') || '',
-	display_name: localStorage.getItem('display_name') || '',
-	profile_image_url: localStorage.getItem('profile_image_url') || '',
-	offline_image_url: localStorage.getItem('offline_image_url') || '',
-	color: localStorage.getItem('color') || '',
-	timezone: localStorage.getItem('timezone') || Intl.DateTimeFormat().resolvedOptions().timeZone,
-	locale: localStorage.getItem('locale') || Intl.DateTimeFormat().resolvedOptions().locale,
-});
+const twitchUser = useLocalStorage<User>('twitchUser', <User>{});
+const spotifyUser = useLocalStorage<User>('spotifyUser', <User>{});
 
-document.documentElement.style.setProperty('--theme', user.value.color);
+const discordUser = useLocalStorage<User>('discordUser', <User>{});
+const obsUser = useLocalStorage<User>('obsUser', <User>{});
+
+export const userProviders = {
+	twitch: twitchUser,
+	spotify: spotifyUser,
+	discord: discordUser,
+	obs: obsUser,
+};
+
+export const user = computed(() => twitchUser.value);
+
+if (user.value?.color) {
+	document.documentElement.style.setProperty('--theme', user.value?.color);
+}
 
 export const isInitialized = ref(false);
 
-watch(user, (newUser) => {
-	if (!newUser.access_token)
-		return;
-
-	localStorage.setItem('access_token', newUser.access_token);
-	localStorage.setItem('refresh_token', newUser.refresh_token!);
-	localStorage.setItem('tokenExpiry', newUser.token_expiry!);
-	localStorage.setItem('username', newUser.username);
-	localStorage.setItem('display_name', newUser.display_name);
-	localStorage.setItem('profile_image_url', newUser.profile_image_url);
-	localStorage.setItem('offline_image_url', newUser.offline_image_url);
-	localStorage.setItem('color', newUser.color);
-	localStorage.setItem('timezone', newUser.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
-	localStorage.setItem('locale', newUser.locale || Intl.DateTimeFormat().resolvedOptions().locale);
-
-	document.documentElement.style.setProperty('--theme', newUser.color);
-});
-
-export function storeTwitchUser(twitchUser: User) {
-	user.value = twitchUser;
+export function storeUser(provider: string, user: User) {
+	switch (provider) {
+		case 'twitch':
+			twitchUser.value = user;
+			document.documentElement.style.setProperty('--theme', user.color);
+			break;
+		case 'spotify':
+			spotifyUser.value = user;
+			break;
+		case 'discord':
+			discordUser.value = user;
+			break;
+		case 'obs':
+			obsUser.value = user;
+			break;
+		default:
+			console.warn(`Unknown provider: ${provider}`);
+	}
 }
 
-export function clearUserSession() {
-	user.value = {} as User;
-	localStorage.removeItem('access_token');
-	localStorage.removeItem('refresh_token');
-	localStorage.removeItem('tokenExpiry');
-	localStorage.removeItem('username');
-	localStorage.removeItem('display_name');
-	localStorage.removeItem('profile_image_url');
-	localStorage.removeItem('offline_image_url');
-	localStorage.removeItem('color');
-	localStorage.removeItem('timezone');
-	localStorage.removeItem('locale');
-
-	document.documentElement.style.removeProperty('--theme');
+export function clearUserSession(provider: string) {
+	switch (provider) {
+		case 'twitch':
+			twitchUser.value = null;
+			document.documentElement.style.removeProperty('--theme');
+			break;
+		case 'spotify':
+			spotifyUser.value = null;
+			break;
+		case 'discord':
+			discordUser.value = null;
+			break;
+		case 'obs':
+			obsUser.value = null;
+			break;
+		default:
+			console.warn(`Unknown provider: ${provider}`);
+	}
 }
 
-export async function initializeUserSession() {
+export async function initializeUserSession(provider = 'twitch') {
 	try {
-		if (!user.value.access_token) {
+		if (!user.value?.access_token) {
 			return;
 		}
 
-		const data = await authService.validateSession();
-		storeTwitchUser(data.user);
+		const data = await authService.validateSession(provider);
+		storeUser(provider, data.user);
 	}
 	catch (error) {
 		console.error(error);
-		clearUserSession();
-		await router.push({ name: 'Login' });
+		clearUserSession(provider);
+		await router.push({ name: 'Login', params: { provider } });
 	}
 	finally {
 		isInitialized.value = true;

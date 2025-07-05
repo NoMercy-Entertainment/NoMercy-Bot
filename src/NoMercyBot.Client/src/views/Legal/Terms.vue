@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import Backdrop from '@/components/Backdrop.vue';
+import Backdrop from '@/layout/Backdrop.vue';
 </script>
 
 <template>

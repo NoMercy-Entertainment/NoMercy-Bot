@@ -1,13 +1,17 @@
 <script lang="ts" setup>
 import { ref } from 'vue';
-import LoadingScreen from '@/components/LoadingScreen.vue';
+import { useRoute } from 'vue-router';
+
 import { routePaths } from '@/router/routes';
 
+import LoadingScreen from '@/layout/LoadingScreen.vue';
+
 const isLoading = ref(false);
+const route = useRoute();
 
 function startAuth() {
 	isLoading.value = true;
-	window.location.href = '/api/oauth/twitch/login';
+	window.location.href = `/api/oauth/${route.params.provider}/login`;
 }
 </script>
 

@@ -5,6 +5,7 @@ import vue from '@vitejs/plugin-vue';
 import vueDevTools from 'vite-plugin-vue-devtools';
 import tailwindcss from '@tailwindcss/vite';
 import { ViteCspPlugin } from 'vite-plugin-csp';
+import path from 'node:path';
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -27,7 +28,7 @@ export default defineConfig({
 					'https://static.cloudflareinsights.com',
 				],
 				'style-src-attr': ['unsafe-inline'],
-				'style-src': ['self', 'unsafe-inline', 'unsafe-eval', 'https://fonts.bunny.net'],
+				'style-src': ['self', 'unsafe-inline', 'unsafe-eval', 'https://fonts.bunny.net', 'https://rsms.me'],
 				'img-src': [
 					'self',
 					'blob:',
@@ -104,6 +105,7 @@ export default defineConfig({
 	resolve: {
 		alias: {
 			'@': fileURLToPath(new URL('./src', import.meta.url)),
+			'@Icons': path.resolve(__dirname, './resources/icons'),
 		},
 	},
 	css: {
