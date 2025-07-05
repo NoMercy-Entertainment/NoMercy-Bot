@@ -1,0 +1,27 @@
+﻿using NoMercyBot.Database.Models;
+using NoMercyBot.Globals.Information;
+
+namespace NoMercyBot.Services.Obs;
+
+public class ObsConfig: IConfig
+{
+    internal static Service? _service;
+
+    protected internal static Service Service()
+    {
+        return _service ??= new();
+    }
+    
+    public bool IsEnabled => Service().Enabled;
+    
+    public string ApiUrl { get; } = "http://localhost:4455";
+    public string AuthUrl { get; } = $"http://localhost:4455/oauth2/token";
+    
+    public string RedirectUri => $"http://localhost:{Config.InternalClientPort}/oauth/obs/callback";
+    public string EventSubCallbackUri => $"http://localhost:{Config.InternalServerPort}/eventsub/obs";
+    
+    public string[] AvailableScopes { get; } =
+    [
+        
+    ];
+}
