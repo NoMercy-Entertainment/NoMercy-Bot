@@ -55,9 +55,6 @@ public static class Program
         
         IWebHost app = CreateWebHostBuilder(options).Build();
         
-        using IServiceScope rootScope = app.Services.CreateScope();
-        await rootScope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync();
-        
         new Thread(() => app.RunAsync()).Start();
 
         await Task.Delay(-1);
