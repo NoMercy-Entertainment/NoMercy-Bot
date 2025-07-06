@@ -3,12 +3,13 @@ import { computed, ref } from 'vue';
 import { useTranslation } from 'i18next-vue';
 import { Dialog, DialogPanel, DialogTitle, TransitionChild, TransitionRoot } from '@headlessui/vue';
 
-import { BellIcon, ExclamationTriangleIcon, MagnifyingGlassIcon, UserIcon } from '@heroicons/vue/20/solid';
+import { BellIcon, ExclamationTriangleIcon, UserIcon } from '@heroicons/vue/20/solid';
 import { ChevronDownIcon } from '@heroicons/vue/16/solid';
 import router from '@/router';
 import { timezones } from '@/config/timezones.ts';
 import authService from '@/services/authService.ts';
 import { user } from '@/store/user.ts';
+import DashboardLayout from '@/layout/DashboardLayout.vue';
 
 const { t } = useTranslation();
 
@@ -32,61 +33,39 @@ async function confirmDelete() {
 </script>
 
 <template>
-	<div
-		class="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-6 border-b border-white/5 bg-neutral-900/50 px-4 shadow-xs sm:px-6 lg:px-8"
+	<DashboardLayout
+		:description="$t('settings.description')"
+		:title="$t('settings.title')"
 	>
-		<div class="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
-			<form action="#" class="grid flex-1 grid-cols-1" method="GET">
-				<input aria-label="Search"
-					class="col-start-1 row-start-1 block size-full bg-transparent pl-8 text-base text-white outline-hidden placeholder:text-neutral-300 sm:text-sm"
-					name="search"
-					placeholder="Search"
-					type="search"
+		<!-- Secondary navigation -->
+		<nav class="flex overflow-x-auto py-4 w-full border-b border-white/5">
+			<div
+				class="flex min-w-full flex-none gap-x-6 px-4 text-sm/6 font-semibold text-neutral-400 sm:px-6 lg:px-8"
+				role="list"
+			>
+				<button v-for="item in secondaryNavigation" :key="item.name"
+					:aria-current="currentTab ? 'page' : undefined"
+					:class="[currentTab === item.name
+						? 'border-theme-500 text-theme-600'
+						: 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-400']"
+					class="group inline-flex items-center border-b-2 px-1 py-4 text-sm font-medium transition-colors duration-100"
+					@click="currentTab = item.name"
 				>
-				<MagnifyingGlassIcon
-					aria-hidden="true"
-					class="pointer-events-none col-start-1 row-start-1 size-5 self-center text-neutral-300"
-				/>
-			</form>
-		</div>
-	</div>
-
-	<div class="h-inherit flex flex-col mb-auto">
-		<h1 class="sr-only">
-			{{ $t('settings.title') }}
-		</h1>
-
-		<header class="border-b border-white/5">
-			<!-- Secondary navigation -->
-			<nav class="flex overflow-x-auto py-4 w-full">
-				<div
-					class="flex min-w-full flex-none gap-x-6 px-4 text-sm/6 font-semibold text-neutral-400 sm:px-6 lg:px-8"
-					role="list"
-				>
-					<button v-for="item in secondaryNavigation" :key="item.name"
-						:aria-current="currentTab ? 'page' : undefined"
+					<component :is="item.icon"
 						:class="[currentTab == item.name
-							? 'border-theme-500 text-theme-600'
-							: 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-400']"
-						class="group inline-flex items-center border-b-2 px-1 py-4 text-sm font-medium transition-colors duration-100"
-						@click="currentTab = item.name"
-					>
-						<component :is="item.icon"
-							:class="[currentTab == item.name
-								? 'text-theme-500'
-								: 'text-gray-500 group-hover:text-gray-400',
-							]" aria-hidden="true"
-							class="mr-2 -ml-0.5 size-5 transition-colors duration-100"
-						/>
+							? 'text-theme-500'
+							: 'text-gray-500 group-hover:text-gray-400',
+						]" aria-hidden="true"
+						class="mr-2 -ml-0.5 size-5 transition-colors duration-100"
+					/>
 
-						{{ item.name }}
-					</button>
-				</div>
-			</nav>
-		</header>
+					{{ item.name }}
+				</button>
+			</div>
+		</nav>
 
-		<template v-if="currentTab == 'Account'">
-			<div class="divide-y divide-white/5 h-full">
+		<template v-if="currentTab === 'Account'">
+			<div class="divide-y divide-white/5">
 				<div class="grid max-w-7xl grid-cols-1 gap-x-8 gap-y-10 px-4 py-16 sm:px-6 md:grid-cols-3 lg:px-8">
 					<div>
 						<h2 class="text-base/7 font-semibold text-white">
@@ -210,64 +189,70 @@ async function confirmDelete() {
 				</div>
 			</div>
 		</template>
-	</div>
 
-	<TransitionRoot :show="deleteConfirmDialogOpen" as="template">
-		<Dialog class="relative z-10" @close="deleteConfirmDialogOpen = false">
-			<!-- ... existing transition child ... -->
+		<!-- Delete confirmation dialog -->
+		<TransitionRoot :show="deleteConfirmDialogOpen" as="template">
+			<Dialog class="relative z-10" @close="deleteConfirmDialogOpen = false">
+				<!-- Dialog backdrop -->
+				<TransitionChild as="template" enter="ease-out duration-300" enter-from="opacity-0"
+					enter-to="opacity-100"
+					leave="ease-in duration-200" leave-from="opacity-100" leave-to="opacity-0"
+				>
+					<div class="fixed inset-0 bg-neutral-950/75 transition-opacity" />
+				</TransitionChild>
 
-			<div class="fixed inset-0 z-10 w-screen overflow-y-auto">
-				<div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-					<TransitionChild as="template" enter="ease-out duration-300"
-						enter-from="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-						enter-to="opacity-100 translate-y-0 sm:scale-100" leave="ease-in duration-200"
-						leave-from="opacity-100 translate-y-0 sm:scale-100"
-						leave-to="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-					>
-						<DialogPanel
-							class="relative transform overflow-hidden rounded-lg bg-neutral-900 px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6"
+				<div class="fixed inset-0 z-10 w-screen overflow-y-auto">
+					<div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+						<TransitionChild as="template" enter="ease-out duration-300"
+							enter-from="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+							enter-to="opacity-100 translate-y-0 sm:scale-100" leave="ease-in duration-200"
+							leave-from="opacity-100 translate-y-0 sm:scale-100"
+							leave-to="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
 						>
-							<div class="sm:flex sm:items-start">
-								<div
-									class="mx-auto flex size-12 shrink-0 items-center justify-center rounded-full bg-red-900/20 sm:mx-0 sm:size-10"
-								>
-									<ExclamationTriangleIcon aria-hidden="true" class="size-6 text-red-600" />
-								</div>
-								<div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-									<DialogTitle as="h3" class="text-base font-semibold text-white">
-										{{ $t('settings.delete.title') }}
-									</DialogTitle>
-									<div class="mt-2">
-										<p class="text-sm text-neutral-400 whitespace-pre-wrap">
-											{{ $t('settings.dialog.subtitle') }}
-										</p>
+							<DialogPanel
+								class="relative transform overflow-hidden rounded-lg bg-neutral-900 px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6"
+							>
+								<div class="sm:flex sm:items-start">
+									<div
+										class="mx-auto flex size-12 shrink-0 items-center justify-center rounded-full bg-red-900/20 sm:mx-0 sm:size-10"
+									>
+										<ExclamationTriangleIcon aria-hidden="true" class="size-6 text-red-600" />
+									</div>
+									<div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+										<DialogTitle as="h3" class="text-base font-semibold text-white">
+											{{ $t('settings.delete.title') }}
+										</DialogTitle>
+										<div class="mt-2">
+											<p class="text-sm text-neutral-400 whitespace-pre-wrap">
+												{{ $t('settings.dialog.subtitle') }}
+											</p>
+										</div>
 									</div>
 								</div>
-							</div>
-							<div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
-								<button
-									class="inline-flex w-full justify-center rounded-md bg-red-700 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-red-600 active:bg-red-800 sm:ml-3 sm:w-auto"
-									type="button"
-									@click="confirmDelete"
-								>
-									{{ $t('settings.delete.button') }}
-								</button>
-								<button
-									class="mt-3 inline-flex w-full justify-center rounded-md bg-white/10 px-3 py-2 text-sm font-semibold text-white shadow-xs ring-1 ring-inset ring-white/10 hover:bg-white/20 sm:mt-0 sm:w-auto"
-									type="button"
-									@click="deleteConfirmDialogOpen = false"
-								>
-									{{ $t('settings.dialog.cancel') }}
-								</button>
-							</div>
-						</DialogPanel>
-					</TransitionChild>
+								<div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+									<button
+										class="inline-flex w-full justify-center rounded-md bg-red-700 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-red-600 active:bg-red-800 sm:ml-3 sm:w-auto"
+										type="button"
+										@click="confirmDelete"
+									>
+										{{ $t('settings.delete.button') }}
+									</button>
+									<button
+										class="mt-3 inline-flex w-full justify-center rounded-md bg-white/10 px-3 py-2 text-sm font-semibold text-white shadow-xs ring-1 ring-inset ring-white/10 hover:bg-white/20 sm:mt-0 sm:w-auto"
+										type="button"
+										@click="deleteConfirmDialogOpen = false"
+									>
+										{{ $t('settings.dialog.cancel') }}
+									</button>
+								</div>
+							</DialogPanel>
+						</TransitionChild>
+					</div>
 				</div>
-			</div>
-		</Dialog>
-	</TransitionRoot>
+			</Dialog>
+		</TransitionRoot>
+	</DashboardLayout>
 </template>
 
 <style scoped>
-
 </style>

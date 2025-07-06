@@ -8,6 +8,10 @@ defineProps({
 		type: Boolean,
 		default: false,
 	},
+	hideHeaderContent: {
+		type: Boolean,
+		default: false,
+	},
 });
 
 const { t } = useTranslation();
@@ -20,19 +24,21 @@ function dynamicT(key: string) {
 </script>
 
 <template>
-	<h2 class="text-3xl font-bold tracking-tight text-white">
-		{{ dynamicT(`providers.${route.params.provider}.welcome`) }}
-	</h2>
-	<p class="mt-2 text-sm text-neutral-400">
-		{{ dynamicT(`providers.${route.params.provider}.description`) }}
-	</p>
-	<p class="mt-2 text-sm text-neutral-400">
-		{{
-			isProcessingAuth
-				? $t('auth.login.processing')
-				: $t('auth.login.pleaseSignIn')
-		}}
-	</p>
+	<template v-if="!hideHeaderContent">
+		<h2 class="text-3xl font-bold tracking-tight text-white">
+			{{ dynamicT(`providers.${route.params.provider}.welcome`) }}
+		</h2>
+		<p class="mt-2 text-sm text-neutral-400">
+			{{ dynamicT(`providers.${route.params.provider}.description`) }}
+		</p>
+		<p class="mt-2 text-sm text-neutral-400">
+			{{
+				isProcessingAuth
+					? $t('auth.login.processing')
+					: $t('auth.login.pleaseSignIn')
+			}}
+		</p>
+	</template>
 </template>
 
 <style scoped>

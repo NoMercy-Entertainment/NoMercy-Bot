@@ -29,9 +29,8 @@ public class CustomLogger<T> : ILogger<T>
             Logger.Http($"{message}", level);
         else if (_categoryName.Contains("Service"))
             Logger.Service($"{message}", level);
-        // else
-        //     Logger.System($"{message}", level);
-            // Logger.System($"[{_categoryName}] {message}", level);
+        else
+            Logger.System($"{message}", level);
     }
 
     public bool IsEnabled(LogLevel logLevel) => true;

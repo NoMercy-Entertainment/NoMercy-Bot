@@ -3,15 +3,17 @@ import type { Provider } from '@/types/providers.ts';
 
 import useServerClient from '@/lib/clients/useServerClient.ts';
 import { ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
-import { useTranslation } from 'i18next-vue';
+import { useRoute } from 'vue-router';
 import ProviderLogo from '@/components/icons/ProviderLogo.vue';
 import serverClient from '@/lib/clients/serverClient.ts';
 import { useSessionStorage } from '@vueuse/core';
+import router from '@/router';
+import DashboardLayout from '@/layout/DashboardLayout.vue';
+import { useQueryClient } from '@tanstack/vue-query';
 
-const { t } = useTranslation();
-const router = useRouter();
+const route = useRoute();
 const redirect = useSessionStorage('redirect', '/home');
+const query = useQueryClient();
 
 const { data: provider, isLoading, refetch } = useServerClient<Provider>({});
 
@@ -22,8 +24,8 @@ const scopesString = ref('');
 
 const selectedTab = ref('Configuration');
 const tabs = [
-	{ name: 'Configuration', label: t('settings.provider.tabConfig') },
-	{ name: 'Advanced', label: t('settings.provider.tabAdvanced') },
+	{ name: 'Configuration', label: 'settings.provider.tabConfig' },
+	{ name: 'Advanced', label: 'settings.provider.tabAdvanced' },
 ];
 
 watch(provider, (val) => {
@@ -56,10 +58,11 @@ async function save() {
 	try {
 		await serverClient()
 			.put(`/settings/providers/${form.value.name.toLowerCase()}`, form.value);
+		await query.invalidateQueries({ queryKey: ['settings', 'providers'] });
 		await refetch();
 
 		if (form.value.enabled) {
-			redirect.value = router.currentRoute.value.fullPath;
+			redirect.value = route.fullPath;
 			await router.push({
 				name: 'Login',
 				params: { provider: form.value.name.toLowerCase() },
@@ -95,27 +98,27 @@ function toggleScope(scope: string) {
 </script>
 
 <template>
-	<div class="h-inherit flex flex-col mb-auto w-full">
-		<header class="border-b border-white/5 w-full">
-			<h1 class="text-base/7 font-semibold text-white px-8 pt-4 pb-2">
-				{{ t('settings.provider.title') }}
-			</h1>
-			<p class="text-neutral-400 px-8 pb-6">
-				{{ t('settings.provider.desc') }}
-			</p>
-		</header>
-
+	<DashboardLayout
+		:description="$t('settings.events.desc', { provider: '' })"
+		:icon="ProviderLogo"
+		:title="$t('settings.events.title', { provider: '' })"
+		v-bind="{ provider: route.params.provider }"
+	>
 		<!-- Tabs -->
-		<nav class="flex overflow-x-auto py-4 w-full border-b border-white/5 bg-neutral-900/50">
-			<div class="flex min-w-full flex-none gap-x-6 px-4 text-sm/6 font-semibold text-neutral-400 sm:px-6 lg:px-8"
+		<nav class="flex overflow-x-auto py-4 w-full mt-1 border-b border-white/5 bg-neutral-900/50">
+			<div
+				class="flex min-w-full flex-none gap-x-6 px-4 text-sm/6 font-semibold text-neutral-400 sm:px-6 lg:px-8"
 				role="list"
 			>
 				<button v-for="tab in tabs" :key="tab.name"
-					:class="[selectedTab === tab.name ? 'border-theme-500 text-theme-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-400']"
+					:class="[selectedTab === tab.name
+						? 'border-theme-500 text-theme-600'
+						: 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-400',
+					]"
 					class="group inline-flex items-center border-b-2 px-1 py-4 text-sm font-medium transition-colors duration-100"
 					@click="selectedTab = tab.name"
 				>
-					{{ tab.label }}
+					{{ $t(tab.label) }}
 				</button>
 			</div>
 		</nav>
@@ -124,18 +127,20 @@ function toggleScope(scope: string) {
 			<div class="w-full grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-10 px-8 py-12">
 				<div>
 					<h2 class="text-base/7 font-semibold text-white">
-						{{ t('settings.provider.configTitle') }}
+						{{ $t('settings.provider.configTitle') }}
 					</h2>
 					<p class="mt-1 text-sm/6 text-neutral-400">
-						{{ t('settings.provider.configSubtitle') }}
+						{{ $t('settings.provider.configSubtitle') }}
 					</p>
 				</div>
 
 				<form v-if="form" class="md:col-span-2 space-y-8" @submit.prevent="save">
 					<div class="grid grid-cols-1 gap-x-6 gap-y-8 sm:max-w-3xl sm:grid-cols-6">
 						<div class="col-span-full flex items-center gap-x-8">
-							<div class="size-16 flex-none rounded-lg  flex items-center justify-center">
-								<ProviderLogo :provider="form.name" class-name="h-16" />
+							<div class="size-16 flex-none rounded-lg flex items-center justify-center">
+								<ProviderLogo
+									v-if="form.name" :provider="form.name" class-name="h-16"
+								/>
 							</div>
 							<div>
 								<div class="text-lg font-semibold text-white">
@@ -146,11 +151,11 @@ function toggleScope(scope: string) {
 
 						<div class="sm:col-span-3">
 							<label class="block text-sm/6 font-medium text-white">
-								{{ t('settings.provider.clientId') }}
+								{{ $t('settings.provider.clientId') }}
 							</label>
 							<div class="mt-2">
 								<input v-model="form.clientId"
-									:placeholder="t('settings.provider.clientIdPlaceholder')"
+									:placeholder="$t('settings.provider.clientIdPlaceholder')"
 									autocomplete="off"
 									class="block w-full rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-neutral-500 focus:outline-2 focus:-outline-offset-2 focus:outline-theme-500 sm:text-sm/6"
 								>
@@ -159,11 +164,11 @@ function toggleScope(scope: string) {
 
 						<div class="sm:col-span-3">
 							<label class="block text-sm/6 font-medium text-white">
-								{{ t('settings.provider.clientSecret') }}
+								{{ $t('settings.provider.clientSecret') }}
 							</label>
 							<div class="mt-2">
 								<input v-model="form.clientSecret"
-									:placeholder="t('settings.provider.clientSecretPlaceholder')"
+									:placeholder="$t('settings.provider.clientSecretPlaceholder')"
 									autocomplete="off"
 									class="block w-full rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-neutral-500 focus:outline-2 focus:-outline-offset-2 focus:outline-theme-500 sm:text-sm/6"
 									type="password"
@@ -173,7 +178,7 @@ function toggleScope(scope: string) {
 
 						<div class="col-span-full">
 							<label class="block text-sm/6 font-medium text-white">{{
-								t('settings.provider.scopes')
+								$t('settings.provider.scopes')
 							}}</label>
 							<div
 								class="mt-2 grid grid-cols-1 gap-4 max-h-64 w-full overflow-y-auto p-2 bg-neutral-900/60 rounded-md border border-white/10"
@@ -199,7 +204,7 @@ function toggleScope(scope: string) {
 								</div>
 							</div>
 							<p class="mt-1 text-xs text-neutral-400">
-								{{ t('settings.provider.scopesHelp') }}
+								{{ $t('settings.provider.scopesHelp') }}
 							</p>
 						</div>
 
@@ -208,7 +213,7 @@ function toggleScope(scope: string) {
 								type="checkbox"
 							>
 							<label class="text-sm font-medium text-white select-none" for="enabled">
-								{{ t('settings.provider.enabled') }}
+								{{ $t('settings.provider.enabled') }}
 							</label>
 						</div>
 
@@ -219,10 +224,10 @@ function toggleScope(scope: string) {
 							>
 								{{
 									isSaving
-										? t('common.saving')
+										? $t('common.saving')
 										: form.enabled
-											? t('settings.provider.saveAndLogin')
-											: t('settings.provider.save')
+											? $t('settings.provider.saveAndLogin')
+											: $t('settings.provider.save')
 								}}
 							</button>
 							<button :disabled="isSaving"
@@ -230,7 +235,7 @@ function toggleScope(scope: string) {
 								type="button"
 								@click="cancel"
 							>
-								{{ t('common.cancel') }}
+								{{ $t('common.cancel') }}
 							</button>
 						</div>
 						<div v-if="error" class="text-red-400 text-sm mt-2 col-span-full">
@@ -239,22 +244,21 @@ function toggleScope(scope: string) {
 					</div>
 				</form>
 				<div v-else class="md:col-span-2 text-center text-gray-500 py-12">
-					{{ t('settings.provider.noData') }}
+					{{ $t('settings.provider.noData') }}
 				</div>
 			</div>
 		</div>
 		<div v-else-if="selectedTab === 'Advanced'" class="w-full px-8 py-12">
 			<!-- Advanced tab content placeholder -->
 			<div class="text-neutral-400">
-				{{ t('settings.provider.advancedComingSoon') }}
+				{{ $t('settings.provider.advancedComingSoon') }}
 			</div>
 		</div>
 		<div v-if="isLoading" class="text-center text-gray-500 mt-6">
 			Loading...
 		</div>
-	</div>
+	</DashboardLayout>
 </template>
 
 <style scoped>
-
 </style>

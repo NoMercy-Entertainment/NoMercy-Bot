@@ -234,6 +234,91 @@ public class AuthController : BaseController
             return InternalServerErrorResponse($"Failed to revoke token: {ex.Message}");
         }
     }
+
+    [HttpGet("config-status")]
+    public IActionResult GetProviderConfigStatus([FromRoute] string provider)
+    {
+        try
+        {
+            if (!_authServices.TryGetValue(provider.ToLower(), out IAuthService? foundService))
+            {
+                return NotFoundResponse($"Provider '{provider}' not found");
+            }
+            
+            bool isConfigured = false;
+            
+            try
+            {
+                isConfigured = foundService.Service is
+                {
+                    Enabled: true,
+                    ClientId: not null,
+                    ClientSecret: not null,
+                    Scopes.Length: > 0
+                };
+            }
+            catch (InvalidOperationException)
+            {
+                // Configuration is missing
+            }
+            
+            return Ok(new
+            {
+                isConfigured,
+                foundService.Service.Name,
+                foundService.Service.Enabled,
+                foundService.Service.ClientId,
+                foundService.Service.ClientSecret,
+            });
+        }
+        catch (Exception ex)
+        {
+            return InternalServerErrorResponse($"Error checking provider configuration: {ex.Message}");
+        }
+    }
+
+    [HttpPost("configure")]
+    public async Task<IActionResult> ConfigureProvider([FromRoute] string provider, [FromBody] ProviderConfigRequest request)
+    {
+        try
+        {
+            if (!_authServices.TryGetValue(provider.ToLower(), out IAuthService? foundService))
+            {
+                return NotFoundResponse($"Provider '{provider}' not found");
+            }
+
+            bool result = await foundService.ConfigureService(request);
+            
+            if (!result)
+            {
+                return BadRequestResponse("Failed to configure the provider");
+            }
+            
+            return Ok(new { success = true, message = $"{provider} provider configured successfully" });
+        }
+        catch (Exception ex)
+        {
+            return InternalServerErrorResponse($"Error configuring provider: {ex.Message}");
+        }
+    }
+
+    [HttpGet("scopes")]
+    public IActionResult GetAvailableScopes([FromRoute] string provider)
+    {
+        try
+        {
+            if (!_authServices.TryGetValue(provider.ToLower(), out IAuthService? foundService))
+            {
+                return NotFoundResponse($"Provider '{provider}' not found");
+            }
+            
+            return Ok(foundService.AvailableScopes);
+        }
+        catch (Exception ex)
+        {
+            return InternalServerErrorResponse($"Error retrieving available scopes: {ex.Message}");
+        }
+    }
 }
 
 public class TokenRequest

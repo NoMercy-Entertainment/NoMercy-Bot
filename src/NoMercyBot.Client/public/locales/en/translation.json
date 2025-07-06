@@ -17,6 +17,7 @@
       "retry": "Retry connecting to {{provider}}",
       "cancel": "Cancel",
       "back": "Back",
+      "checking": "Checking configuration",
       "error": {
         "authFailed": "Authentication failed"
       }
@@ -28,7 +29,19 @@
       "cancel": "Cancel",
       "loading": "Signing out..."
     },
-    "validating": "Validating session..."
+    "validating": "Validating session...",
+    "setup": {
+      "title": "Setup the {{provider}} integration",
+      "description": "To use the features of {{provider}}, you need to set it up first.",
+      "clientId": "Client ID",
+      "clientSecret": "Client Secret",
+      "scopes": "Scopes",
+      "submit": "Proceed to login",
+      "requiredSetup": "{{provider}} Setup Required",
+      "setupNeeded": "You need to set up your {{provider}} credentials before you can log in.",
+      "proceed": "Continue to Setup",
+      "scopeInfo": "Basic permissions will be requested for authentication and core functionality."
+    }
   },
   "settings": {
     "title": "Account Settings",
@@ -92,6 +105,15 @@
       "save": "Save",
       "noData": "No provider data found.",
       "advancedComingSoon": "Advanced options coming soon..."
+    },
+    "events": {
+      "title": "{{provider}} Events",
+      "desc": "Manage events and notifications {{provider}}.",
+      "availableEvents": "Available Events",
+      "deleteAll": "Delete All Events",
+      "noEvents": "No events found for this provider.",
+      "noProviders": "No providers available.",
+      "provider": "Provider"
     }
   },
   "providers": {
@@ -139,7 +161,10 @@
   "common": {
     "loading": "Loading...",
     "saving": "Saving...",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "back": "Back",
+    "disabled": "Disabled",
+    "enabled": "Enabled"
   },
   "notFound": {
     "title": "Page not found",

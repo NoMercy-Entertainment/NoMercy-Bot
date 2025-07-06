@@ -153,5 +153,14 @@ public class TwitchApiService
         
         return channelResponse;
     }
-    
+
+    public async Task<string?> CreateEventSubSubscription(string channelChatMessage, string p1, Dictionary<string, string> messageCondition, string callbackUrl, string? appAccessToken)
+    {
+        throw new NotImplementedException();
+    }
+
+    public async Task DeleteAllEventSubSubscriptions(string? accessToken)
+    {
+        throw new NotImplementedException();
+    }
 }

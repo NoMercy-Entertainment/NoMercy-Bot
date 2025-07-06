@@ -51,3 +51,9 @@ declare module '@vue/runtime-core' {
 		$t: (key: TranslationPath, args?: Record<string, any>) => string;
 	}
 }
+
+declare global {
+	interface String {
+		toTitleCase: (lang?: string) => string;
+	}
+}

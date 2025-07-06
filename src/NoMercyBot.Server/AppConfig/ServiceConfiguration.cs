@@ -12,6 +12,7 @@ using NoMercyBot.Globals.Information;
 using NoMercyBot.Globals.NewtonSoftConverters;
 using NoMercyBot.Server.Swagger;
 using NoMercyBot.Services;
+using NoMercyBot.Services.Seeds;
 using NoMercyBot.Services.Twitch;
 using RestSharp;
 using Swashbuckle.AspNetCore.SwaggerGen;
@@ -48,6 +49,7 @@ public static class ServiceConfiguration
         services.AddScoped<ILocalizer, Localizer>();
         
         services.AddBotServices();
+        services.AddEventSubServices(); // Register EventSub services
         
         services.AddSingleton<ServiceResolver>();
     }

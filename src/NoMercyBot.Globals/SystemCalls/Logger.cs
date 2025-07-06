@@ -46,7 +46,7 @@ public static class Logger
         { "configuration", new("configuration", "Configuration", Color.MediumPurple, "System") },
         { "setup", new("setup", "Setup", Color.CornflowerBlue, "System") },
         { "system", new("system", "System", Color.CornflowerBlue, "System") },
-        { "service", new("system", "Service", Color.CornflowerBlue, "System") },
+        { "service", new("service", "Service", Color.CornflowerBlue, "System") },
         { "debug", new("debug", "Debug", Color.Gray, "System", LogEventLevel.Debug) },
         { "info", new("info", "Info", Color.White, "System") },
         { "warning", new("warning", "Warning", Color.Yellow, "System", LogEventLevel.Warning) },
@@ -220,48 +220,25 @@ public static class Logger
     
     public static void Error(string message) => Log("error", message);
     public static void Error<T>(T message, LogEventLevel? level = null) where T : class => Log("error", message, level ?? LogEventLevel.Error);
-
-    
-    public static void Access(string message, LogEventLevel level = LogEventLevel.Information) => Log("access", message, level);
     public static void Access<T>(T message, LogEventLevel level = LogEventLevel.Information) where T : class => Log("access", message, level);
-    public static void App(string message, LogEventLevel level = LogEventLevel.Information) => Log("app", message, level);
     public static void App<T>(T message, LogEventLevel level = LogEventLevel.Information) where T : class => Log("app", message, level);
-    public static void Configuration(string message, LogEventLevel level = LogEventLevel.Information) => Log("configuration", message, level);
     public static void Configuration<T>(T message, LogEventLevel level = LogEventLevel.Information) where T : class => Log("configuration", message, level);
-    public static void Discord(string message, LogEventLevel level = LogEventLevel.Information) => Log("discord", message, level);
     public static void Discord<T>(T message, LogEventLevel level = LogEventLevel.Information) where T : class => Log("discord", message, level);    
-    public static void Http(string message, LogEventLevel level = LogEventLevel.Information) => Log("http", message, level);
     public static void Http<T>(T message, LogEventLevel level = LogEventLevel.Information) where T : class => Log("http", message, level);
-    public static void Notify(string message, LogEventLevel level = LogEventLevel.Information) => Log("notify", message, level);
     public static void Notify<T>(T message, LogEventLevel level = LogEventLevel.Information) where T : class => Log("notify", message, level);
-    public static void Ping(string message, LogEventLevel level = LogEventLevel.Information) => Log("ping", message, level);
     public static void Ping<T>(T message, LogEventLevel level = LogEventLevel.Information) where T : class => Log("ping", message, level);
-    public static void Queue(string message, LogEventLevel level = LogEventLevel.Debug) => Log("queue", message, level);
     public static void Queue<T>(T message, LogEventLevel level = LogEventLevel.Debug) where T : class => Log("queue", message, level);
-    public static void Request(string message, LogEventLevel level = LogEventLevel.Debug) => Log("request", message, level);
-    public static void Request(string message, LogEventLevel? level = null) => Log("request", message, level);
     public static void Request<T>(T message, LogEventLevel level = LogEventLevel.Debug) where T : class => Log("request", message, level);
     public static void Request<T>(T message, LogEventLevel? level = null) where T : class => Log("request", message, level);
-    public static void Service(string message, LogEventLevel level = LogEventLevel.Information) => Log("service", message, level);
-    public static void Service(string message, LogEventLevel? level = null) => Log("service", message, level);
     public static void Service<T>(T message, LogEventLevel level = LogEventLevel.Information) where T : class => Log("service", message, level);
     public static void Service<T>(T message, LogEventLevel? level = null) where T : class => Log("service", message, level);
-    public static void Setup(string message, LogEventLevel level = LogEventLevel.Information) => Log("setup", message, level);
     public static void Setup<T>(T message, LogEventLevel level = LogEventLevel.Information) where T : class => Log("setup", message, level);
-    public static void Socket(string message, LogEventLevel level = LogEventLevel.Information) => Log("socket", message, level);
     public static void Socket<T>(T message, LogEventLevel level = LogEventLevel.Information) where T : class => Log("socket", message, level);    
-    public static void Spotify(string message, LogEventLevel level = LogEventLevel.Information) => Log("spotify", message, level);
     public static void Spotify<T>(T message, LogEventLevel level = LogEventLevel.Information) where T : class => Log("spotify", message, level);
-    public static void System(string message, LogEventLevel level = LogEventLevel.Information) => Log("system", message, level);
-    public static void System(string message, LogEventLevel? level = null) => Log("system", message, level);
     public static void System<T>(T message, LogEventLevel level = LogEventLevel.Information) where T : class => Log("system", message, level);
     public static void System<T>(T message, LogEventLevel? level = null) where T : class => Log("system", message, level);
-    public static void Twitch(string message, LogEventLevel level = LogEventLevel.Information) => Log("twitch", message, level);
     public static void Twitch<T>(T message, LogEventLevel level = LogEventLevel.Information) where T : class => Log("twitch", message, level);    
-    public static void Twitter(string message, LogEventLevel level = LogEventLevel.Information) => Log("twitter", message, level);
     public static void Twitter<T>(T message, LogEventLevel level = LogEventLevel.Information) where T : class => Log("twitter", message, level);
-    public static void Webhook(string message, LogEventLevel level = LogEventLevel.Information) => Log("webhook", message, level);
     public static void Webhook<T>(T message, LogEventLevel level = LogEventLevel.Information) where T : class => Log("webhook", message, level);
-    public static void Youtube(string message, LogEventLevel level = LogEventLevel.Information) => Log("youtube", message, level);
     public static void Youtube<T>(T message, LogEventLevel level = LogEventLevel.Information) where T : class => Log("youtube", message, level);    
 }

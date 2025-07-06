@@ -51,7 +51,7 @@ const teamMembers = [
 <template>
 	<div class="h-inherit flex flex-col mb-auto w-full">
 		<!-- Header -->
-		<header class="border-b border-white/5 w-full">
+		<header class="border-b border-white/5 w-full sticky top-0">
 			<div class="px-8 pt-8 pb-6">
 				<h1 class="text-2xl font-bold text-white">
 					{{ t('about.title', 'About NoMercy Bot') }}
@@ -132,7 +132,8 @@ const teamMembers = [
 						</p>
 					</div>
 					<div>
-						<a class="text-theme-500 hover:text-theme-400 text-sm flex items-center" href="https://github.com/yourusername/nomercy-bot" rel="noopener noreferrer"
+						<a class="text-theme-500 hover:text-theme-400 text-sm flex items-center"
+							href="https://github.com/yourusername/nomercy-bot" rel="noopener noreferrer"
 							target="_blank"
 						>
 							<MoooomIcon class="h-5 w-5 mr-1" icon="github" />

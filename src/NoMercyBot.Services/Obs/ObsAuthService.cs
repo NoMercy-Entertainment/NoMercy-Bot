@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -103,5 +102,10 @@ public class ObsAuthService : IAuthService
         Service.AccessToken = updateService.AccessToken;
         Service.RefreshToken = updateService.RefreshToken;
         Service.TokenExpiry = updateService.TokenExpiry;
+    }
+
+    public Task<bool> ConfigureService(ProviderConfigRequest config)
+    {
+        throw new NotImplementedException();
     }
 }

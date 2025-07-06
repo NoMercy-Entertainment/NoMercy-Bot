@@ -4,7 +4,6 @@
 using System.Collections.Specialized;
 using System.Web;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -234,5 +233,36 @@ public class TwitchAuthService : IAuthService
         Service.AccessToken = updateService.AccessToken;
         Service.RefreshToken = updateService.RefreshToken;
         Service.TokenExpiry = updateService.TokenExpiry;
+    }
+
+    public async Task<bool> ConfigureService(ProviderConfigRequest config)
+    {
+        try
+        {
+            // Find existing service or create new one
+            Service service = await _db.Services
+                .FirstAsync(s => s.Name == "Twitch");
+
+            // Update the configuration
+            service.ClientId = config.ClientId;
+            service.ClientSecret = config.ClientSecret;
+            service.Scopes = config.Scopes;
+            service.Enabled = true;
+
+            _db.Services.Update(service);
+
+            await _db.SaveChangesAsync();
+
+            // Update the static reference
+            TwitchConfig._service = service;
+
+            _logger.LogInformation("Twitch service configured successfully");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Failed to configure Twitch service: {Error}", ex.Message);
+            return false;
+        }
     }
 }

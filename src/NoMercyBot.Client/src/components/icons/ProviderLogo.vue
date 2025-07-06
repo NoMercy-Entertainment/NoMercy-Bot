@@ -106,7 +106,7 @@ defineProps({
 		/>
 	</svg>
 
-	<svg v-else-if="provider.toLowerCase() === 'github'"
+	<svg v-else-if="provider?.toLowerCase() === 'github'"
 		:class="className"
 		class="flex-grow-0 flex-shrink-0 relative"
 		fill="none"

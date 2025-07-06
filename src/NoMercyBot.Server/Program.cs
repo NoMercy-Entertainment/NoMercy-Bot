@@ -4,11 +4,10 @@ using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using CommandLine;
 using Microsoft.AspNetCore;
-using Microsoft.EntityFrameworkCore;
-using NoMercyBot.Database;
 using NoMercyBot.Globals.Information;
 using NoMercyBot.Globals.SystemCalls;
 using NoMercyBot.Server.Setup;
+using NoMercyBot.Services;
 
 namespace NoMercyBot.Server;
 
@@ -77,6 +76,13 @@ public static class Program
                 services.AddSingleton<StartupOptions>(options);
                 services.AddSingleton<IApiVersionDescriptionProvider, DefaultApiVersionDescriptionProvider>();
                 services.AddSingleton<ISunsetPolicyManager, DefaultSunsetPolicyManager>();
+                // Add custom logging here to ensure it's available during startup
+                services.AddSingleton(typeof(ILogger<>), typeof(CustomLogger<>));
+            })
+            .ConfigureLogging(logging =>
+            {
+                // Clear default providers to prevent duplicate logs
+                logging.ClearProviders();
             })
             .UseUrls(urls.ToArray())
             .UseKestrel(options =>

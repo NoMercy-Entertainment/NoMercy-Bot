@@ -4,24 +4,17 @@ import type { Provider } from '@/types/providers.ts';
 import useServerClient from '@/lib/clients/useServerClient.ts';
 import ProviderLogo from '@/components/icons/ProviderLogo.vue';
 import { providerColor } from '@/lib/ui.ts';
-import { useRouter } from 'vue-router';
-
-const router = useRouter();
+import DashboardLayout from '@/layout/DashboardLayout.vue';
 
 const { data: providers, loading } = useServerClient<Provider[]>();
 </script>
 
 <template>
-	<div class="h-inherit flex flex-col mb-auto w-full">
-		<header class="border-b border-white/5 w-full">
-			<h1 class="text-base/7 font-semibold text-white px-8 pt-8 pb-2">
-				{{ $t('settings.providers.title') }}
-			</h1>
-			<p class="text-neutral-400 px-8 pb-6">
-				{{ $t('settings.providers.desc') }}
-			</p>
-		</header>
-		<div class="max-w-7xl w-full mx-auto px-8 py-12">
+	<DashboardLayout
+		:description="$t('settings.provider.desc', { provider: '' })"
+		:title="$t('settings.provider.title', { provider: '' })"
+	>
+		<div class="max-w-7xl w-full mx-auto mt-2 mb-4">
 			<div v-if="loading" class="text-center text-gray-500 py-12">
 				{{ $t('common.loading') }}
 			</div>
@@ -32,7 +25,9 @@ const { data: providers, loading } = useServerClient<Provider[]>();
 					class="rounded-xl bg-neutral-800 border border-white/10 shadow-lg flex flex-col items-center p-6 cursor-pointer hover:border-theme-500 transition focus:outline-none focus:ring-2 focus:ring-theme-500"
 				>
 					<div class="flex items-center gap-4 w-full">
-						<ProviderLogo :provider="provider.name"
+						<ProviderLogo
+							v-if="provider"
+							:provider="provider.name"
 							:style="{ filter: provider.enabled ? '' : 'grayscale(1) opacity(0.5)' }"
 							class-name="h-12 w-12"
 						/>
@@ -60,9 +55,8 @@ const { data: providers, loading } = useServerClient<Provider[]>();
 				</RouterLink>
 			</div>
 		</div>
-	</div>
+	</DashboardLayout>
 </template>
 
 <style scoped>
-
 </style>

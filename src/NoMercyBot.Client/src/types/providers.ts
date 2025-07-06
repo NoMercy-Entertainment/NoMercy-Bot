@@ -15,3 +15,11 @@ export interface Provider {
 		[key: string]: string;
 	};
 }
+
+export interface ConfigurationStatus {
+	isConfigured: boolean;
+	name: string;
+	enabled: boolean;
+	clientId: string;
+	clientSecret: string;
+}

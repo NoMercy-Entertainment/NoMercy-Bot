@@ -1,7 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using NoMercyBot.Database;
 using NoMercyBot.Database.Models;
 
-namespace NoMercyBot.Database.Seeds;
+namespace NoMercyBot.Services.Seeds;
 
 public static class ServiceSeed
 {

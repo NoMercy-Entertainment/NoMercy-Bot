@@ -23,17 +23,94 @@ namespace NoMercyBot.Database.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("UserId")
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("LastShoutout")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ShoutoutInterval")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ShoutoutTemplate")
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
                     b.ToTable("Channels");
+                });
+
+            modelBuilder.Entity("NoMercyBot.Database.Models.ChannelInfo", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Delay")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("GameId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GameName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsBrandedContent")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LabelsJson")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TagsJson")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ChannelInfo");
+                });
+
+            modelBuilder.Entity("NoMercyBot.Database.Models.ChannelModerator", b =>
+                {
+                    b.Property<string>("ChannelId")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("ChannelId", "UserId");
+
+                    b.HasIndex("ChannelId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ChannelModerator");
                 });
 
             modelBuilder.Entity("NoMercyBot.Database.Models.ChatMessage", b =>
@@ -250,6 +327,92 @@ namespace NoMercyBot.Database.Migrations
                     b.ToTable("Configurations");
                 });
 
+            modelBuilder.Entity("NoMercyBot.Database.Models.EventSubscription", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CallbackUrl")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MetadataJson")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SubscriptionId")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Provider", "EventType")
+                        .IsUnique();
+
+                    b.ToTable("EventSubscriptions");
+                });
+
+            modelBuilder.Entity("NoMercyBot.Database.Models.Pronoun", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Object")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Singular")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Pronouns");
+                });
+
             modelBuilder.Entity("NoMercyBot.Database.Models.Service", b =>
                 {
                     b.Property<string>("Id")
@@ -306,6 +469,44 @@ namespace NoMercyBot.Database.Migrations
                     b.ToTable("Services");
                 });
 
+            modelBuilder.Entity("NoMercyBot.Database.Models.Shoutout", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ChannelId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("LastShoutout")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MessageTemplate")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ShoutedUserId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ShoutedUserId");
+
+                    b.HasIndex("ChannelId", "ShoutedUserId")
+                        .IsUnique();
+
+                    b.ToTable("Shoutout");
+                });
+
             modelBuilder.Entity("NoMercyBot.Database.Models.User", b =>
                 {
                     b.Property<string>("Id")
@@ -347,6 +548,10 @@ namespace NoMercyBot.Database.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("PronounData")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Timezone")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
@@ -365,9 +570,39 @@ namespace NoMercyBot.Database.Migrations
                 {
                     b.HasOne("NoMercyBot.Database.Models.User", "User")
                         .WithOne("Channel")
-                        .HasForeignKey("NoMercyBot.Database.Models.Channel", "UserId")
+                        .HasForeignKey("NoMercyBot.Database.Models.Channel", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("NoMercyBot.Database.Models.ChannelInfo", b =>
+                {
+                    b.HasOne("NoMercyBot.Database.Models.Channel", "Channel")
+                        .WithOne("Info")
+                        .HasForeignKey("NoMercyBot.Database.Models.ChannelInfo", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Channel");
+                });
+
+            modelBuilder.Entity("NoMercyBot.Database.Models.ChannelModerator", b =>
+                {
+                    b.HasOne("NoMercyBot.Database.Models.Channel", "Channel")
+                        .WithMany("ChannelModerators")
+                        .HasForeignKey("ChannelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NoMercyBot.Database.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Channel");
 
                     b.Navigation("User");
                 });
@@ -423,8 +658,34 @@ namespace NoMercyBot.Database.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("NoMercyBot.Database.Models.Shoutout", b =>
+                {
+                    b.HasOne("NoMercyBot.Database.Models.Channel", "Channel")
+                        .WithMany("Shoutouts")
+                        .HasForeignKey("ChannelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NoMercyBot.Database.Models.User", "ShoutedUser")
+                        .WithMany()
+                        .HasForeignKey("ShoutedUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Channel");
+
+                    b.Navigation("ShoutedUser");
+                });
+
             modelBuilder.Entity("NoMercyBot.Database.Models.Channel", b =>
                 {
+                    b.Navigation("ChannelModerators");
+
+                    b.Navigation("Info")
+                        .IsRequired();
+
+                    b.Navigation("Shoutouts");
+
                     b.Navigation("UsersInChat");
                 });
 

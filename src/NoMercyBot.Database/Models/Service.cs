@@ -1,7 +1,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
-using NoMercyBot.Globals.Extensions;
 
 namespace NoMercyBot.Database.Models;
 

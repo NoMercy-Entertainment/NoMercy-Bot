@@ -29,7 +29,7 @@ const connectedProviders = computed(() => {
 <template>
 	<div class="h-inherit flex flex-col mb-auto w-full">
 		<!-- Welcome Header -->
-		<header class="border-b border-white/5 w-full">
+		<header class="border-b border-white/5 w-full sticky top-0">
 			<div class="px-8 pt-8 pb-6">
 				<h1 class="text-2xl font-bold text-white">
 					{{ t('home.welcome', { name: userDisplayName }) }}

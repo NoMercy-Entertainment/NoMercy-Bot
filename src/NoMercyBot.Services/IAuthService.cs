@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using NoMercyBot.Database.Models;
+﻿using NoMercyBot.Database.Models;
 using NoMercyBot.Services.Twitch.Dto;
 
 namespace NoMercyBot.Services;
@@ -19,4 +17,5 @@ public interface IAuthService
     string GetRedirectUrl();
     Task<DeviceCodeResponse> Authorize();
     Task StoreTokens(TokenResponse tokenResponse); 
+    Task<bool> ConfigureService(ProviderConfigRequest config);
 }

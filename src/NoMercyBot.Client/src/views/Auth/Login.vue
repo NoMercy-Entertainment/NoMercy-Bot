@@ -10,13 +10,17 @@ import LoadingScreen from '../../layout/LoadingScreen.vue';
 import LoginHeader from './components/LoginHeader.vue';
 import AuthButton from '@/views/Auth/components/AuthButton.vue';
 import LoginFooter from '@/views/Auth/components/LoginFooter.vue';
+import ProviderSetup from '@/views/Auth/components/ProviderSetup.vue';
 import { providerColor, providerIcon } from '@/lib/ui.ts';
 import { useSessionStorage } from '@vueuse/core';
+import {ConfigurationStatus} from "@/types/providers.ts";
 
 const route = useRoute();
 const isLoading = ref(false);
 const errorMessage = ref('');
 const redirect = useSessionStorage('redirect', '/home');
+const providerConfiguration = ref<ConfigurationStatus>(<ConfigurationStatus>{});
+const isCheckingConfig = ref(true);
 
 const theme = computed(() => providerColor(route.params.provider as string));
 const icon = computed(() => providerIcon(route.params.provider as string));
@@ -25,6 +29,26 @@ watch(theme, (value) => {
     console.log(`Setting theme color to: ${value[0]}`);
     document.documentElement.style.setProperty('--theme', value[0]);
 });
+
+async function checkProviderConfiguration() {
+    isCheckingConfig.value = true;
+    
+    // Only perform this check for Twitch as it's the main provider that needs configuration
+    if (route.params.provider === 'twitch') {
+        try {
+            providerConfiguration.value = await authService.getProviderConfigStatus(route.params.provider as string);
+        } catch (error) {
+            console.error('Error checking provider configuration:', error);
+        }
+    } else {
+        // For other providers, assume they're configured
+        providerConfiguration.value = {
+          isConfigured: true,
+        }
+    }
+    
+    isCheckingConfig.value = false;
+}
 
 function startAuth() {
     if (isLoading.value)
@@ -69,8 +93,20 @@ async function handleCallback() {
 
 onMounted(() => {
     document.documentElement.style.setProperty('--theme', theme.value[0]);
-    handleCallback();
+    checkProviderConfiguration().then(() => {
+        if (providerConfiguration.value.isConfigured) {
+            handleCallback();
+        }
+    });
 });
+
+function handleProviderSetupComplete() {
+    providerConfiguration.value.isConfigured = true;
+    // Give the system a moment to register the configuration
+    setTimeout(() => {
+        startAuth();
+    }, 1000);
+}
 
 const isProcessingAuth = computed(() => {
     return route.name === 'Login' && (!!route.query.code || !!route.query.error);
@@ -93,7 +129,10 @@ function handleBack() {
 
 <template>
     <LoadingScreen>
-        <LoginHeader :is-processing-auth="isProcessingAuth" />
+        <LoginHeader 
+            :is-processing-auth="isProcessingAuth" 
+            :hide-header-content="!providerConfiguration.isConfigured && !isCheckingConfig" 
+        />
 
         <div v-if="errorMessage" class="mt-4 text-center flex flex-col gap-2 w-full">
             <div class="rounded-md bg-red-900/50 p-4">
@@ -117,7 +156,24 @@ function handleBack() {
                 @click="retry" />
         </div>
 
-        <div v-if="isLoading" class="mt-8 text-center">
+        <div v-else-if="isCheckingConfig" class="mt-8 text-center">
+            <div
+                class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-theme-400 border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"
+            />
+            <p class="mt-4 text-sm text-neutral-400">
+                {{ $t('auth.login.checking') }}...
+            </p>
+        </div>
+
+        <div v-else-if="!providerConfiguration.isConfigured" class="mt-8 w-full">
+            <ProviderSetup 
+                :providerConfiguration="providerConfiguration"
+                :provider="route.params.provider as string"
+                @setup-complete="handleProviderSetupComplete"
+            />
+        </div>
+
+        <div v-else-if="isLoading" class="mt-8 text-center">
             <div
                 class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-theme-400 border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"
             />
@@ -126,7 +182,7 @@ function handleBack() {
             </p>
         </div>
 
-        <div v-if="!isProcessingAuth" class="mt-8 w-full gap-2 flex flex-col items-center">
+        <div v-else-if="!isProcessingAuth" class="mt-8 w-full gap-2 flex flex-col items-center">
             <AuthButton
                 :disabled="isProcessingAuth"
                 :icon="icon"

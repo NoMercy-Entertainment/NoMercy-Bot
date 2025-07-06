@@ -154,12 +154,6 @@ public class AppDbContext : DbContext
             .HasForeignKey(cp => cp.UserId)
             .OnDelete(DeleteBehavior.Restrict);
         
-        // Configure the Channel-User relationship
-        modelBuilder.Entity<Channel>()
-            .HasOne(c => c.User)
-            .WithOne(u => u.Channel)
-            .HasForeignKey<Channel>(c => c.UserId);
-        
         // Configure the Channel-ChatPresence relationship
         modelBuilder.Entity<Channel>()
             .HasMany(c => c.UsersInChat)
@@ -176,4 +170,6 @@ public class AppDbContext : DbContext
     public DbSet<ChatPresence> ChatPresences { get; set; }
     public DbSet<Configuration> Configurations { get; set; }
     public DbSet<Service> Services { get; set; }
+    public DbSet<Pronoun> Pronouns { get; set; }
+    public DbSet<EventSubscription> EventSubscriptions { get; set; }
 }

@@ -1,5 +1,4 @@
 using System.Runtime.InteropServices;
-using NoMercyBot.Database.Seeds;
 using NoMercyBot.Globals.Information;
 
 namespace NoMercyBot.Server.Setup;
@@ -32,7 +31,6 @@ public class Start
         List<TaskDelegate> startupTasks =
         [
             new(AppFiles.CreateAppFolders),
-            new(Seed.Init),
             ..tasks,
 
             new(delegate

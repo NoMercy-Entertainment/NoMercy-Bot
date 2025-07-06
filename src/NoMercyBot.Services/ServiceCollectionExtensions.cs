@@ -2,6 +2,8 @@
 using Microsoft.Extensions.Logging;
 using NoMercyBot.Services.Discord;
 using NoMercyBot.Services.Obs;
+using NoMercyBot.Services.Other;
+using NoMercyBot.Services.Seeds;
 using NoMercyBot.Services.Spotify;
 using NoMercyBot.Services.Twitch;
 
@@ -11,27 +13,28 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddBotServices(this IServiceCollection services)
     {
+        services.AddSingleton<SeedService>();
+        
         services.AddTwitchServices();
         services.AddSpotifyServices();
         services.AddDiscordServices();
         services.AddObsServices();
+        services.AddOtherServices();
         
         services.AddTokenRefreshService();
-        services.AddCustomLogging();
         
+        return services;
+    }
+
+    private static IServiceCollection AddOtherServices(this IServiceCollection services)
+    {
+        services.AddScoped<PronounService>();
         return services;
     }
 
     private static IServiceCollection AddTokenRefreshService(this IServiceCollection services)
     {
         services.AddHostedService<TokenRefreshService>();
-        return services;
-    }
-    
-    public static IServiceCollection AddCustomLogging(this IServiceCollection services)
-    {
-        // Replace the standard logger with your custom implementation
-        services.AddSingleton(typeof(ILogger<>), typeof(CustomLogger<>));
         return services;
     }
 }

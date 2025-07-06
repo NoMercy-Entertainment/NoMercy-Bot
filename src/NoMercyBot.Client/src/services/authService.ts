@@ -4,6 +4,7 @@ import type { User } from '@/types/auth';
 
 import serverClient from '@/lib/clients/serverClient';
 import { clearUserSession, getProviderUser, storeUser } from '@/store/user';
+import type { ConfigurationStatus } from '@/types/providers.ts';
 
 class AuthService {
 	private refreshTimer: number | null = null;
@@ -60,6 +61,36 @@ class AuthService {
 	async deleteAccount(provider: string) {
 		await serverClient().delete(`oauth/${provider}/account`);
 		clearUserSession(provider);
+	}
+
+	async getProviderConfigStatus(provider: string): Promise<ConfigurationStatus | undefined> {
+		try {
+			const response = await serverClient().get<ConfigurationStatus>(`oauth/${provider}/config-status`);
+			return response.data;
+		}
+		catch (error) {
+			console.error('Failed to check provider config status:', error);
+			return undefined;
+		}
+	}
+
+	async configureProvider(provider: string, config: {
+		clientId: string;
+		clientSecret: string;
+		scopes: string[];
+	}): Promise<boolean> {
+		try {
+			const response = await serverClient().post<{ success: boolean }, ConfigurationStatus>(`oauth/${provider}/configure`, {
+				clientId: config.clientId,
+				clientSecret: config.clientSecret,
+				scopes: config.scopes,
+			});
+			return response.data?.success;
+		}
+		catch (error) {
+			console.error('Failed to configure provider:', error);
+			return false;
+		}
 	}
 
 	private scheduleTokenRefresh(provider: string, expiryTime: Date) {

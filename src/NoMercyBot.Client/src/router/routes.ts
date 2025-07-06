@@ -79,7 +79,7 @@ export const mainRoutes: Array<RouteRecordRaw> = [
 							{
 								path: '',
 								name: 'Provider List',
-								component: () => import('@/views/Settings/Providers.vue'),
+								component: () => import('@/views/Settings/Providers/Providers.vue'),
 								meta: {
 									requiresAuth: true,
 								},
@@ -87,7 +87,35 @@ export const mainRoutes: Array<RouteRecordRaw> = [
 							{
 								path: ':provider',
 								name: 'Provider Settings',
-								component: () => import('@/views/Settings/ProviderSettings.vue'),
+								component: () => import('@/views/Settings/Providers/ProviderSettings.vue'),
+								meta: {
+									requiresAuth: true,
+								},
+							},
+						],
+					},
+					{
+						path: 'events',
+						name: 'Events',
+						meta: {
+							requiresAuth: true,
+							group: 'settings',
+							icon: 'bell' as keyof typeof MoooomIcons,
+							menuItem: true,
+						},
+						children: [
+							{
+								path: '',
+								name: 'Event List',
+								component: () => import('@/views/Settings/Providers/Events.vue'),
+								meta: {
+									requiresAuth: true,
+								},
+							},
+							{
+								path: ':provider',
+								name: 'Event Provider Settings',
+								component: () => import('@/views/Settings/Providers/EventProviderSettings.vue'),
 								meta: {
 									requiresAuth: true,
 								},
