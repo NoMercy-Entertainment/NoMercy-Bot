@@ -1,5 +1,4 @@
 import type { RouteRecordRaw } from 'vue-router';
-import { ArrowLeftStartOnRectangleIcon, UserCircleIcon } from '@heroicons/vue/24/outline';
 
 import type { InferRouteNames, InferRoutePaths } from '@/types/router';
 import { routeNameToKey } from '@/types/router';
@@ -12,6 +11,7 @@ import Login from '@/views/Auth/Login.vue';
 import Unauthenticated from '@/views/Auth/Unauthenticated.vue';
 import NotFound from '@/views/NotFound.vue';
 import type { MoooomIcons } from '@Icons/icons';
+import { useSessionStorage } from '@vueuse/core';
 
 export const mainRoutes: Array<RouteRecordRaw> = [
 	{
@@ -24,6 +24,7 @@ export const mainRoutes: Array<RouteRecordRaw> = [
 				};
 			}
 			else {
+				useSessionStorage('redirect', '/home').value = '/home';
 				return {
 					name: 'Login',
 					params: {
@@ -77,6 +78,7 @@ export const mainRoutes: Array<RouteRecordRaw> = [
 						children: [
 							{
 								path: '',
+								name: 'Provider List',
 								component: () => import('@/views/Settings/Providers.vue'),
 								meta: {
 									requiresAuth: true,
@@ -142,13 +144,23 @@ export const mainRoutes: Array<RouteRecordRaw> = [
 				],
 			},
 			{
-				path: '/oauth/:provider/logout',
+				path: '/oauth/twitch/logout',
 				name: 'Sign out',
 				component: () => import('@/views/Auth/Logout.vue'),
 				meta: {
 					requiresAuth: true,
 					group: 'profileMenu',
-					icon: ArrowLeftStartOnRectangleIcon,
+					icon: 'doorOut' as keyof typeof MoooomIcons,
+					menuItem: true,
+				},
+			},
+			{
+				path: '/about',
+				name: 'About',
+				component: () => import('@/views/About.vue'),
+				meta: {
+					icon: 'arrowLeftStartOnRectangle' as keyof typeof MoooomIcons,
+					group: 'profileMenu',
 					menuItem: true,
 				},
 			},
@@ -157,7 +169,7 @@ export const mainRoutes: Array<RouteRecordRaw> = [
 				name: 'Terms of Service',
 				component: () => import('@/views/Legal/Terms.vue'),
 				meta: {
-					icon: UserCircleIcon,
+					icon: 'bookOpen' as keyof typeof MoooomIcons,
 				},
 			},
 			{
@@ -165,7 +177,7 @@ export const mainRoutes: Array<RouteRecordRaw> = [
 				name: 'Privacy Policy',
 				component: () => import('@/views/Legal/Privacy.vue'),
 				meta: {
-					icon: UserCircleIcon,
+					icon: 'shieldCheck' as keyof typeof MoooomIcons,
 				},
 			},
 		],

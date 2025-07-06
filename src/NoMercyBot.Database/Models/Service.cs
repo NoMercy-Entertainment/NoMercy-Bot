@@ -34,4 +34,7 @@ public class Service : Timestamps
     [JsonIgnore]
     public DateTime? TokenExpiry { get; set; }
 
+    [NotMapped] 
+    public Dictionary<string, string> AvailableScopes { get; set; } = [];
+    
 }

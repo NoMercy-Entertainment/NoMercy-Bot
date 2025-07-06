@@ -1,6 +1,7 @@
 {
   "auth": {
     "welcome": "Welcome to {{name}}",
+    "subtitle": "Please sign in to continue",
     "loading": "Loading...",
     "login": {
       "title": "Sign in",
@@ -28,6 +29,70 @@
       "loading": "Signing out..."
     },
     "validating": "Validating session..."
+  },
+  "settings": {
+    "title": "Account Settings",
+    "search": "Search",
+    "tabs": {
+      "account": "Account",
+      "notifications": "Notifications"
+    },
+    "display": {
+      "title": "Display options",
+      "subtitle": "Choose how you want to view the site. These settings will be saved to your account.",
+      "timezone": "Timezone",
+      "save": "Save"
+    },
+    "delete": {
+      "title": "Delete account",
+      "subtitle": "No longer want to use our service? All non-public data will be deleted.",
+      "button": "Delete my account"
+    },
+    "dialog": {
+      "subtitle": "Are you sure you want to delete your account? \nThis action is not reversible.",
+      "cancel": "Cancel",
+      "confirm": "Yes, delete my account"
+    },
+    "personal": {
+      "title": "Personal Information",
+      "subtitle": "This is the information provided by twitch",
+      "displayName": "Display name",
+      "username": "Username",
+      "namePlaceholder": "Enter your name",
+      "email": "Email",
+      "emailPlaceholder": "Enter your email address",
+      "language": "Language",
+      "languagePlaceholder": "Select your preferred language",
+      "timezone": "Timezone",
+      "timezonePlaceholder": "Select your timezone",
+      "saveChanges": "Save Changes"
+    },
+    "providers": {
+      "title": "Providers",
+      "desc": "Manage and configure your provider integrations.",
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "provider": {
+      "title": "Provider Integration",
+      "desc": "Configure and enable integrations for this provider.",
+      "tabConfig": "Configuration",
+      "tabAdvanced": "Advanced",
+      "configTitle": "Provider Configuration",
+      "configSubtitle": "Enter your credentials and enable the provider to use its features.",
+      "clientId": "Client ID",
+      "clientIdPlaceholder": "Enter client ID",
+      "clientSecret": "Client Secret",
+      "clientSecretPlaceholder": "Enter client secret",
+      "scopes": "Scopes",
+      "scopesPlaceholder": "e.g. user:read, chat:write",
+      "scopesHelp": "Select the scopes required for this provider.",
+      "enabled": "Enable this provider",
+      "saveAndLogin": "Save & Login",
+      "save": "Save",
+      "noData": "No provider data found.",
+      "advancedComingSoon": "Advanced options coming soon..."
+    }
   },
   "providers": {
     "twitch": {
@@ -73,48 +138,14 @@
   },
   "common": {
     "loading": "Loading...",
-    "error": {
-      "title": "Error",
-      "message": "An error occurred",
-      "retry": "Retry",
-      "cancel": "Cancel"
-    }
+    "saving": "Saving...",
+    "cancel": "Cancel"
   },
   "notFound": {
     "title": "Page not found",
     "message": "The page you are looking for does not exist",
     "goHome": "Go back home",
     "contactSupport": "Contact support"
-  },
-  "settings": {
-    "title": "Account Settings",
-    "search": "Search",
-    "tabs": {
-      "account": "Account",
-      "notifications": "Notifications"
-    },
-    "personal": {
-      "title": "Personal Information",
-      "subtitle": "This is the information provided by twitch",
-      "displayName": "Display name",
-      "username": "Username"
-    },
-    "display": {
-      "title": "Display options",
-      "subtitle": "Choose how you want to view the site. These settings will be saved to your account.",
-      "timezone": "Timezone",
-      "save": "Save"
-    },
-    "delete": {
-      "title": "Delete account",
-      "subtitle": "No longer want to use our service? All non-public data will be deleted.",
-      "button": "Delete my account"
-    },
-    "dialog": {
-      "subtitle": "Are you sure you want to delete your account? \nThis action is not reversible.",
-      "cancel": "Cancel",
-      "confirm": "Yes, delete my account"
-    }
   },
   "chat": {
     "placeholder": "Send a message",

@@ -28,6 +28,7 @@ public class SpotifyAuthService : IAuthService
     public string ClientId => Service.ClientId ?? throw new InvalidOperationException("Spotify ClientId is not set.");
     private string ClientSecret => Service.ClientSecret ?? throw new InvalidOperationException("Spotify ClientSecret is not set.");
     private string[] Scopes => Service.Scopes ?? throw new InvalidOperationException("Spotify Scopes are not set.");
+    public Dictionary<string, string> AvailableScopes => SpotifyConfig.AvailableScopes ?? throw new InvalidOperationException("Spotify Scopes are not set.");
     
     public SpotifyAuthService(IServiceScopeFactory serviceScopeFactory, IConfiguration conf, ILogger<SpotifyAuthService> logger, SpotifyApiService api)
     {
@@ -76,22 +77,15 @@ public class SpotifyAuthService : IAuthService
         return (new(), tokenResponse);
     }
 
-    public async Task<(User, TokenResponse)> ValidateToken(HttpRequest request)
+    public Task<(User, TokenResponse)> ValidateToken(HttpRequest request)
     {
         string authorizationHeader = request.Headers["Authorization"].First() ?? throw new InvalidOperationException();
         string accessToken = authorizationHeader["Bearer ".Length..];
         
-        await ValidateToken(accessToken);
-
-        return (new(), new TokenResponse
-        {
-            AccessToken = accessToken,
-            RefreshToken = Service.RefreshToken,
-            ExpiresIn = (int)(Service.TokenExpiry - DateTime.UtcNow).Value.TotalSeconds
-        });
+        return ValidateToken(accessToken);
     }
     
-    public async Task<TokenResponse> ValidateToken(string accessToken)
+    public async Task<(User, TokenResponse)> ValidateToken(string accessToken)
     {
         RestClient client = new(SpotifyConfig.ApiUrl);
         
@@ -102,13 +96,13 @@ public class SpotifyAuthService : IAuthService
         
         if (!response.IsSuccessful)
             throw new("Invalid access token");
-
-        // Spotify doesn't have a dedicated validate endpoint, so we just check if we can access protected resources
-        // Return the same token info since it's still valid
-        return new()
+        
+        return (new(), new()
         {
             AccessToken = accessToken,
-        };
+            RefreshToken = Service.RefreshToken,
+            ExpiresIn = (int)(Service.TokenExpiry - DateTime.UtcNow).Value.TotalSeconds
+        });
     }
 
     public async Task<(User, TokenResponse)> RefreshToken(string refreshToken)

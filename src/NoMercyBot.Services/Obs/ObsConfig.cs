@@ -20,7 +20,7 @@ public class ObsConfig: IConfig
     public string RedirectUri => $"http://localhost:{Config.InternalClientPort}/oauth/obs/callback";
     public string EventSubCallbackUri => $"http://localhost:{Config.InternalServerPort}/eventsub/obs";
     
-    public string[] AvailableScopes { get; } =
+    public static Dictionary<string, string> AvailableScopes { get; } =
     [
         
     ];

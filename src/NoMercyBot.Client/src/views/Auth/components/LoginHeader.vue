@@ -20,7 +20,6 @@ function dynamicT(key: string) {
 </script>
 
 <template>
-	<!--	<template v-if="route.params.provider === 'twitch'"> -->
 	<h2 class="text-3xl font-bold tracking-tight text-white">
 		{{ dynamicT(`providers.${route.params.provider}.welcome`) }}
 	</h2>
@@ -34,7 +33,6 @@ function dynamicT(key: string) {
 				: $t('auth.login.pleaseSignIn')
 		}}
 	</p>
-	<!--	</template> -->
 </template>
 
 <style scoped>

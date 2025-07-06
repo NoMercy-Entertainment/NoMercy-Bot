@@ -30,6 +30,7 @@ public class TwitchAuthService : IAuthService
     public string ClientId => Service.ClientId ?? throw new InvalidOperationException("Twitch ClientId is not set.");
     private string ClientSecret => Service.ClientSecret ?? throw new InvalidOperationException("Twitch ClientSecret is not set.");
     private string[] Scopes => Service.Scopes ?? throw new InvalidOperationException("Twitch Scopes are not set.");
+    public Dictionary<string, string> AvailableScopes => TwitchConfig.AvailableScopes ?? throw new InvalidOperationException("Twitch Scopes are not set.");
     
     public TwitchAuthService(IServiceScopeFactory serviceScopeFactory, IConfiguration conf, ILogger<TwitchAuthService> logger, TwitchApiService twitchApiService)
     {
@@ -65,6 +66,14 @@ public class TwitchAuthService : IAuthService
         return (user, tokenResponse);
     }
     
+    public Task<(User, TokenResponse)> ValidateToken(HttpRequest request)
+    {        
+        string authorizationHeader = request.Headers["Authorization"].First() ?? throw new InvalidOperationException();
+        string accessToken = authorizationHeader["Bearer ".Length..];
+        
+        return ValidateToken(accessToken);
+    }
+
     public async Task<(User, TokenResponse)> ValidateToken(string accessToken)
     {
         RestClient client = new(TwitchConfig.AuthUrl);
@@ -91,14 +100,6 @@ public class TwitchAuthService : IAuthService
         });
     }
 
-    public Task<(User, TokenResponse)> ValidateToken(HttpRequest request)
-    {        
-        string authorizationHeader = request.Headers["Authorization"].First() ?? throw new InvalidOperationException();
-        string accessToken = authorizationHeader["Bearer ".Length..];
-        
-        return ValidateToken(accessToken);
-    }
-    
     public async Task<(User, TokenResponse)> RefreshToken(string refreshToken)
     {        
         RestClient client = new(TwitchConfig.AuthUrl);

@@ -3,7 +3,7 @@ import axios from 'axios';
 import type { User } from '@/types/auth';
 
 import serverClient from '@/lib/clients/serverClient';
-import { clearUserSession, storeUser, user } from '@/store/user';
+import { clearUserSession, getProviderUser, storeUser } from '@/store/user';
 
 class AuthService {
 	private refreshTimer: number | null = null;
@@ -34,14 +34,12 @@ class AuthService {
 	}
 
 	async validateSession(provider: string): Promise<{ user: User }> {
-		const response = await serverClient().get<{ user: User }>(`oauth/${provider}/validate`, {
-			headers: {
-				Authorization: `Bearer ${user.value?.access_token}`,
-			},
+		const response = await serverClient().post<{ user: User }>(`oauth/${provider}/validate`, {
+			AccessToken: getProviderUser(provider).access_token,
 		});
 
-		if (user.value?.token_expiry) {
-			this.scheduleTokenRefresh(provider, user.value?.token_expiry);
+		if (getProviderUser(provider)?.token_expiry) {
+			this.scheduleTokenRefresh(provider, getProviderUser(provider).token_expiry);
 		}
 
 		return response.data;
@@ -49,7 +47,7 @@ class AuthService {
 
 	async refreshToken(provider: string): Promise<{ user: User }> {
 		const response = await serverClient().post<{ user: User }>(`oauth/${provider}/refresh`, {
-			refresh_token: localStorage.getItem('refresh_token'),
+			RefreshToken: getProviderUser(provider).refresh_token,
 		});
 
 		return response.data;

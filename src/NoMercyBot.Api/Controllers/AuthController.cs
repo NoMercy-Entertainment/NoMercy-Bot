@@ -143,13 +143,12 @@ public class AuthController : BaseController
         }
         catch (Exception ex)
         {
-            return InternalServerErrorResponse($"Failed to process callback: {ex.Message}");
+            return InternalServerErrorResponse(ex.Message);
         }
     }
 
-    [HttpGet("validate")]
     [HttpPost("validate")]
-    public async Task<IActionResult> Validate([FromRoute] string provider)
+    public async Task<IActionResult> Validate([FromRoute] string provider, [FromBody] TokenRequest request)
     {
         User? currentUser = User.User();
         if (currentUser is null) return UnauthenticatedResponse("User not logged in.");
@@ -158,7 +157,7 @@ public class AuthController : BaseController
             IActionResult serviceResult = GetAuthService(provider, out IAuthService? authService);
             if (serviceResult is not OkResult) return serviceResult;
 
-            (User, TokenResponse) result = await authService!.ValidateToken(Request);
+            (User, TokenResponse) result = await authService!.ValidateToken(request.AccessToken);
             
             return Ok(new
             {

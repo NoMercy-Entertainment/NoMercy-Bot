@@ -2,26 +2,63 @@
 import type { Provider } from '@/types/providers.ts';
 
 import useServerClient from '@/lib/clients/useServerClient.ts';
+import ProviderLogo from '@/components/icons/ProviderLogo.vue';
+import { providerColor } from '@/lib/ui.ts';
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
 
 const { data: providers, loading } = useServerClient<Provider[]>();
 </script>
 
 <template>
-	<div class="flex flex-col min-h-available items-center justify-center">
-		<div class="w-full max-w-md space-y-8 rounded-lg bg-neutral-800 p-8 shadow-lg">
-			Settings Providers View
-		</div>
-		<div v-if="loading" class="text-center text-gray-500">
-			Loading...
-		</div>
-		<div v-else class="flex flex-col items-center justify-center space-y-4">
-			<template v-for="provider in providers" :key="provider.id">
-				<RouterLink :to="provider.link"
-					class="text-gray-200 w-full max-w-md space-y-2 rounded-lg bg-neutral-800 px-2 py-1 shadow-lg"
+	<div class="h-inherit flex flex-col mb-auto w-full">
+		<header class="border-b border-white/5 w-full">
+			<h1 class="text-base/7 font-semibold text-white px-8 pt-8 pb-2">
+				{{ $t('settings.providers.title') }}
+			</h1>
+			<p class="text-neutral-400 px-8 pb-6">
+				{{ $t('settings.providers.desc') }}
+			</p>
+		</header>
+		<div class="max-w-7xl w-full mx-auto px-8 py-12">
+			<div v-if="loading" class="text-center text-gray-500 py-12">
+				{{ $t('common.loading') }}
+			</div>
+			<div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+				<RouterLink v-for="provider in providers" :key="provider.id"
+					:style="{ boxShadow: provider.enabled ? `0 0 0 2px ${providerColor(provider.name)[0]}` : '' }"
+					:to="{ name: 'Provider Settings', params: { provider: provider.name.toLowerCase() } }"
+					class="rounded-xl bg-neutral-800 border border-white/10 shadow-lg flex flex-col items-center p-6 cursor-pointer hover:border-theme-500 transition focus:outline-none focus:ring-2 focus:ring-theme-500"
 				>
-					{{ provider.name }}: {{ provider.enabled }}
+					<div class="flex items-center gap-4 w-full">
+						<ProviderLogo :provider="provider.name"
+							:style="{ filter: provider.enabled ? '' : 'grayscale(1) opacity(0.5)' }"
+							class-name="h-12 w-12"
+						/>
+						<div class="flex flex-col flex-1 min-w-0">
+							<div class="text-lg font-semibold text-white truncate">
+								{{ provider.name }}
+							</div>
+							<div class="text-xs text-neutral-400 truncate">
+								{{ provider.link }}
+							</div>
+						</div>
+						<div class="ml-auto">
+							<span v-if="provider.enabled"
+								class="inline-block rounded-full px-3 py-1 text-xs font-semibold bg-theme-700 text-white"
+							>{{
+								$t('settings.providers.enabled')
+							}}</span>
+							<span v-else
+								class="inline-block rounded-full px-3 py-1 text-xs font-semibold bg-neutral-700 text-neutral-400"
+							>{{
+								$t('settings.providers.disabled')
+							}}</span>
+						</div>
+					</div>
 				</RouterLink>
-			</template>
+			</div>
 		</div>
 	</div>
 </template>

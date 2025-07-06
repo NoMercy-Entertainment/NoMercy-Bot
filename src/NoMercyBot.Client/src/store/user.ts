@@ -21,6 +21,22 @@ export const userProviders = {
 
 export const user = computed(() => twitchUser.value);
 
+export function getProviderUser(provider: string) {
+	switch (provider) {
+		case 'twitch':
+			return twitchUser.value;
+		case 'spotify':
+			return spotifyUser.value;
+		case 'discord':
+			return discordUser.value;
+		case 'obs':
+			return obsUser.value;
+		default:
+			console.warn(`Unknown provider: ${provider}`);
+			return twitchUser.value;
+	}
+}
+
 if (user.value?.color) {
 	document.documentElement.style.setProperty('--theme', user.value?.color);
 }
@@ -69,7 +85,7 @@ export function clearUserSession(provider: string) {
 
 export async function initializeUserSession(provider = 'twitch') {
 	try {
-		if (!user.value?.access_token) {
+		if (!getProviderUser(provider)?.access_token) {
 			return;
 		}
 

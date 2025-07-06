@@ -27,6 +27,7 @@ public class DiscordAuthService : IAuthService
     public string ClientId => Service.ClientId ?? throw new InvalidOperationException("Discord ClientId is not set.");
     private string ClientSecret => Service.ClientSecret ?? throw new InvalidOperationException("Discord ClientSecret is not set.");
     private string[] Scopes => Service.Scopes ?? throw new InvalidOperationException("Discord Scopes are not set.");
+    public Dictionary<string, string> AvailableScopes => DiscordConfig.AvailableScopes ?? throw new InvalidOperationException("Discord Scopes are not set.");
     
     public DiscordAuthService(IServiceScopeFactory serviceScopeFactory, IConfiguration conf, ILogger<DiscordAuthService> logger, DiscordApiService api)
     {
@@ -77,22 +78,15 @@ public class DiscordAuthService : IAuthService
         return (new(), tokenResponse);
     }
     
-    public async Task<(User, TokenResponse)> ValidateToken(HttpRequest request)
+    public Task<(User, TokenResponse)> ValidateToken(HttpRequest request)
     {
         string authorizationHeader = request.Headers["Authorization"].First() ?? throw new InvalidOperationException();
         string accessToken = authorizationHeader["Bearer ".Length..];
         
-        await ValidateToken(accessToken);
-        
-        return (new(), new()
-        {
-            AccessToken = accessToken,
-            ExpiresIn = 3600,
-            RefreshToken = null
-        });
+        return ValidateToken(accessToken);
     }
     
-    public async Task<TokenResponse> ValidateToken(string accessToken)
+    public async Task<(User, TokenResponse)> ValidateToken(string accessToken)
     {
         RestClient client = new(DiscordConfig.ApiUrl);
         
@@ -105,10 +99,13 @@ public class DiscordAuthService : IAuthService
             throw new("Invalid access token");
 
         // Discord doesn't have a dedicated validate endpoint, so we just check if we can access the user's info
-        return new()
+        
+        return (new(), new()
         {
             AccessToken = accessToken,
-        };
+            RefreshToken = Service.RefreshToken,
+            ExpiresIn = (int)(Service.TokenExpiry - DateTime.UtcNow).Value.TotalSeconds
+        });
     }
 
     public async Task<(User, TokenResponse)> RefreshToken(string refreshToken)

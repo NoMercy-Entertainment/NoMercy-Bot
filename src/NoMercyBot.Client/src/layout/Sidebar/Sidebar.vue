@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { computed, ref } from 'vue';
-import { RouterLink, useRoute } from 'vue-router';
+import { RouterLink } from 'vue-router';
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/vue';
 
 import routes from '@/router/routes.ts';
@@ -11,16 +11,11 @@ import SidebarButton from '@/layout/Sidebar/SidebarButton.vue';
 import { MoooomIcons } from '@Icons/icons';
 import SidebarButtonGroup from '@/layout/Sidebar/SidebarButtonGroup.vue';
 
-const route = useRoute();
-
 const sidebarOpen = ref(false);
 
 const navigation = computed(() =>
 	routes!.filter(route => route.meta?.group === 'main'),
 );
-
-console.log('navigation', navigation.value);
-
 const userNavigation = computed(() =>
 	routes!.filter(route => route.meta?.group === 'profileMenu'),
 );

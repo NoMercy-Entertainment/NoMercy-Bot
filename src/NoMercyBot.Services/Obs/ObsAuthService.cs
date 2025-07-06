@@ -23,6 +23,7 @@ public class ObsAuthService : IAuthService
     public string ClientId => Service.ClientId ?? throw new InvalidOperationException("OBS ClientId is not set.");
     private string ClientSecret => Service.ClientSecret ?? throw new InvalidOperationException("OBS ClientSecret is not set.");
     private string[] Scopes => Service.Scopes ?? throw new InvalidOperationException("OBS Scopes are not set.");
+    public Dictionary<string, string> AvailableScopes => ObsConfig.AvailableScopes ?? throw new InvalidOperationException("OBS Scopes are not set.");
 
     public ObsAuthService(IServiceScopeFactory serviceScopeFactory, IConfiguration conf, ILogger<ObsAuthService> logger, ObsApiService api)
     {
@@ -53,7 +54,7 @@ public class ObsAuthService : IAuthService
         });
     }
     
-    public Task<TokenResponse> ValidateToken(string accessToken)
+    public Task<(User, TokenResponse)> ValidateToken(string accessToken)
     {
         throw new NotImplementedException();
     }

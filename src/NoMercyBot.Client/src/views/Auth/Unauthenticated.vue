@@ -40,8 +40,8 @@ function startAuth() {
 				<span class="whitespace-nowrap">
 					{{
 						isLoading
-							? $t('auth.login.connectingToTwitch')
-							: $t('auth.login.connectWithTwitch')
+							? $t('auth.login.connecting')
+							: $t('auth.login.connect')
 					}}
 				</span>
 			</button>

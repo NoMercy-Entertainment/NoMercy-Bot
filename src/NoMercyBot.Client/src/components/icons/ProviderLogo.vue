@@ -1,18 +1,18 @@
 <script lang="ts" setup>
-import { useRoute } from 'vue-router';
-
 defineProps({
 	className: {
 		type: String,
 		required: false,
 	},
+	provider: {
+		type: String,
+		required: true,
+	},
 });
-
-const route = useRoute();
 </script>
 
 <template>
-	<svg v-if="route.params.provider === 'twitch'"
+	<svg v-if="provider.toLowerCase() === 'twitch'"
 		:class="className"
 		class="flex-grow-0 flex-shrink-0 relative"
 		fill="none"
@@ -27,7 +27,7 @@ const route = useRoute();
 		/>
 	</svg>
 
-	<svg v-else-if="route.params.provider === 'spotify'"
+	<svg v-else-if="provider.toLowerCase() === 'spotify'"
 		:class="className"
 		class="flex-grow-0 flex-shrink-0 relative"
 		fill="none"
@@ -49,7 +49,7 @@ const route = useRoute();
 		/>
 	</svg>
 
-	<svg v-else-if="route.params.provider === 'obs'"
+	<svg v-else-if="provider.toLowerCase() === 'obs'"
 		:class="className"
 		class="flex-grow-0 flex-shrink-0 relative"
 		fill="none"
@@ -68,7 +68,7 @@ const route = useRoute();
 		/>
 	</svg>
 
-	<svg v-else-if="route.params.provider === 'discord'"
+	<svg v-else-if="provider.toLowerCase() === 'discord'"
 		:class="className"
 		class="flex-grow-0 flex-shrink-0 relative"
 		fill="none"
@@ -85,7 +85,7 @@ const route = useRoute();
 
 	</svg>
 
-	<svg v-else-if="route.params.provider === 'youtube'"
+	<svg v-else-if="provider.toLowerCase() === 'youtube'"
 		:class="className"
 		class="flex-grow-0 flex-shrink-0 relative"
 		fill="none"
@@ -106,7 +106,7 @@ const route = useRoute();
 		/>
 	</svg>
 
-	<svg v-else-if="route.params.provider === 'github'"
+	<svg v-else-if="provider.toLowerCase() === 'github'"
 		:class="className"
 		class="flex-grow-0 flex-shrink-0 relative"
 		fill="none"

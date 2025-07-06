@@ -1,8 +1,14 @@
 <script lang="ts" setup>
-import AppLogoSquare from '@/components/icons/AppLogoSquare.vue';
-import Backdrop from '@/layout/Backdrop.vue';
-import ProviderLogo from '@/components/icons/ProviderLogo.vue';
+import { useRoute } from 'vue-router';
+
 import { isInitialized } from '@/store/user.ts';
+
+import Backdrop from '@/layout/Backdrop.vue';
+
+import AppLogoSquare from '@/components/icons/AppLogoSquare.vue';
+import ProviderLogo from '@/components/icons/ProviderLogo.vue';
+
+const route = useRoute();
 </script>
 
 <template>
@@ -22,7 +28,7 @@ import { isInitialized } from '@/store/user.ts';
 						/>
 					</svg>
 
-					<ProviderLogo v-if="isInitialized" class-name="h-16" />
+					<ProviderLogo v-if="isInitialized" :provider="route.params.provider as string" class-name="h-16" />
 				</div>
 				<div class="text-center flex flex-col gap-4 justify-center items-center flex-1 w-full">
 					<slot />

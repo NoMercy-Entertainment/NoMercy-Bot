@@ -11,4 +11,7 @@ export interface Provider {
 	tokenExpiry: Date | null;
 	created_at: Date;
 	updated_at: Date;
+	availableScopes: {
+		[key: string]: string;
+	};
 }
