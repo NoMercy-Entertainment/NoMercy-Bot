@@ -17,16 +17,28 @@ public class DiscordEventSubService : IEventSubService
     private readonly DiscordApiService _discordApiService;
     
     public string ProviderName => "discord";
-    
-    private readonly Dictionary<string, string> _availableEventTypes = new()
+
+    internal static readonly Dictionary<string, string> AvailableEventTypes = new()
     {
-        { "guild.create", "When the bot is added to a new guild" },
-        { "guild.delete", "When the bot is removed from a guild" },
-        { "guild.member_add", "When a new member joins a guild" },
-        { "guild.member_remove", "When a member leaves a guild" },
-        { "message.create", "When a message is created in a channel" },
+        { "guild.create", "When the bot joins a new Discord server" },
+        { "guild.delete", "When the bot leaves or is removed from a Discord server" },
+        { "guild.member_add", "When a new member joins a Discord server" },
+        { "guild.member_remove", "When a member leaves or is removed from a Discord server" },
+        { "message.create", "When a message is sent in a channel" },
         { "message.delete", "When a message is deleted" },
-        { "voice.state_update", "When a user's voice state changes" }
+        { "voice.state_update", "When a user joins, leaves, or moves between voice channels" },
+        { "interaction", "When a user interacts with a bot command or component" },
+        { "ready", "When the bot has successfully connected to Discord" },
+        { "channel.create", "When a new channel is created" },
+        { "channel.delete", "When a channel is deleted" },
+        { "channel.pins_update", "When a message is pinned or unpinned in a channel" },
+        { "guild.ban_add", "When a user is banned from a server" },
+        { "guild.ban_remove", "When a user is unbanned from a server" },
+        { "guild.emojis_update", "When a server's emoji list is updated" },
+        { "guild.integrations_update", "When a guild integration is updated" },
+        { "guild.role_create", "When a role is created in a server" },
+        { "guild.role_delete", "When a role is deleted from a server" },
+        { "guild.role_update", "When a role's settings are updated" }
     };
     
     public DiscordEventSubService(
@@ -150,7 +162,7 @@ public class DiscordEventSubService : IEventSubService
     public async Task<EventSubscription> CreateSubscriptionAsync(string eventType, bool enabled = true)
     {
         // Check if event type is valid
-        if (!_availableEventTypes.ContainsKey(eventType))
+        if (!AvailableEventTypes.ContainsKey(eventType))
             throw new ArgumentException($"Invalid event type: {eventType}");
             
         // Check if subscription already exists
@@ -242,6 +254,6 @@ public class DiscordEventSubService : IEventSubService
     
     public IEnumerable<string> GetAvailableEventTypes()
     {
-        return _availableEventTypes.Keys;
+        return AvailableEventTypes.Keys;
     }
 }

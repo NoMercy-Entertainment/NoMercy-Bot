@@ -23,6 +23,18 @@ public class TwitchEventSubService : IEventSubService
     public event EventSubscriptionChangedHandler? OnEventSubscriptionChanged;
 
     public string ProviderName => "twitch";
+    
+    public TwitchEventSubService(
+        ILogger<TwitchEventSubService> logger,
+        AppDbContext dbContext,
+        TwitchApiService twitchApiService,
+        EventSubWebsocketClient eventSubWebsocketClient)
+    {
+        _logger = logger;
+        _dbContext = dbContext;
+        _twitchApiService = twitchApiService;
+        _eventSubWebsocketClient = eventSubWebsocketClient;
+    }
 
     internal static readonly Dictionary<string, (string Description, string Version, string[] Condition)>
         AvailableEventTypes = new()
@@ -321,18 +333,6 @@ public class TwitchEventSubService : IEventSubService
             { "user.update", ("A user has updated their account", "1", ["user_id"]) },
             { "user.whisper.message", ("A user receives a whisper", "1", ["user_id"]) }
         };
-
-    public TwitchEventSubService(
-        ILogger<TwitchEventSubService> logger,
-        AppDbContext dbContext,
-        TwitchApiService twitchApiService,
-        EventSubWebsocketClient eventSubWebsocketClient)
-    {
-        _logger = logger;
-        _dbContext = dbContext;
-        _twitchApiService = twitchApiService;
-        _eventSubWebsocketClient = eventSubWebsocketClient;
-    }
 
     // These methods are no longer used for websockets but kept for IEventSubService implementation
     public bool VerifySignature(HttpRequest request, string payload)

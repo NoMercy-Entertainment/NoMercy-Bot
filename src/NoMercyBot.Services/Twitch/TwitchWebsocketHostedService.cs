@@ -410,43 +410,6 @@ public class TwitchWebsocketHostedService : IHostedService
             ChatMessage chatMessage = new(args.Notification);
 
             await _dbContext.ChatMessages.Upsert(chatMessage)
-                .On(u => new { u.Id })
-                .WhenMatched((old, incoming) => new()
-                {
-                    BadgeInfo = incoming.BadgeInfo,
-                    Color = incoming.Color,
-                    Badges = incoming.Badges,
-                    Bits = incoming.Bits,
-                    BitsInDollars = incoming.BitsInDollars,
-                    // CheerBadge = incoming.CheerBadge,
-                    Fragments = incoming.Fragments,
-                    CustomRewardId = incoming.CustomRewardId,
-                    IsBroadcaster = incoming.IsBroadcaster,
-                    IsFirstMessage = incoming.IsFirstMessage,
-                    IsHighlighted = incoming.IsHighlighted,
-                    IsMe = incoming.IsMe,
-                    IsModerator = incoming.IsModerator,
-                    IsSkippingSubMode = incoming.IsSkippingSubMode,
-                    IsSubscriber = incoming.IsSubscriber,
-                    IsVip = incoming.IsVip,
-                    IsStaff = incoming.IsStaff,
-                    IsPartner = incoming.IsPartner,
-                    Message = incoming.Message,
-                    Noisy = incoming.Noisy,
-                    SubscribedMonthCount = incoming.SubscribedMonthCount,
-                    TmiSentTs = incoming.TmiSentTs,
-                    BotUsername = incoming.BotUsername,
-                    ColorHex = incoming.ColorHex,
-                    DisplayName = incoming.DisplayName,
-                    IsTurbo = incoming.IsTurbo,
-                    Username = incoming.Username,
-                    UserType = incoming.UserType,
-                    UserId = incoming.UserId,
-                    IsReturningChatter = incoming.IsReturningChatter,
-                    RewardId = incoming.RewardId,
-                    ChannelId = incoming.ChannelId,
-                    ReplyToMessageId = incoming.ReplyToMessageId,
-                })
                 .RunAsync();
         }
         catch (Exception e)
