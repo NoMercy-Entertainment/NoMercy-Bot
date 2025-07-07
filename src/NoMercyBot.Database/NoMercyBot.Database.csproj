@@ -7,20 +7,22 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="FlexLabs.EntityFrameworkCore.Upsert" Version="8.1.2" />
-        <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="9.0.4" />
-        <PackageReference Include="Microsoft.AspNetCore.DataProtection.Extensions" Version="9.0.2" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.3" />
+        <PackageReference Include="FlexLabs.EntityFrameworkCore.Upsert" Version="9.0.0" />
+        <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="9.0.6" />
+        <PackageReference Include="Microsoft.AspNetCore.DataProtection.Extensions" Version="9.0.6" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.6" />
         <PackageReference Include="Pastel" Version="6.0.1"/>
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.3">
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.6">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.3" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.6" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-        <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
-        <PackageReference Include="TwitchLib.Client.Models" Version="3.3.1" />
+        <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.6" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.6" />
+        <PackageReference Include="TwitchLib.Client.Models" Version="4.0.0-preview-fd131763416cb9f1a31705ca609566d7e7e7fac8" />
+        <PackageReference Include="TwitchLib.EventSub.Core" Version="3.0.0-preview.61.2ebdc93" />
+        <PackageReference Include="TwitchLib.EventSub.Websockets" Version="0.7.0-preview.71.3864955" />
     </ItemGroup>
 
     <ItemGroup>

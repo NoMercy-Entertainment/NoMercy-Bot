@@ -27,6 +27,7 @@ public class Channel
     [ForeignKey(nameof(Id))]
     [JsonProperty("broadcaster")] public virtual User User { get; set; } = null!;
     
+    [ForeignKey(nameof(Id))]
     [JsonProperty("info")] public virtual ChannelInfo Info { get; set; } = null!;
     
     public virtual ICollection<ChatPresence> UsersInChat { get; set; } = [];

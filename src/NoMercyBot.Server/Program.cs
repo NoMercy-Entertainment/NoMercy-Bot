@@ -81,7 +81,6 @@ public static class Program
             })
             .ConfigureLogging(logging =>
             {
-                // Clear default providers to prevent duplicate logs
                 logging.ClearProviders();
             })
             .UseUrls(urls.ToArray())

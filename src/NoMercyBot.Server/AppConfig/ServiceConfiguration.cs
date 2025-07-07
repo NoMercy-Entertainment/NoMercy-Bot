@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json.Serialization;
 using I18N.DotNet;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
@@ -12,7 +13,6 @@ using NoMercyBot.Globals.Information;
 using NoMercyBot.Globals.NewtonSoftConverters;
 using NoMercyBot.Server.Swagger;
 using NoMercyBot.Services;
-using NoMercyBot.Services.Seeds;
 using NoMercyBot.Services.Twitch;
 using RestSharp;
 using Swashbuckle.AspNetCore.SwaggerGen;
@@ -32,6 +32,10 @@ public static class ServiceConfiguration
 
     private static void ConfigureKestrel(IServiceCollection services)
     {
+        services.AddDataProtection()
+            .SetApplicationName("NoMercyBot")
+            .PersistKeysToFileSystem(new(AppFiles.ConfigPath));
+
     }
 
     private static void ConfigureCoreServices(IServiceCollection services)
@@ -49,7 +53,7 @@ public static class ServiceConfiguration
         services.AddScoped<ILocalizer, Localizer>();
         
         services.AddBotServices();
-        services.AddEventSubServices(); // Register EventSub services
+        services.AddEventSubServices();
         
         services.AddSingleton<ServiceResolver>();
     }
@@ -59,9 +63,19 @@ public static class ServiceConfiguration
         services.AddLogging(logging =>
         {
             logging.ClearProviders();
-            logging.AddFilter("Microsoft", LogLevel.None);
-            logging.AddFilter("System", LogLevel.None);
-            logging.AddFilter("Network", LogLevel.None);
+            logging.AddFilter("Microsoft", LogLevel.Warning);
+            logging.AddFilter("System", LogLevel.Warning);
+            logging.AddFilter("Network", LogLevel.Warning);
+            logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Trace);
+                
+            logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
+            logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
+            logging.AddFilter("Microsoft.AspNetCore.Routing", LogLevel.Warning);
+            logging.AddFilter("Microsoft.AspNetCore.Mvc", LogLevel.Warning);
+                
+            logging.AddFilter("Microsoft.AspNetCore.HostFiltering.HostFilteringMiddleware", LogLevel.Warning);
+            logging.AddFilter("Microsoft.AspNetCore.Cors.Infrastructure.CorsMiddleware", LogLevel.Warning);
+            logging.AddFilter("Microsoft.AspNetCore.Middleware", LogLevel.Warning);
         });
     }
 

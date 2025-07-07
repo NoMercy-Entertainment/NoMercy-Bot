@@ -11,5 +11,5 @@ public class ProviderConfigRequest
     public string ClientSecret { get; set; } = string.Empty;
     
     [Required]
-    public string[] Scopes { get; set; } = Array.Empty<string>();
+    public string[] Scopes { get; set; } = [];
 }

@@ -18,10 +18,12 @@ public class ObsConfig: IConfig
     public string AuthUrl { get; } = $"http://localhost:4455/oauth2/token";
     
     public string RedirectUri => $"http://localhost:{Config.InternalClientPort}/oauth/obs/callback";
-    public string EventSubCallbackUri => $"http://localhost:{Config.InternalServerPort}/eventsub/obs";
     
-    public static Dictionary<string, string> AvailableScopes { get; } =
-    [
-        
-    ];
+    public static readonly Dictionary<string, string> AvailableScopes = new()
+    {
+        { "obs:read", "Read OBS data" },
+        { "obs:write", "Write OBS data" },
+        { "obs:streaming", "Control streaming in OBS" },
+        { "obs:recording", "Control recording in OBS" }
+    };
 }

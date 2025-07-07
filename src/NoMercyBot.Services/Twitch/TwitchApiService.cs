@@ -7,7 +7,9 @@ using Microsoft.Extensions.Logging;
 using NodaTime.TimeZones;
 using NoMercyBot.Database;
 using NoMercyBot.Database.Models;
+using NoMercyBot.Globals.Information;
 using NoMercyBot.Globals.NewtonSoftConverters;
+using NoMercyBot.Services.Other;
 using NoMercyBot.Services.Twitch.Dto;
 using RestSharp;
 using TwitchLib.Api.Helix.Models.Chat.GetUserChatColor;
@@ -18,15 +20,17 @@ public class TwitchApiService
 {
     private readonly IConfiguration _conf;
     private readonly ILogger<TwitchApiService> _logger;
+    private readonly PronounService _pronounService;
 
     public Service Service => TwitchConfig.Service();
     
     public string ClientId => Service.ClientId ?? throw new InvalidOperationException("Twitch ClientId is not set.");
     
-    public TwitchApiService(IConfiguration conf, ILogger<TwitchApiService> logger)
+    public TwitchApiService(IConfiguration conf, ILogger<TwitchApiService> logger, PronounService pronounService)
     {
         _conf = conf;
         _logger = logger;
+        _pronounService = pronounService;
     }
         
     public async Task<List<UserInfo>?> GetUsers(string accessToken, string[]? userIds = null, string? userId = null)
@@ -52,7 +56,7 @@ public class TwitchApiService
             throw new(response.Content ?? "Failed to fetch user information.");
 
         UserInfoResponse? userInfoResponse = response.Content?.FromJson<UserInfoResponse>();
-        if (userInfoResponse is null) throw new("Failed to parse user information.");
+        if (userInfoResponse?.Data is null) throw new("Failed to parse user information.");
         
         return userInfoResponse.Data;
     }
@@ -68,6 +72,9 @@ public class TwitchApiService
             .Where(x => x.CountryCode == countryCode)
             .Select(x => x.ZoneId)
             .ToList();
+        
+        GetUserChatColorResponse? colors = await GetUserChatColors(tokenResponse, [userInfo.Id]);
+        Pronoun? pronoun = await _pronounService.GetUserPronoun(userInfo.Login);
 
         User user = new()
         {
@@ -79,9 +86,8 @@ public class TwitchApiService
             OfflineImageUrl = userInfo.OfflineImageUrl,
             BroadcasterType = userInfo.BroadcasterType,
             Timezone = zoneIds?.FirstOrDefault(),
+            Pronoun = pronoun,
         };
-        
-        GetUserChatColorResponse? colors = await GetUserChatColors(tokenResponse, [userInfo.Id]);
         
         string? color = colors?.Data.First().Color;
         
@@ -102,6 +108,25 @@ public class TwitchApiService
                 BroadcasterType = newUser.BroadcasterType,
             })
             .RunAsync();
+        
+        ChannelInfo? channelInfo = await FetchChannelInfo(tokenResponse.AccessToken, userInfo.Id);
+        if (channelInfo is not null)
+        {
+            await dbContext.ChannelInfo.Upsert(channelInfo)
+                .On(c => c.Id)
+                .WhenMatched((oldChannel, newChannel) => new()
+                {
+                    Language = newChannel.Language,
+                    GameId = newChannel.GameId,
+                    GameName = newChannel.GameName,
+                    Title = newChannel.Title,
+                    Delay = newChannel.Delay,
+                    TagsJson = newChannel.TagsJson,
+                    LabelsJson = newChannel.LabelsJson,
+                    IsBrandedContent = newChannel.IsBrandedContent
+                })
+                .RunAsync();
+        }
         
         return user;
     }
@@ -153,14 +178,165 @@ public class TwitchApiService
         
         return channelResponse;
     }
-
-    public async Task<string?> CreateEventSubSubscription(string channelChatMessage, string p1, Dictionary<string, string> messageCondition, string callbackUrl, string? appAccessToken)
+    
+    private async Task<ChannelInfo?> FetchChannelInfo(string accessToken, string broadcasterId)
     {
-        throw new NotImplementedException();
+        RestClient client = new(TwitchConfig.ApiUrl);
+        
+        RestRequest request = new($"channels?broadcaster_id={broadcasterId}");
+            request.AddHeader("Authorization", $"Bearer {accessToken}");
+            request.AddHeader("Client-Id", TwitchConfig.Service().ClientId!);
+            
+        RestResponse response = await client.ExecuteAsync(request);
+        if (!response.IsSuccessful || response.Content is null)
+            throw new(response.Content ?? "Failed to fetch channel information.");
+        
+        ChannelInfoResponse? channelInfoResponse = response.Content.FromJson<ChannelInfoResponse>();
+        if (channelInfoResponse == null || channelInfoResponse.Data.Count == 0) 
+            throw new("Invalid response from Twitch or no channel information found.");
+
+        ChannelInfoDto? dto = channelInfoResponse?.Data.FirstOrDefault();
+        if (dto == null) return null;
+
+        return new()
+        {
+            Id = dto.BroadcasterId,
+            Language = dto.Language,
+            GameId = dto.GameId,
+            GameName = dto.GameName,
+            Title = dto.Title,
+            Delay = dto.Delay,
+            Tags = dto.Tags,
+            ContentLabels = dto.ContentLabels,
+            IsBrandedContent = dto.IsBrandedContent
+        };
+    }
+
+    public async Task<string?> CreateEventSubSubscription(string eventType, string version, Dictionary<string, string> conditions, string callbackUrl, string? accessToken)
+    {
+        if (string.IsNullOrEmpty(accessToken)) throw new("No access token provided.");
+        
+        try
+        {
+            RestClient client = new(TwitchConfig.ApiUrl);
+            RestRequest request = new("eventsub/subscriptions", Method.Post);
+            request.AddHeader("Authorization", $"Bearer {accessToken}");
+            request.AddHeader("Client-Id", TwitchConfig.Service().ClientId!);
+            request.AddHeader("Content-Type", "application/json");
+            
+            var subscription = new
+            {
+                type = eventType,
+                version = version,
+                condition = conditions,
+                transport = new
+                {
+                    method = "webhook",
+                    callback = callbackUrl,
+                    secret = EventSubSecretStore.Secret
+                }
+            };
+            
+            _logger.LogInformation("Creating EventSub subscription: Type={EventType}, Version={Version}, Callback={Callback}, Conditions={@Conditions}", 
+                eventType, version, callbackUrl, conditions);
+            
+            request.AddJsonBody(subscription);
+            
+            RestResponse response = await client.ExecuteAsync(request);
+            
+            if (!response.IsSuccessful || response.Content is null)
+            {
+                _logger.LogError("Failed to create EventSub subscription: Status={StatusCode}, Content={Content}", 
+                    (int)response.StatusCode, response.Content);
+                return null;
+            }
+            
+            _logger.LogInformation("EventSub subscription response: {Content}", response.Content);
+            
+            // Parse the response to get the subscription ID
+            dynamic? responseObject = System.Text.Json.JsonSerializer.Deserialize<dynamic>(response.Content);
+            string? subscriptionId = responseObject?.data?[0]?.id?.ToString();
+            
+            if (subscriptionId != null)
+            {
+                _logger.LogInformation("Successfully created EventSub subscription: ID={SubscriptionId}", subscriptionId);
+            }
+            else
+            {
+                _logger.LogWarning("Created EventSub subscription but couldn't extract ID from response");
+            }
+            
+            return subscriptionId;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating EventSub subscription");
+            return null;
+        }
+    }
+
+    public async Task DeleteEventSubSubscription(string subscriptionId, string? accessToken)
+    {
+        if (string.IsNullOrEmpty(accessToken)) throw new("No access token provided.");
+        
+        try
+        {
+            RestClient client = new(TwitchConfig.ApiUrl);
+            RestRequest request = new($"eventsub/subscriptions?id={subscriptionId}", Method.Delete);
+            request.AddHeader("Authorization", $"Bearer {accessToken}");
+            request.AddHeader("Client-Id", TwitchConfig.Service().ClientId!);
+            
+            RestResponse response = await client.ExecuteAsync(request);
+            
+            if (!response.IsSuccessful)
+            {
+                _logger.LogError($"Failed to delete EventSub subscription: {response.Content}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error deleting EventSub subscription {subscriptionId}");
+        }
     }
 
     public async Task DeleteAllEventSubSubscriptions(string? accessToken)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(accessToken)) throw new("No access token provided.");
+        
+        try
+        {
+            RestClient client = new(TwitchConfig.ApiUrl);
+            RestRequest request = new("eventsub/subscriptions", Method.Get);
+            request.AddHeader("Authorization", $"Bearer {accessToken}");
+            request.AddHeader("Client-Id", TwitchConfig.Service().ClientId!);
+            
+            RestResponse response = await client.ExecuteAsync(request);
+            
+            if (!response.IsSuccessful || response.Content is null)
+            {
+                _logger.LogError($"Failed to fetch EventSub subscriptions: {response.Content}");
+                return;
+            }
+            
+            // Parse the response to get all subscription IDs
+            dynamic? responseObject = System.Text.Json.JsonSerializer.Deserialize<dynamic>(response.Content);
+            dynamic? subscriptions = responseObject?.data?.EnumerateArray();
+            
+            if (subscriptions != null)
+            {
+                foreach (dynamic? subscription in subscriptions)
+                {
+                    string? id = subscription.GetProperty("id").ToString();
+                    if (!string.IsNullOrEmpty(id))
+                    {
+                        await DeleteEventSubSubscription(id, accessToken);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting all EventSub subscriptions");
+        }
     }
 }

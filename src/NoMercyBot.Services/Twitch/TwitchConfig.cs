@@ -18,7 +18,6 @@ public class TwitchConfig : IConfig
     public static string AuthUrl { get; } = "https://id.twitch.tv/oauth2";
 
     public static string RedirectUri => $"http://localhost:{Config.InternalClientPort}/oauth/twitch/callback";
-    public static string EventSubCallbackUri => $"http://localhost:{Config.InternalServerPort}/eventsub/twitch";
 
     public static readonly Dictionary<string, string> AvailableScopes = new()
     {

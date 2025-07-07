@@ -110,7 +110,7 @@ public class EventSubscriptionController : BaseController
     }
 
     [HttpPut("{provider}/{id}")]
-    public async Task<IActionResult> UpdateSubscription(string provider, string id, [FromBody] UpdateSubscriptionRequest request)
+    public async Task<IActionResult> UpdateSubscription(string provider, string id, [FromBody] EventSubscriptionUpdateDto request)
     {
         IActionResult serviceResult = GetEventSubService(provider, out IEventSubService? service);
         if (serviceResult is not OkResult) return serviceResult;
@@ -152,6 +152,41 @@ public class EventSubscriptionController : BaseController
         }
     }
 
+    [HttpPut("{provider}")]
+    public async Task<IActionResult> UpdateAllSubscriptions(string provider, [FromBody] EventSubscriptionUpdateDto[] subscriptionUpdates)
+    {
+        IActionResult serviceResult = GetEventSubService(provider, out IEventSubService? service);
+        if (serviceResult is not OkResult) return serviceResult;
+
+        try
+        {
+            // Get existing subscriptions
+            List<EventSubscription> existingSubscriptions = await service!.GetAllSubscriptionsAsync();
+            
+            // Map the partial updates to full EventSubscription objects
+            List<EventSubscription> subscriptionsToUpdate = [];
+            foreach (EventSubscriptionUpdateDto update in subscriptionUpdates)
+            {
+                // Find the existing subscription by ID
+                EventSubscription? existing = existingSubscriptions.FirstOrDefault(s => s.Id == update.Id);
+                if (existing == null) continue;
+                
+                // Apply the update to the existing subscription
+                // The issue was here - we only applied updates when enabled was true
+                existing.Enabled = update.Enabled; // Apply the enabled status unconditionally
+                subscriptionsToUpdate.Add(existing);
+            }
+
+            await service.UpdateAllSubscriptionsAsync(subscriptionsToUpdate.ToArray());
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return InternalServerErrorResponse($"Failed to update subscriptions: {ex.Message}");
+        }
+    }
+    
+    
     [HttpDelete("{provider}")]
     public async Task<IActionResult> DeleteAllSubscriptions(string provider)
     {
@@ -179,7 +214,8 @@ public class CreateSubscriptionRequest
     public bool Enabled { get; set; } = true;
 }
 
-public class UpdateSubscriptionRequest
+public class EventSubscriptionUpdateDto
 {
+    public string Id { get; set; } = string.Empty;
     public bool Enabled { get; set; }
 }

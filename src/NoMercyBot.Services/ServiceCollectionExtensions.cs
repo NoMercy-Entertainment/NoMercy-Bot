@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using NoMercyBot.Services.Discord;
 using NoMercyBot.Services.Obs;
 using NoMercyBot.Services.Other;

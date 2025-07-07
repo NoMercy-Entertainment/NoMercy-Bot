@@ -22,4 +22,5 @@ public interface IEventSubService
     
     // Event types
     IEnumerable<string> GetAvailableEventTypes();
+    Task UpdateAllSubscriptionsAsync(EventSubscription[] subscriptions);
 }

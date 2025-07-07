@@ -13,10 +13,12 @@ public class EventSubscription
     
     [JsonProperty("provider")] public string Provider { get; set; } = null!;
     [JsonProperty("event_type")] public string EventType { get; set; } = null!;
+    [JsonProperty("description")] public string Description { get; set; } = null!;
     [JsonProperty("enabled")] public bool Enabled { get; set; } = true;
+    [JsonProperty("version")] public string? Version { get; set; }
     
     [JsonProperty("subscription_id")] public string? SubscriptionId { get; set; }
-    [JsonProperty("callback_url")] public string? CallbackUrl { get; set; }
+    [JsonProperty("session_id")] public string? SessionId { get; set; }
     [JsonProperty("created_at")] public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     [JsonProperty("updated_at")] public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     [JsonProperty("expires_at")] public DateTime? ExpiresAt { get; set; }
@@ -34,14 +36,28 @@ public class EventSubscription
         set => MetadataJson = JsonConvert.SerializeObject(value);
     }
     
+    [JsonProperty("condition_json")]
+    public string? ConditionJson { get; set; }
+
+    [NotMapped]
+    [JsonProperty("condition")]
+    public string[] Condition
+    {
+        get => !string.IsNullOrEmpty(ConditionJson) 
+            ? JsonConvert.DeserializeObject<string[]>(ConditionJson) ?? []
+            : [];
+        set => ConditionJson = JsonConvert.SerializeObject(value);
+    }
+    
     // Create a new subscription entry
     public EventSubscription() {}
 
-    public EventSubscription(string provider, string eventType, bool enabled = true)
+    public EventSubscription(string provider, string eventType, bool enabled = true, string? version = null)
     {
         Id = Ulid.NewUlid().ToString();
         Provider = provider;
         EventType = eventType;
         Enabled = enabled;
+        Version = version;
     }
 }

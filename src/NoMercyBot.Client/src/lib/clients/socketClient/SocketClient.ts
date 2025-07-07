@@ -5,8 +5,8 @@ import {
     HubConnectionState,
     LogLevel,
 } from '@microsoft/signalr';
-import { onConnect, connect, onDisconnect } from '@/lib/clients/socketClient/events;
-import { deviceInfo } from '@/lib/clients/socketClient/device;
+import {onConnect, connect, onDisconnect} from '@/lib/clients/socketClient/events;
+import {deviceInfo} from '@/lib/clients/socketClient/device;
 
 export class SocketClient {
     public connection: HubConnection | null = null;

@@ -11,7 +11,6 @@ public interface IConfig
     static string ApiUrl { get; }
     static string AuthUrl { get; }
     static string RedirectUri { get; }
-    static string EventSubCallbackUri { get; }
-    string[] AvailableScopes => [];
-    static Dictionary<string, string> Scopes => [];
+    static Dictionary<string, string> AvailableScopes { get; }
+    static Dictionary<string, string> Scopes { get; }
 }

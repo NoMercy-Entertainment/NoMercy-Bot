@@ -18,7 +18,6 @@ public class SpotifyConfig: IConfig
     public static string AuthUrl { get; } = "https://accounts.spotify.com/api";
     
     public static string RedirectUri => $"http://localhost:{Config.InternalClientPort}/oauth/spotify/callback";
-    public string EventSubCallbackUri => $"http://localhost:{Config.InternalServerPort}/eventsub/spotify";
     
     public static readonly Dictionary<string, string> AvailableScopes = new()
     {

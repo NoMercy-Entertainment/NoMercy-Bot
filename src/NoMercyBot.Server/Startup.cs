@@ -1,8 +1,6 @@
 using Asp.Versioning.ApiExplorer;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using NoMercyBot.Database;
-using NoMercyBot.Globals.Information;
 using NoMercyBot.Server.AppConfig;
 using NoMercyBot.Services;
 using NoMercyBot.Services.Seeds;
@@ -24,10 +22,6 @@ public class Startup
     
     public void ConfigureServices(IServiceCollection services)
     {
-        services.AddDataProtection()
-            .SetApplicationName("NoMercyBot")
-            .PersistKeysToFileSystem(new(AppFiles.ConfigPath));
-    
         ServiceConfiguration.ConfigureServices(services);
         
         services.AddSingleton(_options);

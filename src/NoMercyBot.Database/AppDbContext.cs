@@ -5,6 +5,7 @@ using NoMercyBot.Database.Models;
 using NoMercyBot.Globals.Information;
 using TwitchLib.Client.Enums;
 using TwitchLib.Client.Models;
+using TwitchLib.EventSub.Core.Models.Chat;
 using ChatMessage = NoMercyBot.Database.Models.ChatMessage;
 
 namespace NoMercyBot.Database;
@@ -96,14 +97,14 @@ public class AppDbContext : DbContext
             .WithMany(m => m.Replies)
             .HasForeignKey(m => m.ReplyToMessageId)
             .OnDelete(DeleteBehavior.Restrict);
-
+        
         modelBuilder.Entity<ChatMessage>()
             .Property(e => e.BadgeInfo)
             .HasConversion(
                 v => JsonConvert.SerializeObject(v),
                 v => JsonConvert.DeserializeObject<List<KeyValuePair<string, string>>>(v) ?? new List<KeyValuePair<string, string>>());
-
-
+        
+        
         modelBuilder.Entity<ChatMessage>()
             .Property(e => e.Color)
             .HasConversion(
@@ -117,22 +118,22 @@ public class AppDbContext : DbContext
                 v => JsonConvert.DeserializeObject<List<KeyValuePair<string, string>>>(v) ?? new List<KeyValuePair<string, string>>());
 
         modelBuilder.Entity<ChatMessage>()
-            .Property(e => e.CheerBadge)
+            .Property(e => e.Fragments)
             .HasConversion(
                 v => JsonConvert.SerializeObject(v),
-                v => JsonConvert.DeserializeObject<CheerBadge>(v));
+                v => JsonConvert.DeserializeObject<ChatMessageFragment[]>(v) ?? Array.Empty<ChatMessageFragment>());
         
-        modelBuilder.Entity<ChatMessage>()
-            .Property(e => e.EmoteSet)
-            .HasConversion(
-                v => JsonConvert.SerializeObject(v, new JsonSerializerSettings 
-                { 
-                    TypeNameHandling = TypeNameHandling.All 
-                }),
-                v => JsonConvert.DeserializeObject<MyEmoteSet>(v, new JsonSerializerSettings 
-                { 
-                    TypeNameHandling = TypeNameHandling.All 
-                }) ?? new MyEmoteSet());
+        // modelBuilder.Entity<ChatMessage>()
+        //     .Property(e => e.EmoteSet)
+        //     .HasConversion(
+        //         v => JsonConvert.SerializeObject(v, new JsonSerializerSettings 
+        //         { 
+        //             TypeNameHandling = TypeNameHandling.All 
+        //         }),
+        //         v => JsonConvert.DeserializeObject<MyEmoteSet>(v, new JsonSerializerSettings 
+        //         { 
+        //             TypeNameHandling = TypeNameHandling.All 
+        //         }) ?? new MyEmoteSet());
         
         modelBuilder.Entity<ChatMessage>()
             .Property(e => e.UserType)
@@ -166,6 +167,7 @@ public class AppDbContext : DbContext
 
     public DbSet<User> Users { get; set; }
     public DbSet<Channel> Channels { get; set; }
+    public DbSet<ChannelInfo> ChannelInfo { get; set; }
     public DbSet<ChatMessage> ChatMessages { get; set; }
     public DbSet<ChatPresence> ChatPresences { get; set; }
     public DbSet<Configuration> Configurations { get; set; }

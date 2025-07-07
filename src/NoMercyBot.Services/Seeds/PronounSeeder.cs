@@ -1,9 +1,6 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using NoMercyBot.Database;
-using NoMercyBot.Database.Models;
 using NoMercyBot.Services.Other;
 
 namespace NoMercyBot.Services.Seeds;

@@ -104,7 +104,8 @@
       "saveAndLogin": "Save & Login",
       "save": "Save",
       "noData": "No provider data found.",
-      "advancedComingSoon": "Advanced options coming soon..."
+      "advancedComingSoon": "Advanced options coming soon...",
+      "tabEvents": "Events"
     },
     "events": {
       "title": "{{provider}} Events",
@@ -164,7 +165,9 @@
     "cancel": "Cancel",
     "back": "Back",
     "disabled": "Disabled",
-    "enabled": "Enabled"
+    "enabled": "Enabled",
+    "disableAll": "Disable all",
+    "enableAll": "Enable all"
   },
   "notFound": {
     "title": "Page not found",
@@ -177,5 +180,26 @@
     "send": "Chat",
     "settings": "Settings",
     "channelPoints": "Power-ups and rewards"
+  },
+  "home": {
+    "welcome": "Welcome to NoMercy Bot",
+    "description": "Your all-in-one solution for managing your stream and community.",
+    "getStarted": "Get started",
+    "features": {
+      "title": "Features",
+      "subtitle": "Explore the features of NoMercy Bot",
+      "feature1": {
+        "title": "Stream Management",
+        "description": "Easily manage your stream settings and configurations."
+      },
+      "feature2": {
+        "title": "Community Engagement",
+        "description": "Engage with your community through chat and notifications."
+      },
+      "feature3": {
+        "title": "Advanced Integrations",
+        "description": "Connect with various platforms like Twitch, Discord, and more."
+      }
+    }
   }
 }

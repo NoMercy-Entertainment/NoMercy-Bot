@@ -158,10 +158,7 @@ public class ObsEventSubService : IEventSubService
         }
         
         // Create new subscription
-        EventSubscription subscription = new(ProviderName, eventType, enabled)
-        {
-            CallbackUrl = null // OBS doesn't use callbacks like web services
-        };
+        EventSubscription subscription = new(ProviderName, eventType, enabled);
         
         // If subscription is enabled and OBS is connected, register the event handler
         if (enabled && ObsConfig.Service().Enabled)
@@ -173,6 +170,22 @@ public class ObsEventSubService : IEventSubService
         await _dbContext.SaveChangesAsync();
         
         return subscription;
+    }
+    
+    public Task UpdateAllSubscriptionsAsync(EventSubscription[] subscriptions)
+    {
+        if (subscriptions == null || subscriptions.Length == 0)
+            throw new ArgumentException("No subscriptions provided to update");
+            
+        foreach (EventSubscription sub in subscriptions)
+        {
+            if (sub.Provider != ProviderName)
+                throw new ArgumentException($"Invalid provider for subscription: {sub.Id}");
+                
+            _dbContext.EventSubscriptions.Update(sub);
+        }
+        
+        return _dbContext.SaveChangesAsync();
     }
     
     private Task RegisterObsEventHandler(string eventType)

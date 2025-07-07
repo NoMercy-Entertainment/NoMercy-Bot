@@ -18,7 +18,6 @@ public class DiscordConfig: IConfig
     public static string AuthUrl { get; } = $"https://discord.com/api/v9/oauth2/token";
     
     public static string RedirectUri => $"http://localhost:{Config.InternalClientPort}/oauth/discord/callback";
-    public static string EventSubCallbackUri => $"http://localhost:{Config.InternalServerPort}/eventsub/discord";
     
     public static Dictionary<string, string> AvailableScopes = new()
     {

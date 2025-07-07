@@ -7,18 +7,19 @@
     </PropertyGroup>
     
     <ItemGroup>
-        <PackageReference Include="AspNet.Security.OAuth.Twitch" Version="9.0.0"/>
+        <PackageReference Include="AspNet.Security.OAuth.Twitch" Version="9.4.0"/>
         <PackageReference Include="DotNetBungieAPI.AspNet.Security.OAuth.Providers" Version="1.0.2"/>
-        <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="9.0.0"/>
-        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.0"/>
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0-preview.2.25163.2" />
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="9.0.6"/>
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.6"/>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.6" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.3"/>
-        <PackageReference Include="NodaTime" Version="3.2.1" />
+        <PackageReference Include="NodaTime" Version="3.2.2" />
         <PackageReference Include="NodaTime.Serialization.JsonNet" Version="3.2.0" />
-        <PackageReference Include="RestSharp" Version="112.1.0"/>
+        <PackageReference Include="RestSharp" Version="112.1.1-alpha.0.4"/>
         <PackageReference Include="TwitchLib" Version="3.5.3" />
+        <PackageReference Include="TwitchLib.EventSub.Core" Version="3.0.0-preview.61.2ebdc93" />
         <PackageReference Include="TwitchLib.EventSub.Webhooks" Version="2.3.0" />
-        <PackageReference Include="TwitchLib.EventSub.Websockets" Version="0.7.0-preview.70.cd91499" />
+        <PackageReference Include="TwitchLib.EventSub.Websockets" Version="0.7.0-preview.71.3864955" />
     </ItemGroup>
 
     <ItemGroup>

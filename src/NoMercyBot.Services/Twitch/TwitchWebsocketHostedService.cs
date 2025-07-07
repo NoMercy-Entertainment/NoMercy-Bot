@@ -3,12 +3,17 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NoMercyBot.Database;
 using NoMercyBot.Database.Models;
+using NoMercyBot.Globals.NewtonSoftConverters;
 using TwitchLib.Api;
+using TwitchLib.Api.Core.Enums;
+using TwitchLib.Api.Helix.Models.EventSub;
+using TwitchLib.EventSub.Webhooks.Core.EventArgs.User;
 using TwitchLib.EventSub.Websockets;
 using TwitchLib.EventSub.Websockets.Core.EventArgs;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Stream;
-using TwitchLib.EventSub.Websockets.Core.EventArgs.User;
+using UserUpdateArgs = TwitchLib.EventSub.Websockets.Core.EventArgs.User.UserUpdateArgs;
+
 
 namespace NoMercyBot.Services.Twitch;
 
@@ -20,14 +25,24 @@ public class TwitchWebsocketHostedService : IHostedService
     private CancellationTokenSource _cts = new();
     private readonly TwitchAPI _twitchApi = new();
     private readonly TwitchApiService _twitchApiService;
-    private readonly Dictionary<string, string> _channelSubscriptionIds = new();
+    private readonly TwitchEventSubService _twitchEventSubService;
+    private bool _isConnected = false;
 
-    public TwitchWebsocketHostedService(AppDbContext dbContext, ILogger<TwitchWebsocketHostedService> logger, EventSubWebsocketClient eventSubWebsocketClient, TwitchApiService twitchApiService)
+    public TwitchWebsocketHostedService(
+        AppDbContext dbContext,
+        ILogger<TwitchWebsocketHostedService> logger,
+        EventSubWebsocketClient eventSubWebsocketClient,
+        TwitchApiService twitchApiService,
+        TwitchEventSubService twitchEventSubService)
     {
         _dbContext = dbContext;
         _logger = logger;
         _eventSubWebsocketClient = eventSubWebsocketClient;
         _twitchApiService = twitchApiService;
+        _twitchEventSubService = twitchEventSubService;
+
+        // Subscribe to the event
+        twitchEventSubService.OnEventSubscriptionChanged += HandleEventSubscriptionChange;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -35,190 +50,882 @@ public class TwitchWebsocketHostedService : IHostedService
         _logger.LogInformation("TwitchWebsocketHostedService starting.");
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-        _eventSubWebsocketClient.WebsocketConnected += OnConnected;
-        _eventSubWebsocketClient.WebsocketDisconnected += OnDisconnected;
-        _eventSubWebsocketClient.WebsocketReconnected += OnReconnected;
+        // Basic connection events
+        _eventSubWebsocketClient.WebsocketConnected += OnWebsocketConnected;
+        _eventSubWebsocketClient.WebsocketDisconnected += OnWebsocketDisconnected;
+        _eventSubWebsocketClient.WebsocketReconnected += OnWebsocketReconnected;
         _eventSubWebsocketClient.ErrorOccurred += OnError;
-        _eventSubWebsocketClient.UserUpdate += OnServiceAnnouncement;
 
-        _eventSubWebsocketClient.ChannelFollow += OnChannelFollow;
+        // User events
+        _eventSubWebsocketClient.UserUpdate += OnUserUpdate;
+        // _eventSubWebsocketClient.UserAuthorizationGrant += OnUserAuthorizationGrant;
+        // _eventSubWebsocketClient.UserAuthorizationRevoke += OnUserAuthorizationRevoke;
+
+        // Channel events
         _eventSubWebsocketClient.ChannelUpdate += OnChannelUpdate;
+        _eventSubWebsocketClient.ChannelFollow += OnChannelFollow;
+        _eventSubWebsocketClient.ChannelSubscribe += OnChannelSubscribe;
+        _eventSubWebsocketClient.ChannelSubscriptionGift += OnChannelSubscriptionGift;
+        _eventSubWebsocketClient.ChannelSubscriptionMessage += OnChannelSubscriptionMessage;
+        _eventSubWebsocketClient.ChannelCheer += OnChannelCheer;
+        _eventSubWebsocketClient.ChannelRaid += OnChannelRaid;
+        _eventSubWebsocketClient.ChannelBan += OnChannelBan;
+        _eventSubWebsocketClient.ChannelUnban += OnChannelUnban;
+        _eventSubWebsocketClient.ChannelModeratorAdd += OnChannelModeratorAdd;
+        _eventSubWebsocketClient.ChannelModeratorRemove += OnChannelModeratorRemove;
+
+        // Channel chat events
+        _eventSubWebsocketClient.ChannelChatMessage += OnChannelChatMessage;
+        _eventSubWebsocketClient.ChannelChatClear += OnChannelChatClear;
+        _eventSubWebsocketClient.ChannelChatClearUserMessages += OnChannelChatClearUserMessages;
+        _eventSubWebsocketClient.ChannelChatMessageDelete += OnChannelChatMessageDelete;
+        _eventSubWebsocketClient.ChannelChatNotification += OnChannelChatNotification;
+
+        // Stream events
         _eventSubWebsocketClient.StreamOnline += OnStreamOnline;
         _eventSubWebsocketClient.StreamOffline += OnStreamOffline;
-        _eventSubWebsocketClient.ChannelChatMessage += OnChannelChatMessage;
 
+        // Channel points events
+        _eventSubWebsocketClient.ChannelPointsCustomRewardAdd += OnChannelPointsCustomRewardAdd;
+        _eventSubWebsocketClient.ChannelPointsCustomRewardUpdate += OnChannelPointsCustomRewardUpdate;
+        _eventSubWebsocketClient.ChannelPointsCustomRewardRemove += OnChannelPointsCustomRewardRemove;
+        _eventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += OnChannelPointsCustomRewardRedemptionAdd;
+        _eventSubWebsocketClient.ChannelPointsCustomRewardRedemptionUpdate +=
+            OnChannelPointsCustomRewardRedemptionUpdate;
+
+        // Poll events
+        _eventSubWebsocketClient.ChannelPollBegin += OnChannelPollBegin;
+        _eventSubWebsocketClient.ChannelPollProgress += OnChannelPollProgress;
+        _eventSubWebsocketClient.ChannelPollEnd += OnChannelPollEnd;
+
+        // Prediction events
+        _eventSubWebsocketClient.ChannelPredictionBegin += OnChannelPredictionBegin;
+        _eventSubWebsocketClient.ChannelPredictionProgress += OnChannelPredictionProgress;
+        _eventSubWebsocketClient.ChannelPredictionLock += OnChannelPredictionLock;
+        _eventSubWebsocketClient.ChannelPredictionEnd += OnChannelPredictionEnd;
+
+        // Hype Train events
+        _eventSubWebsocketClient.ChannelHypeTrainBeginV2 += OnHypeTrainBegin;
+        _eventSubWebsocketClient.ChannelHypeTrainProgressV2 += OnHypeTrainProgress;
+        _eventSubWebsocketClient.ChannelHypeTrainEndV2 += OnHypeTrainEnd;
+
+        // AutoMod events
+        // _eventSubWebsocketClient.AutomodMessageHold += OnAutomodMessageHold;
+        // _eventSubWebsocketClient.AutomodMessageUpdate += OnAutomodMessageUpdate;
+        // _eventSubWebsocketClient.AutomodTermsUpdate += OnAutomodTermsUpdate;
+
+        // Other events
+        _eventSubWebsocketClient.ChannelShieldModeBegin += OnChannelShieldModeBegin;
+        _eventSubWebsocketClient.ChannelShieldModeEnd += OnChannelShieldModeEnd;
+        _eventSubWebsocketClient.ChannelShoutoutCreate += OnShoutoutCreate;
+        _eventSubWebsocketClient.ChannelShoutoutReceive += OnShoutoutReceived;
+
+        // Set up TwitchAPI credentials
         _twitchApi.Settings.ClientId = TwitchConfig.Service().ClientId;
+        _twitchApi.Settings.Secret = TwitchConfig.Service().ClientSecret;
         _twitchApi.Settings.AccessToken = TwitchConfig.Service().AccessToken;
-        
-        await _eventSubWebsocketClient.ConnectAsync();
 
-        // Subscribe to events for all channels
-        await SubscribeToAllChannels(cancellationToken);
+        // Connect to EventSub WebSocket
+        await _eventSubWebsocketClient.ConnectAsync();
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("TwitchWebsocketHostedService stopping.");
-        await _cts.CancelAsync();
 
-        // Unsubscribe from all events
-        await UnsubscribeFromAllChannels();
+        // Unsubscribe from event changes
+        _twitchEventSubService.OnEventSubscriptionChanged -= HandleEventSubscriptionChange;
 
         await _eventSubWebsocketClient.DisconnectAsync();
+
+        await _cts.CancelAsync();
     }
 
-    private async Task OnConnected(object sender, WebsocketConnectedArgs e)
+    private async Task OnWebsocketConnected(object sender, WebsocketConnectedArgs e)
     {
-        _logger.LogInformation("WebSocket connected.");
+        _logger.LogInformation("Twitch EventSub WebSocket connected. Session ID: {SessionId}",
+            _eventSubWebsocketClient.SessionId);
+        _isConnected = true;
+
+        if (!e.IsRequestedReconnect)
+        {
+            // Get broadcaster ID from configuration
+            string? accessToken = TwitchConfig.Service().AccessToken;
+            string broadcasterId = _twitchApiService.GetUsers(accessToken).Result.First().Id;
+
+            if (string.IsNullOrEmpty(broadcasterId) || string.IsNullOrEmpty(accessToken))
+            {
+                _logger.LogWarning("Cannot subscribe to events: Missing broadcaster ID or access token");
+                return;
+            }
+
+            try
+            {
+                // Get all enabled Twitch event subscriptions from the database
+                List<EventSubscription> enabledSubscriptions = await _dbContext.EventSubscriptions
+                    .Where(s => s.Provider == "twitch" && s.Enabled)
+                    .ToListAsync(_cts.Token);
+
+                if (enabledSubscriptions.Count == 0)
+                {
+                    _logger.LogInformation("No enabled Twitch event subscriptions found");
+                    return;
+                }
+
+                _logger.LogInformation("Subscribing to {Count} enabled Twitch events via websocket",
+                    enabledSubscriptions.Count);
+
+                // Subscribe to all enabled events
+                foreach (EventSubscription subscription in enabledSubscriptions)
+                {
+                    try
+                    {
+                        // Different events have different condition requirements
+                        // Create condition based on event type
+                        Dictionary<string, string> condition =
+                            CreateConditionForEvent(subscription.EventType, broadcasterId);
+
+                        // Create subscription using websocket transport
+                        await _twitchApi.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                            subscription.EventType,
+                            subscription.Version,
+                            condition,
+                            EventSubTransportMethod.Websocket,
+                            _eventSubWebsocketClient.SessionId,
+                            accessToken: accessToken);
+
+                        // Update the SessionId in the database
+                        subscription.SessionId = _eventSubWebsocketClient.SessionId;
+                        subscription.UpdatedAt = DateTime.UtcNow;
+                        _dbContext.EventSubscriptions.Update(subscription);
+
+                        _logger.LogInformation(
+                            "Successfully subscribed to {EventType} (version {Version}) via websocket",
+                            subscription.EventType, subscription.Version ?? "1");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to subscribe to event {EventType}: {Message}",
+                            subscription.EventType, ex.Message);
+                    }
+                }
+
+                // Save all subscription changes at once
+                await _dbContext.SaveChangesAsync(_cts.Token);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error subscribing to Twitch events via websocket");
+            }
+        }
+    }
+
+    private async Task OnWebsocketDisconnected(object sender, EventArgs e)
+    {
+        _logger.LogError($"Websocket {_eventSubWebsocketClient.SessionId} disconnected!");
+
+        // Don't do this in production. You should implement a better reconnect strategy
+        while (!await _eventSubWebsocketClient.ReconnectAsync())
+        {
+            _logger.LogError("Websocket reconnect failed!");
+            await Task.Delay(1000);
+        }
+    }
+
+    private async Task OnWebsocketReconnected(object sender, EventArgs e)
+    {
+        _logger.LogWarning($"Websocket {_eventSubWebsocketClient.SessionId} reconnected");
+    }
+
+    private async Task OnError(object sender, ErrorOccuredArgs args)
+    {
+        _logger.LogError($"Websocket {_eventSubWebsocketClient.SessionId} - Error occurred!");
+        await Task.CompletedTask;
+    }
+
+    #region User Events
+
+    private async Task OnUserUpdate(object sender, UserUpdateArgs args)
+    {
+        _logger.LogInformation("User updated: {User}", args.Notification.Payload.Event.ToJson());
+        await Task.CompletedTask;
+    }
+
+    private async Task OnUserAuthorizationGrant(object sender, UserAuthorizationGrantArgs args)
+    {
+        _logger.LogInformation("User authorization granted: {User}", args.Notification.Event.ToJson());
+        await Task.CompletedTask;
+    }
+
+    private async Task OnUserAuthorizationRevoke(object sender, UserAuthorizationRevokeArgs args)
+    {
+        _logger.LogInformation("User authorization revoked: {User}", args.Notification.Event.ToJson());
+        await Task.CompletedTask;
+    }
+
+    #endregion
+
+    #region Channel Events
+
+    private async Task OnChannelUpdate(object sender, ChannelUpdateArgs args)
+    {
+        _logger.LogInformation("Channel updated: {Channel}", args.Notification.Payload.Event.ToJson());
+
+        string broadcasterId = args.Notification.Payload.Event.BroadcasterUserId;
+
+        ChannelInfo? channelInfo = await _dbContext.ChannelInfo
+            .FirstOrDefaultAsync(c => c.Id == broadcasterId, _cts.Token);
+
+        if (channelInfo != null)
+        {
+            channelInfo.Title = args.Notification.Payload.Event.Title;
+            channelInfo.Language = args.Notification.Payload.Event.Language;
+            channelInfo.GameId = args.Notification.Payload.Event.CategoryId;
+            channelInfo.GameName = args.Notification.Payload.Event.CategoryName;
+
+            await _dbContext.SaveChangesAsync(_cts.Token);
+            _logger.LogInformation("Updated channel info for {Channel}",
+                args.Notification.Payload.Event.BroadcasterUserLogin);
+        }
+    }
+
+    private async Task OnChannelFollow(object sender, ChannelFollowArgs args)
+    {
+        _logger.LogInformation("Follow: {User} followed {Channel}",
+            args.Notification.Payload.Event.UserLogin,
+            args.Notification.Payload.Event.BroadcasterUserLogin);
 
         await Task.CompletedTask;
     }
 
-    private async Task OnDisconnected(object sender, EventArgs args)
+    private async Task OnChannelSubscribe(object sender, ChannelSubscribeArgs args)
     {
-        _logger.LogInformation("WebSocket disconnected.");
-        
+        _logger.LogInformation("Subscribe: {User} subscribed to {Channel} at tier {Tier}",
+            args.Notification.Payload.Event.UserLogin,
+            args.Notification.Payload.Event.BroadcasterUserLogin,
+            args.Notification.Payload.Event.Tier);
+
         await Task.CompletedTask;
     }
 
-    private async Task OnReconnected(object sender, EventArgs e)
+    private async Task OnChannelSubscriptionGift(object sender, ChannelSubscriptionGiftArgs args)
     {
-        _logger.LogInformation("WebSocket reconnected. Resubscribing to events.");
-        await SubscribeToAllChannels(_cts.Token);
-    }
+        _logger.LogInformation("Subscription gift: {User} gifted {Count} subs to {Channel}",
+            args.Notification.Payload.Event.UserLogin,
+            args.Notification.Payload.Event.Total,
+            args.Notification.Payload.Event.BroadcasterUserLogin);
 
-    private async Task OnError(object sender, ErrorOccuredArgs e)
-    {
-        _logger.LogError($"WebSocket error: {e.Exception.Message}");
         await Task.CompletedTask;
     }
 
-    private async Task OnServiceAnnouncement(object sender, UserUpdateArgs e)
+    private async Task OnChannelSubscriptionMessage(object sender, ChannelSubscriptionMessageArgs args)
     {
-        _logger.LogInformation($"Service announcement: {e.Notification.Payload.Event.UserLogin}");
+        _logger.LogInformation("Resub message: {User} resubscribed to {Channel} for {Months} months",
+            args.Notification.Payload.Event.UserLogin,
+            args.Notification.Payload.Event.BroadcasterUserLogin,
+            args.Notification.Payload.Event.CumulativeMonths);
+
         await Task.CompletedTask;
     }
 
-    private async Task OnChannelFollow(object sender, ChannelFollowArgs e)
+    private async Task OnChannelCheer(object sender, ChannelCheerArgs args)
     {
-        _logger.LogInformation($"New follower: {e.Notification.Payload.Event.UserLogin} in channel {e.Notification.Payload.Event.BroadcasterUserLogin}");
+        _logger.LogInformation("Cheer: {User} cheered {Bits} bits in {Channel}",
+            args.Notification.Payload.Event.IsAnonymous ? "Anonymous" : args.Notification.Payload.Event.UserLogin,
+            args.Notification.Payload.Event.Bits,
+            args.Notification.Payload.Event.BroadcasterUserLogin);
+
         await Task.CompletedTask;
     }
 
-    private async Task OnChannelUpdate(object sender, ChannelUpdateArgs e)
+    private async Task OnChannelRaid(object sender, ChannelRaidArgs args)
     {
-        _logger.LogInformation($"Channel updated: {e.Notification.Payload.Event.BroadcasterUserLogin}");
+        _logger.LogInformation("Raid: {FromChannel} raided {ToChannel} with {Viewers} viewers",
+            args.Notification.Payload.Event.FromBroadcasterUserLogin,
+            args.Notification.Payload.Event.ToBroadcasterUserLogin,
+            args.Notification.Payload.Event.Viewers);
+
         await Task.CompletedTask;
     }
 
-    private async Task OnStreamOnline(object sender, StreamOnlineArgs e)
+    private async Task OnChannelBan(object sender, ChannelBanArgs args)
     {
-        _logger.LogInformation($"Stream online: {e.Notification.Payload.Event.BroadcasterUserLogin}");
+        _logger.LogInformation("Ban: {User} was banned from {Channel} by {Moderator}. Reason: {Reason}",
+            args.Notification.Payload.Event.UserLogin,
+            args.Notification.Payload.Event.BroadcasterUserLogin,
+            args.Notification.Payload.Event.ModeratorUserLogin,
+            args.Notification.Payload.Event.Reason);
+
+        await Task.CompletedTask;
+    }
+
+    private async Task OnChannelUnban(object sender, ChannelUnbanArgs args)
+    {
+        _logger.LogInformation("Unban: {User} was unbanned from {Channel} by {Moderator}",
+            args.Notification.Payload.Event.UserLogin,
+            args.Notification.Payload.Event.BroadcasterUserLogin,
+            args.Notification.Payload.Event.ModeratorUserLogin);
+
+        await Task.CompletedTask;
+    }
+
+    private async Task OnChannelModeratorAdd(object sender, ChannelModeratorArgs args)
+    {
+        _logger.LogInformation("Mod add: {User} was modded in {Channel}",
+            args.Notification.Payload.Event.UserLogin,
+            args.Notification.Payload.Event.BroadcasterUserLogin);
+
+        await Task.CompletedTask;
+    }
+
+    private async Task OnChannelModeratorRemove(object sender, ChannelModeratorArgs args)
+    {
+        _logger.LogInformation("Mod remove: {User} was unmodded in {Channel}",
+            args.Notification.Payload.Event.UserLogin,
+            args.Notification.Payload.Event.BroadcasterUserLogin);
+
+        await Task.CompletedTask;
+    }
+
+    #endregion
+
+    #region Chat Events
+
+    private async Task OnChannelChatMessage(object sender, ChannelChatMessageArgs args)
+    {
+        _logger.LogInformation("Chat message: {User} in {Channel}: {Message}",
+            args.Notification.Payload.Event.ChatterUserLogin,
+            args.Notification.Payload.Event.BroadcasterUserLogin,
+            args.Notification.Payload.Event.Message.Text);
+
+        if (!_dbContext.Users.Any(u => u.Id == args.Notification.Payload.Event.ChatterUserId))
+        {
+            await _twitchApiService.FetchUser(
+                new() { AccessToken = TwitchConfig.Service().AccessToken },
+                id: args.Notification.Payload.Event.ChatterUserId);
+        }
+
+        try
+        {
+            ChatMessage chatMessage = new(args.Notification);
+
+            await _dbContext.ChatMessages.Upsert(chatMessage)
+                .On(u => new { u.Id })
+                .WhenMatched((old, incoming) => new()
+                {
+                    BadgeInfo = incoming.BadgeInfo,
+                    Color = incoming.Color,
+                    Badges = incoming.Badges,
+                    Bits = incoming.Bits,
+                    BitsInDollars = incoming.BitsInDollars,
+                    // CheerBadge = incoming.CheerBadge,
+                    Fragments = incoming.Fragments,
+                    CustomRewardId = incoming.CustomRewardId,
+                    IsBroadcaster = incoming.IsBroadcaster,
+                    IsFirstMessage = incoming.IsFirstMessage,
+                    IsHighlighted = incoming.IsHighlighted,
+                    IsMe = incoming.IsMe,
+                    IsModerator = incoming.IsModerator,
+                    IsSkippingSubMode = incoming.IsSkippingSubMode,
+                    IsSubscriber = incoming.IsSubscriber,
+                    IsVip = incoming.IsVip,
+                    IsStaff = incoming.IsStaff,
+                    IsPartner = incoming.IsPartner,
+                    Message = incoming.Message,
+                    Noisy = incoming.Noisy,
+                    SubscribedMonthCount = incoming.SubscribedMonthCount,
+                    TmiSentTs = incoming.TmiSentTs,
+                    BotUsername = incoming.BotUsername,
+                    ColorHex = incoming.ColorHex,
+                    DisplayName = incoming.DisplayName,
+                    IsTurbo = incoming.IsTurbo,
+                    Username = incoming.Username,
+                    UserType = incoming.UserType,
+                    UserId = incoming.UserId,
+                    IsReturningChatter = incoming.IsReturningChatter,
+                    RewardId = incoming.RewardId,
+                    ChannelId = incoming.ChannelId,
+                    ReplyToMessageId = incoming.ReplyToMessageId,
+                })
+                .RunAsync();
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to save chat message from {User} in {Ex}",
+                args.Notification.Payload.Event.ChatterUserLogin,
+                e.Message);
+            throw;
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private async Task OnChannelChatClear(object sender, ChannelChatClearArgs args)
+    {
+        _logger.LogInformation("Chat clear: Chat was cleared in {Channel}",
+            args.Notification.Payload.Event.BroadcasterUserLogin);
+
+        await Task.CompletedTask;
+    }
+
+    private async Task OnChannelChatClearUserMessages(object sender, ChannelChatClearUserMessagesArgs args)
+    {
+        _logger.LogInformation("User messages cleared: {User}'s messages were cleared in {Channel}",
+            args.Notification.Payload.Event.TargetUserLogin,
+            args.Notification.Payload.Event.BroadcasterUserLogin);
+
+        await Task.CompletedTask;
+    }
+
+    private async Task OnChannelChatMessageDelete(object sender, ChannelChatMessageDeleteArgs args)
+    {
+        _logger.LogInformation("Message deleted: A message from {User} was deleted in {Channel}",
+            args.Notification.Payload.Event.TargetUserLogin,
+            args.Notification.Payload.Event.BroadcasterUserLogin);
+
+        await Task.CompletedTask;
+    }
+
+    private async Task OnChannelChatNotification(object sender, ChannelChatNotificationArgs args)
+    {
+        _logger.LogInformation("Chat notification in {Channel}: {Message}",
+            args.Notification.Payload.Event.BroadcasterUserLogin,
+            args.Notification.Payload.Event.Message.Text);
+
+        await Task.CompletedTask;
+    }
+
+    #endregion
+
+    #region Stream Events
+
+    private async Task OnStreamOnline(object sender, StreamOnlineArgs args)
+    {
+        _logger.LogInformation("Stream online: {Channel}", args.Notification.Payload.Event.BroadcasterUserLogin);
 
         Channel? channel = await _dbContext.Channels
             .Include(channel => channel.User)
-            .FirstOrDefaultAsync(c => c.Id == e.Notification.Payload.Event.BroadcasterUserId, _cts.Token);
-        
+            .FirstOrDefaultAsync(c => c.Id == args.Notification.Payload.Event.BroadcasterUserId, _cts.Token);
+
         if (channel != null)
         {
             channel.User.IsLive = true;
             await _dbContext.SaveChangesAsync(_cts.Token);
+            _logger.LogInformation("Updated stream status to online for {Channel}",
+                args.Notification.Payload.Event.BroadcasterUserLogin);
         }
     }
 
-    private async Task OnStreamOffline(object sender, StreamOfflineArgs e)
+    private async Task OnStreamOffline(object sender, StreamOfflineArgs args)
     {
-        _logger.LogInformation($"Stream offline: {e.Notification.Payload.Event.BroadcasterUserLogin}");
+        _logger.LogInformation("Stream offline: {Channel}", args.Notification.Payload.Event.BroadcasterUserLogin);
 
         Channel? channel = await _dbContext.Channels
             .Include(channel => channel.User)
-            .FirstOrDefaultAsync(c => c.Id == e.Notification.Payload.Event.BroadcasterUserId, _cts.Token);
-        
+            .FirstOrDefaultAsync(c => c.Id == args.Notification.Payload.Event.BroadcasterUserId, _cts.Token);
+
         if (channel != null)
         {
             channel.User.IsLive = false;
             await _dbContext.SaveChangesAsync(_cts.Token);
+            _logger.LogInformation("Updated stream status to offline for {Channel}",
+                args.Notification.Payload.Event.BroadcasterUserLogin);
         }
     }
 
-    private async Task OnChannelChatMessage(object sender, ChannelChatMessageArgs e)
+    #endregion
+
+    #region Channel Points Events
+
+    private async Task OnChannelPointsCustomRewardAdd(object sender, ChannelPointsCustomRewardArgs args)
     {
-        _logger.LogInformation($"Message received from {e.Notification.Payload.Event.ChatterUserName} in channel {e.Notification.Payload.Event.BroadcasterUserLogin}: {e.Notification.Payload.Event.Message.Text}");
+        _logger.LogInformation("Custom reward added: {Title} in {Channel}",
+            args.Notification.Payload.Event.Title,
+            args.Notification.Payload.Event.BroadcasterUserLogin);
+
         await Task.CompletedTask;
     }
 
-    private async Task SubscribeToAllChannels(CancellationToken cancellationToken)
+    private async Task OnChannelPointsCustomRewardUpdate(object sender, ChannelPointsCustomRewardArgs args)
     {
-        _logger.LogInformation("Subscribing to events for all channels...");
-        List<Channel> channels = await _dbContext.Channels.ToListAsync(cancellationToken);
+        _logger.LogInformation("Custom reward updated: {Title} in {Channel}",
+            args.Notification.Payload.Event.Title,
+            args.Notification.Payload.Event.BroadcasterUserLogin);
 
-        foreach (Channel channel in channels)
+        await Task.CompletedTask;
+    }
+
+    private async Task OnChannelPointsCustomRewardRemove(object sender, ChannelPointsCustomRewardArgs args)
+    {
+        _logger.LogInformation("Custom reward removed: {Title} in {Channel}",
+            args.Notification.Payload.Event.Title,
+            args.Notification.Payload.Event.BroadcasterUserLogin);
+
+        await Task.CompletedTask;
+    }
+
+    private async Task OnChannelPointsCustomRewardRedemptionAdd(object sender,
+        ChannelPointsCustomRewardRedemptionArgs args)
+    {
+        _logger.LogInformation("Reward redeemed: {User} redeemed {Title} in {Channel}",
+            args.Notification.Payload.Event.UserLogin,
+            args.Notification.Payload.Event.Reward.Title,
+            args.Notification.Payload.Event.BroadcasterUserLogin);
+
+        await Task.CompletedTask;
+    }
+
+    private async Task OnChannelPointsCustomRewardRedemptionUpdate(object sender,
+        ChannelPointsCustomRewardRedemptionArgs args)
+    {
+        _logger.LogInformation("Reward redemption updated: {User}'s redemption of {Title} in {Channel} was {Status}",
+            args.Notification.Payload.Event.UserLogin,
+            args.Notification.Payload.Event.Reward.Title,
+            args.Notification.Payload.Event.BroadcasterUserLogin,
+            args.Notification.Payload.Event.Status);
+
+        await Task.CompletedTask;
+    }
+
+    #endregion
+
+    #region Poll Events
+
+    private async Task OnChannelPollBegin(object sender, ChannelPollBeginArgs args)
+    {
+        _logger.LogInformation("Poll started: \"{Title}\" in {Channel}",
+            args.Notification.Payload.Event.Title,
+            args.Notification.Payload.Event.BroadcasterUserLogin);
+
+        await Task.CompletedTask;
+    }
+
+    private async Task OnChannelPollProgress(object sender, ChannelPollProgressArgs args)
+    {
+        _logger.LogInformation("Poll progress: \"{Title}\" in {Channel}",
+            args.Notification.Payload.Event.Title,
+            args.Notification.Payload.Event.BroadcasterUserLogin);
+
+        await Task.CompletedTask;
+    }
+
+    private async Task OnChannelPollEnd(object sender, ChannelPollEndArgs args)
+    {
+        _logger.LogInformation("Poll ended: \"{Title}\" in {Channel}. Status: {Status}",
+            args.Notification.Payload.Event.Title,
+            args.Notification.Payload.Event.BroadcasterUserLogin,
+            args.Notification.Payload.Event.Status);
+
+        await Task.CompletedTask;
+    }
+
+    #endregion
+
+    #region Prediction Events
+
+    private async Task OnChannelPredictionBegin(object sender, ChannelPredictionBeginArgs args)
+    {
+        _logger.LogInformation("Prediction started: \"{Title}\" in {Channel}",
+            args.Notification.Payload.Event.Title,
+            args.Notification.Payload.Event.BroadcasterUserLogin);
+
+        await Task.CompletedTask;
+    }
+
+    private async Task OnChannelPredictionProgress(object sender, ChannelPredictionProgressArgs args)
+    {
+        _logger.LogInformation("Prediction progress: \"{Title}\" in {Channel}",
+            args.Notification.Payload.Event.Title,
+            args.Notification.Payload.Event.BroadcasterUserLogin);
+
+        await Task.CompletedTask;
+    }
+
+    private async Task OnChannelPredictionLock(object sender, ChannelPredictionLockArgs args)
+    {
+        _logger.LogInformation("Prediction locked: \"{Title}\" in {Channel}",
+            args.Notification.Payload.Event.Title,
+            args.Notification.Payload.Event.BroadcasterUserLogin);
+
+        await Task.CompletedTask;
+    }
+
+    private async Task OnChannelPredictionEnd(object sender, ChannelPredictionEndArgs args)
+    {
+        _logger.LogInformation("Prediction ended: \"{Title}\" in {Channel}. Status: {Status}",
+            args.Notification.Payload.Event.Title,
+            args.Notification.Payload.Event.BroadcasterUserLogin,
+            args.Notification.Payload.Event.Status);
+
+        await Task.CompletedTask;
+    }
+
+    #endregion
+
+    #region Hype Train Events
+
+    private async Task OnHypeTrainBegin(object sender, ChannelHypeTrainBeginV2Args args)
+    {
+        _logger.LogInformation("Hype Train started in {Channel}",
+            args.Notification.Payload.Event.BroadcasterUserLogin);
+
+        await Task.CompletedTask;
+    }
+
+    private async Task OnHypeTrainProgress(object sender, ChannelHypeTrainProgressV2Args args)
+    {
+        _logger.LogInformation("Hype Train progress in {Channel}: Level {Level}, {Points}/{Goal} points",
+            args.Notification.Payload.Event.BroadcasterUserLogin,
+            args.Notification.Payload.Event.Level,
+            args.Notification.Payload.Event.Progress,
+            args.Notification.Payload.Event.Goal);
+
+        await Task.CompletedTask;
+    }
+
+    private async Task OnHypeTrainEnd(object sender, ChannelHypeTrainEndV2Args args)
+    {
+        _logger.LogInformation("Hype Train ended in {Channel}. Reached Level {Level}",
+            args.Notification.Payload.Event.BroadcasterUserLogin,
+            args.Notification.Payload.Event.Level);
+
+        await Task.CompletedTask;
+    }
+
+    #endregion
+
+    #region AutoMod Events
+
+    // private async Task OnAutomodMessageHold(object sender, object args)
+    // {
+    //     _logger.LogInformation("AutoMod held message from {User} in {Channel}", 
+    //         args.Notification.Payload.Event.MessageSenderLogin,
+    //         args.Notification.Payload.Event.BroadcasterUserLogin);
+    //         
+    //     await Task.CompletedTask;
+    // }
+
+    // private async Task OnAutomodMessageUpdate(object sender, object args)
+    // {
+    //     _logger.LogInformation("AutoMod message status updated in {Channel}. Status: {Status}", 
+    //         args.Notification.Payload.Event.BroadcasterUserLogin,
+    //         args.Notification.Payload.Event.Status);
+    //         
+    //     await Task.CompletedTask;
+    // }
+    //
+    // private async Task OnAutomodTermsUpdate(object sender, AutomodTermsUpdateArgs args)
+    // {
+    //     _logger.LogInformation("AutoMod terms updated in {Channel} by {Moderator}", 
+    //         args.Notification.Payload.Event.BroadcasterUserLogin,
+    //         args.Notification.Payload.Event.ModeratorUserLogin);
+    //
+    //     // Log the actual terms data
+    //     _logger.LogInformation("AutoMod terms update payload: {Payload}", 
+    //         JsonConvert.SerializeObject(args.Notification.Payload.Event));
+    //         
+    //     await Task.CompletedTask;
+    // }
+
+    #endregion
+
+    #region Other Events
+
+    private async Task OnChannelShieldModeBegin(object sender, ChannelShieldModeBeginArgs args)
+    {
+        _logger.LogInformation("Shield mode activated in {Channel} by {Moderator}",
+            args.Notification.Payload.Event.BroadcasterUserLogin,
+            args.Notification.Payload.Event.ModeratorUserLogin);
+
+        await Task.CompletedTask;
+    }
+
+    private async Task OnChannelShieldModeEnd(object sender, ChannelShieldModeEndArgs args)
+    {
+        _logger.LogInformation("Shield mode deactivated in {Channel} by {Moderator}",
+            args.Notification.Payload.Event.BroadcasterUserLogin,
+            args.Notification.Payload.Event.ModeratorUserLogin);
+
+        await Task.CompletedTask;
+    }
+
+    private async Task OnShoutoutCreate(object sender, ChannelShoutoutCreateArgs args)
+    {
+        _logger.LogInformation("Shoutout created: {FromChannel} shouted out {ToChannel}",
+            args.Notification.Payload.Event.BroadcasterUserLogin,
+            args.Notification.Payload.Event.ToBroadcasterUserLogin);
+
+        await Task.CompletedTask;
+    }
+
+    private async Task OnShoutoutReceived(object sender, ChannelShoutoutReceiveArgs args)
+    {
+        _logger.LogInformation(
+            "Shoutout received: {ToChannel} received shoutout from {FromChannel} with {ViewerCount} viewers",
+            args.Notification.Payload.Event.BroadcasterUserLogin,
+            args.Notification.Payload.Event.FromBroadcasterUserLogin,
+            args.Notification.Payload.Event.ViewerCount);
+
+        await Task.CompletedTask;
+    }
+
+    #endregion
+
+    // Method to handle event toggling - dynamically subscribe/unsubscribe when events are enabled/disabled
+    public async Task HandleEventSubscriptionChange(string eventType, bool enabled)
+    {
+        _logger.LogInformation("Event subscription changed: {EventType} is now {Status}",
+            eventType, enabled ? "enabled" : "disabled");
+
+        // If the websocket is not connected or SessionId is null, we can't subscribe/unsubscribe
+        if (!_isConnected || string.IsNullOrEmpty(_eventSubWebsocketClient.SessionId))
         {
-            await SubscribeToStreamEvents(channel.Id);
+            _logger.LogWarning("Cannot modify subscription - WebSocket not connected or SessionId is null");
+            return;
+        }
+
+        string? accessToken = TwitchConfig.Service().AccessToken;
+        string broadcasterId = _twitchApiService.GetUsers(accessToken).Result.First().Id;
+
+        if (string.IsNullOrEmpty(broadcasterId) || string.IsNullOrEmpty(accessToken))
+        {
+            _logger.LogWarning("Cannot modify subscription: Missing broadcaster ID or access token");
+            return;
+        }
+
+        try
+        {
+            if (enabled)
+            {
+                // Get event subscription details from database
+                EventSubscription? subscription = await _dbContext.EventSubscriptions
+                    .FirstOrDefaultAsync(s => s.Provider == "twitch" && s.EventType == eventType, _cts.Token);
+
+                if (subscription == null)
+                {
+                    _logger.LogError("Cannot subscribe to event {EventType} - not found in database", eventType);
+                    return;
+                }
+
+                // Create condition for this event type
+                Dictionary<string, string> condition = CreateConditionForEvent(eventType, broadcasterId);
+
+                await _twitchApi.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                    type: eventType,
+                    version: subscription.Version,
+                    condition: condition,
+                    method: EventSubTransportMethod.Websocket,
+                    websocketSessionId: _eventSubWebsocketClient.SessionId,
+                    clientId: TwitchConfig.Service().ClientId,
+                    accessToken: TwitchConfig.Service().AccessToken);
+
+                // Update the SessionId in the database
+                subscription.SessionId = _eventSubWebsocketClient.SessionId;
+                subscription.UpdatedAt = DateTime.UtcNow;
+                _dbContext.EventSubscriptions.Update(subscription);
+                await _dbContext.SaveChangesAsync(_cts.Token);
+
+                _logger.LogInformation(
+                    "Successfully subscribed to {EventType} (version {Version}) via websocket with session {SessionId}",
+                    eventType, subscription.Version ?? "1", _eventSubWebsocketClient.SessionId);
+            }
+            else
+            {
+                // For disabling, we need to find and delete the existing subscription
+                // First, check if we have the subscription in our database with the current session ID
+                EventSubscription? subscription = await _dbContext.EventSubscriptions
+                    .FirstOrDefaultAsync(s => s.Provider == "twitch" && s.EventType == eventType, _cts.Token);
+
+                if (subscription != null)
+                {
+                    // Get the subscription from Twitch API
+                    GetEventSubSubscriptionsResponse? twitchSubscriptions =
+                        await _twitchApi.Helix.EventSub.GetEventSubSubscriptionsAsync(
+                            type: eventType,
+                            accessToken: accessToken);
+
+                    if (twitchSubscriptions != null && twitchSubscriptions.Subscriptions.Any())
+                    {
+                        // Find subscriptions for this event type that use our current websocket session
+                        List<EventSubSubscription> activeSubscriptions = twitchSubscriptions.Subscriptions
+                            .Where(s => s.Type == eventType &&
+                                        s.Transport.Method == "websocket")
+                            .ToList();
+
+                        foreach (EventSubSubscription sub in activeSubscriptions)
+                        {
+                            // Delete the subscription from Twitch
+                            await _twitchApi.Helix.EventSub.DeleteEventSubSubscriptionAsync(
+                                sub.Id, accessToken);
+
+                            _logger.LogInformation(
+                                "Successfully unsubscribed from {EventType} (ID: {Id}, Session: {SessionId})",
+                                eventType, sub.Id, _eventSubWebsocketClient.SessionId);
+                        }
+
+                        // Clear the SessionId in the database to indicate it's no longer active
+                        subscription.SessionId = null;
+                        subscription.UpdatedAt = DateTime.UtcNow;
+                        _dbContext.EventSubscriptions.Update(subscription);
+                        await _dbContext.SaveChangesAsync(_cts.Token);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to {Action} event {EventType}: {Message}",
+                enabled ? "subscribe to" : "unsubscribe from", eventType, ex.Message);
         }
     }
 
-    private async Task SubscribeToStreamEvents(string channelId)
+    // Helper method to create the right condition for different event types
+    private Dictionary<string, string> CreateConditionForEvent(string eventType, string broadcasterId)
     {
-        string appAccessToken = TwitchConfig.Service().AccessToken;
-        string callbackUrl = TwitchConfig.EventSubCallbackUri;
+        Dictionary<string, string> condition = new();
 
-        // Stream Online
-        Dictionary<string, string> onlineCondition = new()
+        // Use the condition information directly from AvailableEventTypes if available
+        if (TwitchEventSubService.AvailableEventTypes.TryGetValue(eventType,
+                out (string, string, string[] Condition) eventTypeInfo))
         {
-            { "broadcaster_user_id", channelId }
-        };
-        
-        string? onlineSubscriptionId = await _twitchApiService.CreateEventSubSubscription(
-            "stream.online", "1",
-            onlineCondition, callbackUrl, appAccessToken);
+            // Apply each required condition parameter
+            foreach (string conditionParam in eventTypeInfo.Condition)
+            {
+                switch (conditionParam)
+                {
+                    case "broadcaster_user_id":
+                        condition["broadcaster_user_id"] = broadcasterId;
+                        break;
 
-        if (onlineSubscriptionId != null)
+                    case "moderator_user_id":
+                        // For simplicity, use the broadcaster as the moderator for automod events
+                        condition["moderator_user_id"] = broadcasterId;
+                        break;
+
+                    case "client_id":
+                        condition["client_id"] = TwitchConfig.Service().ClientId;
+                        break;
+
+                    case "user_id":
+                        condition["user_id"] = broadcasterId;
+                        break;
+
+                    default:
+                        _logger.LogWarning("Unknown condition parameter: {ConditionParam} for event type {EventType}",
+                            conditionParam, eventType);
+                        break;
+                }
+            }
+        }
+        else
         {
-            _channelSubscriptionIds[$"online_{channelId}"] = onlineSubscriptionId;
-            // _logger.LogInformation($"Subscribed to stream.online for channel {channelId} with subscription ID {onlineSubscriptionId}");
+            // Fallback in case the event type is not found in the dictionary
+            _logger.LogWarning(
+                "Event type {EventType} not found in AvailableEventTypes, using broadcaster_user_id as default",
+                eventType);
+            condition["broadcaster_user_id"] = broadcasterId;
         }
 
-        // Stream Offline
-        Dictionary<string, string> offlineCondition = new()
-        {
-            { "broadcaster_user_id", channelId }
-        };
-        
-        string? offlineSubscriptionId = await _twitchApiService.CreateEventSubSubscription(
-            "stream.offline", "1",
-            offlineCondition, callbackUrl, appAccessToken);
-
-        if (offlineSubscriptionId != null)
-        {
-            _channelSubscriptionIds[$"offline_{channelId}"] = offlineSubscriptionId;
-            // _logger.LogInformation($"Subscribed to stream.offline for channel {channelId} with subscription ID {offlineSubscriptionId}");
-        }
-        
-        // chat message
-        Dictionary<string, string> messageCondition = new()
-        { 
-            { "broadcaster_user_id", channelId }, 
-            { "user_id", TwitchConfig.Service().Name } 
-        };
-        
-        string? channelChatMessageSubscriptionId = await _twitchApiService.CreateEventSubSubscription(
-            "channel.chat.message", "1",
-            messageCondition, callbackUrl, appAccessToken);
-        
-        if (channelChatMessageSubscriptionId != null) 
-        {
-            _channelSubscriptionIds[$"chat_message_{channelId}"] = channelChatMessageSubscriptionId;
-            // _logger.LogInformation($"Subscribed to channel.chat.message for channel {channelId} with subscription ID {channelChatMessageSubscriptionId}");
-        }
-    }
-    
-    private async Task UnsubscribeFromAllChannels()
-    {
-        _logger.LogInformation("Unsubscribing from events for all channels...");
-        
-        await _twitchApiService.DeleteAllEventSubSubscriptions(TwitchConfig.Service().AccessToken);
-
-        _channelSubscriptionIds.Clear();
+        return condition;
     }
 }

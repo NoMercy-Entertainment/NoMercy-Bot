@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercyBot.Database;
 using NoMercyBot.Database.Models;
-using NoMercyBot.Globals.Information;
+using NoMercyBot.Services.Twitch;
 
 namespace NoMercyBot.Services.Seeds;
 
@@ -30,115 +30,82 @@ public static class EventSubscriptionSeed
     
     private static void AddTwitchEvents(List<EventSubscription> subscriptions)
     {
-        // Twitch events, all disabled by default
-        string[] twitchEvents =
-        [
-            "channel.update",
-            "channel.follow",
-            "channel.subscribe",
-            "channel.subscription.gift",
-            "channel.subscription.message",
-            "channel.cheer", 
-            "channel.raid",
-            "channel.chat.message",
-            "stream.online",
-            "stream.offline",
-            "channel.hype_train.begin",
-            "channel.hype_train.progress",
-            "channel.hype_train.end",
-            "channel.poll.begin",
-            "channel.poll.progress",
-            "channel.poll.end",
-            "channel.prediction.begin",
-            "channel.prediction.progress",
-            "channel.prediction.lock",
-            "channel.prediction.end",
-            "channel.charity_campaign.donate",
-            "channel.charity_campaign.start",
-            "channel.charity_campaign.progress",
-            "channel.charity_campaign.stop",
-            "channel.shield_mode.begin",
-            "channel.shield_mode.end",
-            "channel.shoutout.create",
-            "channel.shoutout.receive"
-        ];
-
-        string callbackUrl = $"http://localhost:{Config.InternalServerPort}/api/eventsub/twitch";
-        
-        foreach (string eventType in twitchEvents)
+        foreach (KeyValuePair<string, (string Description, string Version, string[] Condition)> eventItem in TwitchEventSubService.AvailableEventTypes)
         {
-            subscriptions.Add(new("twitch", eventType, false)
+            subscriptions.Add(new("twitch", eventItem.Key, false, eventItem.Value.Version)
             {
-                CallbackUrl = callbackUrl
+                Description = eventItem.Value.Description,
+                Condition = eventItem.Value.Condition,
             });
         }
     }
 
     private static void AddDiscordEvents(List<EventSubscription> subscriptions)
     {
-        // Discord events, all disabled by default
-        string[] discordEvents =
-        [
-            "guild.create",
-            "guild.delete",
-            "guild.member_add",
-            "guild.member_remove",
-            "message.create",
-            "message.delete",
-            "voice.state_update",
-            "interaction",
-            "ready",
-            "channel.create",
-            "channel.delete",
-            "channel.pins_update",
-            "guild.ban_add",
-            "guild.ban_remove",
-            "guild.emojis_update",
-            "guild.integrations_update",
-            "guild.role_create",
-            "guild.role_delete",
-            "guild.role_update"
-        ];
-
-        string callbackUrl = $"http://localhost:{Config.InternalServerPort}/api/eventsub/discord";
-        
-        foreach (string eventType in discordEvents)
+        // Dictionary of Discord events with their descriptions
+        Dictionary<string, string> discordEvents = new()
         {
-            subscriptions.Add(new("discord", eventType, false)
+            { "guild.create", "When the bot joins a new Discord server" },
+            { "guild.delete", "When the bot leaves or is removed from a Discord server" },
+            { "guild.member_add", "When a new member joins a Discord server" },
+            { "guild.member_remove", "When a member leaves or is removed from a Discord server" },
+            { "message.create", "When a message is sent in a channel" },
+            { "message.delete", "When a message is deleted" },
+            { "voice.state_update", "When a user joins, leaves, or moves between voice channels" },
+            { "interaction", "When a user interacts with a bot command or component" },
+            { "ready", "When the bot has successfully connected to Discord" },
+            { "channel.create", "When a new channel is created" },
+            { "channel.delete", "When a channel is deleted" },
+            { "channel.pins_update", "When a message is pinned or unpinned in a channel" },
+            { "guild.ban_add", "When a user is banned from a server" },
+            { "guild.ban_remove", "When a user is unbanned from a server" },
+            { "guild.emojis_update", "When a server's emoji list is updated" },
+            { "guild.integrations_update", "When a guild integration is updated" },
+            { "guild.role_create", "When a role is created in a server" },
+            { "guild.role_delete", "When a role is deleted from a server" },
+            { "guild.role_update", "When a role's settings are updated" }
+        };
+        
+        foreach (KeyValuePair<string, string> eventItem in discordEvents)
+        {
+            subscriptions.Add(new("discord", eventItem.Key, false)
             {
-                CallbackUrl = callbackUrl
+                Description = eventItem.Value
             });
         }
     }
 
     private static void AddObsEvents(List<EventSubscription> subscriptions)
     {
-        // OBS events, all disabled by default
-        string[] obsEvents =
-        [
-            "scene.changed",
-            "stream.started",
-            "stream.stopped",
-            "recording.started",
-            "recording.stopped",
-            "source.visibility.changed",
-            "media.started",
-            "media.ended",
-            "scene.item.added",
-            "scene.item.removed",
-            "scene.item.visibility.changed",
-            "scene.collection.changed",
-            "exit.started",
-            "recording.paused",
-            "recording.resumed",
-            "streaming.status",
-            "virtual.cam.started",
-            "virtual.cam.stopped"
-        ];
-
-        foreach (string eventType in obsEvents)
+        // Dictionary of OBS events with their descriptions
+        Dictionary<string, string> obsEvents = new()
         {
-            subscriptions.Add(new("obs", eventType, false));
+            { "scene.changed", "When the active scene in OBS is changed" },
+            { "stream.started", "When streaming begins in OBS" },
+            { "stream.stopped", "When streaming ends in OBS" },
+            { "recording.started", "When recording begins in OBS" },
+            { "recording.stopped", "When recording ends in OBS" },
+            { "source.visibility.changed", "When a source's visibility is toggled in OBS" },
+            { "media.started", "When media playback begins in OBS" },
+            { "media.ended", "When media playback ends in OBS" },
+            { "scene.item.added", "When an item is added to a scene in OBS" },
+            { "scene.item.removed", "When an item is removed from a scene in OBS" },
+            { "scene.item.visibility.changed", "When an item's visibility is toggled in a scene" },
+            { "scene.collection.changed", "When the scene collection is changed in OBS" },
+            { "exit.started", "When OBS begins to shut down" },
+            { "recording.paused", "When recording is paused in OBS" },
+            { "recording.resumed", "When recording is resumed in OBS" },
+            { "streaming.status", "When the streaming status changes in OBS" },
+            { "virtual.cam.started", "When the virtual camera is started in OBS" },
+            { "virtual.cam.stopped", "When the virtual camera is stopped in OBS" }
+        };
+        
+        foreach (KeyValuePair<string, string> eventItem in obsEvents)
+        {
+            subscriptions.Add(new("obs", eventItem.Key, false)
+            {
+                Description = eventItem.Value,
+            });
         }
     }
 }

@@ -170,10 +170,7 @@ public class DiscordEventSubService : IEventSubService
         // Instead, you configure webhooks in the Discord Developer Portal or use the API
         // to create webhooks for specific channels
         
-        EventSubscription subscription = new(ProviderName, eventType, enabled)
-        {
-            CallbackUrl = DiscordConfig.EventSubCallbackUri
-        };
+        EventSubscription subscription = new(ProviderName, eventType, enabled);
         
         await _dbContext.EventSubscriptions.AddAsync(subscription);
         await _dbContext.SaveChangesAsync();
@@ -193,6 +190,22 @@ public class DiscordEventSubService : IEventSubService
         subscription.UpdatedAt = DateTime.UtcNow;
         
         await _dbContext.SaveChangesAsync();
+    }
+    
+    public Task UpdateAllSubscriptionsAsync(EventSubscription[] subscriptions)
+    {
+        if (subscriptions == null || subscriptions.Length == 0)
+            throw new ArgumentException("No subscriptions provided to update");
+            
+        foreach (EventSubscription sub in subscriptions)
+        {
+            if (sub.Provider != ProviderName)
+                throw new ArgumentException($"Invalid provider for subscription: {sub.Id}");
+                
+            _dbContext.EventSubscriptions.Update(sub);
+        }
+        
+        return _dbContext.SaveChangesAsync();
     }
     
     public async Task DeleteSubscriptionAsync(string id)

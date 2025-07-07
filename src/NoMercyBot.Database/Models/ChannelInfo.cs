@@ -10,7 +10,8 @@ public class ChannelInfo
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
     [MaxLength(50)]
-    [JsonProperty("broadcaster_id")] public string Id { get; set; } = string.Empty;
+    [JsonProperty("broadcaster_id")]
+    public string Id { get; set; } = null!;
     
     [MaxLength(50)]
     [JsonProperty("broadcaster_language")] public string Language { get; set; } = string.Empty;
@@ -46,7 +47,4 @@ public class ChannelInfo
     }
     
     [JsonProperty("is_branded_content")] public bool IsBrandedContent { get; set; }
-    
-    [ForeignKey(nameof(Id))]
-    public virtual Channel Channel { get; set; } = null!;
 }

@@ -1,9 +1,13 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Drawing;
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using TwitchLib.Client.Enums;
 using TwitchLib.Client.Models;
+using TwitchLib.EventSub.Core.Models.Chat;
+using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
+using TwitchLib.EventSub.Websockets.Core.Models;
 
 // ReSharper disable MemberCanBePrivate.Global
 
@@ -19,47 +23,10 @@ public class ChatMessage: Timestamps
     public List<KeyValuePair<string, string>>? Badges { get; set; }
     public int Bits { get; set; }
     public double BitsInDollars { get; set; }
-    public CheerBadge? CheerBadge  { get; set; }
-    public EmoteSet? EmoteSet  { get; set; }
+    // public CheerBadge? CheerBadge  { get; set; }
+    
+    public ChatMessageFragment[] Fragments  { get; set; }
     public string? CustomRewardId { get; set; }
-    
-    private string? _emoteReplacedMessage;
-
-    [NotMapped]
-    public string? EmoteReplacedMessage
-    {
-        get => ReplaceEmotesWithImageTags();
-        set => _emoteReplacedMessage = value;
-    }
-    
-    private string ReplaceEmotesWithImageTags()
-    {
-        if (string.IsNullOrEmpty(Message) || EmoteSet?.Emotes == null || !EmoteSet.Emotes.Any())
-            return Message;
-    
-        var stringReplacements = EmoteSet.Emotes
-            .Select(emote =>
-            {
-                string stringToReplace = emote.Name;
-                string replacement = $"<img " +
-                                     $"src=\"https://static-cdn.jtvnw.net/emoticons/v2/{emote.Id}/default/dark/2.0\" " +
-                                     $"style=\"width:30px;height:30px;transform:translateY(25%);\" " +
-                                     $"alt=\"{stringToReplace}\" " +
-                                     $"title=\"{stringToReplace}\">";
-    
-                return new { stringToReplace, replacement };
-            })
-            .ToList();
-    
-        // Use the same reduction pattern as in TypeScript
-        string result = stringReplacements.Aggregate(
-            Message,
-            (current, replacement) => 
-                current.Replace(replacement.stringToReplace, replacement.replacement)
-        );
-    
-        return result;
-    }
     
     public bool IsBroadcaster { get; set; }
     public bool IsFirstMessage { get; set; }
@@ -76,7 +43,7 @@ public class ChatMessage: Timestamps
     public int SubscribedMonthCount { get; set; }
     public string TmiSentTs { get; set; }
     
-    public string BotUsername { get; set; }
+    public string? BotUsername { get; set; }
     public string ColorHex { get; set; }
     public string DisplayName { get; set; }
     public bool IsTurbo { get; set; }
@@ -101,54 +68,42 @@ public class ChatMessage: Timestamps
 
     public virtual ICollection<ChatMessage> Replies { get; set; } = [];
 
-
-
-
-#pragma warning disable CS8618, CS9264
     public ChatMessage()
-#pragma warning restore CS8618, CS9264
     {
         
     }
-
-    public ChatMessage(TwitchLib.Client.Models.ChatMessage chatMessage)
+    
+    public ChatMessage(EventSubNotification<ChannelChatMessage> payloadEvent)
     {
-        BadgeInfo = chatMessage.BadgeInfo;
-        Badges = chatMessage.Badges;
-        ChannelId = chatMessage.RoomId;
-        Bits = chatMessage.Bits;
-        BitsInDollars = chatMessage.BitsInDollars;
-        BotUsername = chatMessage.BotUsername;
-        CheerBadge = chatMessage.CheerBadge;
-        Color = chatMessage.Color;
-        ColorHex = chatMessage.ColorHex;
-        CustomRewardId = chatMessage.CustomRewardId;
-        DisplayName = chatMessage.DisplayName;
-        EmoteReplacedMessage = chatMessage.EmoteReplacedMessage;
-        
-        Message = chatMessage.Message;
-        EmoteSet = chatMessage.EmoteSet.Emotes.Count > 0
-            ? MyEmoteSet.FromTwitchEmoteSet(chatMessage.EmoteSet, chatMessage.Message)
+        Id = payloadEvent.Payload.Event.MessageId;
+        ChannelId = payloadEvent.Payload.Event.BroadcasterUserId;
+        UserId = payloadEvent.Payload.Event.ChatterUserId;
+        Username = payloadEvent.Payload.Event.ChatterUserLogin;
+        DisplayName = payloadEvent.Payload.Event.ChatterUserName;
+        Message = payloadEvent.Payload.Event.Message.Text;
+        IsMe = payloadEvent.Payload.Event.IsBroadcaster;
+        IsModerator = payloadEvent.Payload.Event.IsModerator;
+        IsSubscriber = payloadEvent.Payload.Event.IsSubscriber;
+        IsVip = payloadEvent.Payload.Event.IsVip;
+        IsBroadcaster = payloadEvent.Payload.Event.IsBroadcaster;
+        IsStaff = payloadEvent.Payload.Event.IsStaff;
+        ColorHex = payloadEvent.Payload.Event.Color;
+        Color = !string.IsNullOrEmpty(payloadEvent.Payload.Event.Color) 
+            ? ColorTranslator.FromHtml(payloadEvent.Payload.Event.Color) 
             : null;
-        Id = chatMessage.Id;
-        IsBroadcaster = chatMessage.IsBroadcaster;
-        IsFirstMessage = chatMessage.IsFirstMessage;
-        IsHighlighted = chatMessage.IsHighlighted;
-        IsMe = chatMessage.IsMe;
-        IsModerator = chatMessage.IsModerator;
-        IsPartner = chatMessage.IsPartner;
-        IsSkippingSubMode = chatMessage.IsSkippingSubMode;
-        IsStaff = chatMessage.IsStaff;
-        IsSubscriber = chatMessage.IsSubscriber;
-        IsTurbo = chatMessage.IsTurbo;
-        IsVip = chatMessage.IsVip;
-        Message = chatMessage.Message;
-        Noisy = chatMessage.Noisy;
-        SubscribedMonthCount = chatMessage.SubscribedMonthCount;
-        TmiSentTs = chatMessage.TmiSentTs;
-        UserId = chatMessage.UserId;
-        UserType = chatMessage.UserType;
-        Username = chatMessage.Username;
-        ReplyToMessageId = chatMessage.ChatReply?.ParentMsgId;
+        Badges = payloadEvent.Payload.Event.Badges.Select(b => new KeyValuePair<string, string>(b.Id, b.SetId)).ToList();
+        BadgeInfo = payloadEvent.Payload.Event.SourceBadges?.Select(b => new KeyValuePair<string, string>(b.Id, b.SetId)).ToList();
+        Fragments = payloadEvent.Payload.Event.Message.Fragments;
+        Message = payloadEvent.Payload.Event.Message.Text;
+        ReplyToMessageId = payloadEvent.Payload.Event.Reply?.ParentMessageId;
+        TmiSentTs = payloadEvent.Metadata.MessageTimestamp.Date.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
+        UserType = payloadEvent.Payload.Event.IsBroadcaster 
+            ? UserType.Broadcaster
+            : payloadEvent.Payload.Event.IsModerator 
+                ? UserType.Moderator
+                : payloadEvent.Payload.Event.IsStaff 
+                    ? UserType.Staff 
+                    : UserType.Viewer;
+        
     }
 }

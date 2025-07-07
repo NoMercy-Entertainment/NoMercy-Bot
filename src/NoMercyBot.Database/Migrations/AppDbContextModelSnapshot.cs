@@ -15,7 +15,7 @@ namespace NoMercyBot.Database.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "9.0.3");
+            modelBuilder.HasAnnotation("ProductVersion", "9.0.6");
 
             modelBuilder.Entity("NoMercyBot.Database.Models.Channel", b =>
                 {
@@ -132,16 +132,12 @@ namespace NoMercyBot.Database.Migrations
                         .HasColumnType("REAL");
 
                     b.Property<string>("BotUsername")
-                        .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ChannelId")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("CheerBadge")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Color")
@@ -167,7 +163,8 @@ namespace NoMercyBot.Database.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("EmoteSet")
+                    b.Property<string>("Fragments")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("IsBroadcaster")
@@ -334,7 +331,7 @@ namespace NoMercyBot.Database.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("CallbackUrl")
+                    b.Property<string>("ConditionJson")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
@@ -342,6 +339,11 @@ namespace NoMercyBot.Database.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("Enabled")
                         .HasColumnType("INTEGER");
@@ -363,6 +365,10 @@ namespace NoMercyBot.Database.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("SessionId")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("SubscriptionId")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
@@ -371,6 +377,10 @@ namespace NoMercyBot.Database.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("Version")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -568,24 +578,21 @@ namespace NoMercyBot.Database.Migrations
 
             modelBuilder.Entity("NoMercyBot.Database.Models.Channel", b =>
                 {
+                    b.HasOne("NoMercyBot.Database.Models.ChannelInfo", "Info")
+                        .WithMany()
+                        .HasForeignKey("Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("NoMercyBot.Database.Models.User", "User")
                         .WithOne("Channel")
                         .HasForeignKey("NoMercyBot.Database.Models.Channel", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Info");
+
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("NoMercyBot.Database.Models.ChannelInfo", b =>
-                {
-                    b.HasOne("NoMercyBot.Database.Models.Channel", "Channel")
-                        .WithOne("Info")
-                        .HasForeignKey("NoMercyBot.Database.Models.ChannelInfo", "Id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Channel");
                 });
 
             modelBuilder.Entity("NoMercyBot.Database.Models.ChannelModerator", b =>
@@ -680,9 +687,6 @@ namespace NoMercyBot.Database.Migrations
             modelBuilder.Entity("NoMercyBot.Database.Models.Channel", b =>
                 {
                     b.Navigation("ChannelModerators");
-
-                    b.Navigation("Info")
-                        .IsRequired();
 
                     b.Navigation("Shoutouts");
 
