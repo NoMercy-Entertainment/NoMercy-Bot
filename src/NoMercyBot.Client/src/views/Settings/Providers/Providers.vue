@@ -42,14 +42,14 @@ const {data: providers, loading} = useServerClient<Provider[]>();
             <div class="ml-auto">
 							<span v-if="provider.enabled"
                     class="inline-block rounded-full px-3 py-1 text-xs font-semibold bg-theme-700 text-white"
-              >{{
-                  $t('settings.providers.enabled')
-                }}</span>
+              >
+                {{ $t('settings.providers.enabled') }}
+              </span>
               <span v-else
                     class="inline-block rounded-full px-3 py-1 text-xs font-semibold bg-neutral-700 text-neutral-400"
-              >{{
-                  $t('settings.providers.disabled')
-                }}</span>
+              >
+                {{ $t('settings.providers.disabled') }}
+              </span>
             </div>
           </div>
         </RouterLink>

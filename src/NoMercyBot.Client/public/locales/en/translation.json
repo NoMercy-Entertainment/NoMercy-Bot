@@ -105,7 +105,8 @@
       "save": "Save",
       "noData": "No provider data found.",
       "advancedComingSoon": "Advanced options coming soon...",
-      "tabEvents": "Events"
+      "tabEvents": "Events",
+      "tabBotAccounts": "Bot Account"
     },
     "events": {
       "title": "{{provider}} Events",
@@ -115,6 +116,39 @@
       "noEvents": "No events found for this provider.",
       "noProviders": "No providers available.",
       "provider": "Provider"
+    },
+    "botAccounts": {
+      "title": "Bot Accounts",
+      "login": "Login Bot Account",
+      "description": "Manage your bot account",
+      "connect": "Connect Bot Account",
+      "noBots": "No bot account available. Please connect a bot account chat instead of your account.",
+      "accountDetails": "Account Details",
+      "active": "Active",
+      "inactive": "Inactive",
+      "change": "Change",
+      "connected": "Connected",
+      "botInfo": "Bot Information",
+      "status": "Status",
+      "tokenExpiry": "Token Expires at",
+      "connectBot": {
+        "title": "Connect Bot Account",
+        "description": "To connect your bot account, please go to this URL in a new browser window where you are logged into your bot account or incognito mode",
+        "enterCode": "And enter the following code:",
+        "copyUrl": "Copy URL with Code",
+        "waiting": "Waiting for authentication...",
+        "authenticate": "Please authenticate"
+      },
+      "authSuccess": {
+        "title": "Authentication Successful!",
+        "message": "Successfully authenticated as {{username}}"
+      },
+      "authFailed": {
+        "title": "Authentication Failed"
+      },
+      "confirmDisconnect": "Are you sure you want to disconnect the bot account?",
+      "failedFetch": "Failed to fetch bot account",
+      "failedDisconnect": "Failed to disconnect bot account"
     }
   },
   "providers": {
@@ -147,6 +181,12 @@
       "name": "GitHub",
       "welcome": "Link your GitHub account",
       "description": "Connect your GitHub account to manage your repositories and access development tools."
+    },
+    "tabBotAccounts": {
+      "title": "Bot Accounts",
+      "subtitle": "Manage your bot accounts for different platforms.",
+      "addAccount": "Add Bot Account",
+      "noAccounts": "No bot accounts found. Add a new bot account to get started."
     }
   },
   "layout": {
@@ -164,6 +204,8 @@
     "saving": "Saving...",
     "cancel": "Cancel",
     "back": "Back",
+    "close": "Close",
+    "tryAgain": "Try Again",
     "disabled": "Disabled",
     "enabled": "Enabled",
     "disableAll": "Disable all",

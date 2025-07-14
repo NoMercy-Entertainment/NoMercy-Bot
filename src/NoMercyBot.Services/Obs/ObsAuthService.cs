@@ -73,7 +73,7 @@ public class ObsAuthService : IAuthService
         throw new NotImplementedException();
     }
 
-    public Task<DeviceCodeResponse> Authorize()
+    public Task<DeviceCodeResponse> Authorize(string[]? scopes = null)
     {
         throw new NotImplementedException();
     }

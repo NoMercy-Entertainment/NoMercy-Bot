@@ -4,7 +4,6 @@ using Newtonsoft.Json;
 using NoMercyBot.Database.Models;
 using NoMercyBot.Globals.Information;
 using TwitchLib.Client.Enums;
-using TwitchLib.Client.Models;
 using TwitchLib.EventSub.Core.Models.Chat;
 using ChatMessage = NoMercyBot.Database.Models.ChatMessage;
 
@@ -162,6 +161,30 @@ public class AppDbContext : DbContext
             .HasForeignKey(cp => cp.ChannelId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        modelBuilder.Entity<BotAccount>()
+            .Property(e => e.ClientId)
+            .HasConversion(
+                v => TokenStore.EncryptToken(v),
+                v => TokenStore.DecryptToken(v));
+
+        modelBuilder.Entity<BotAccount>()
+            .Property(e => e.ClientSecret)
+            .HasConversion(
+                v => TokenStore.EncryptToken(v),
+                v => TokenStore.DecryptToken(v));
+
+        modelBuilder.Entity<BotAccount>()
+            .Property(e => e.AccessToken)
+            .HasConversion(
+                v => TokenStore.EncryptToken(v),
+                v => TokenStore.DecryptToken(v));
+
+        modelBuilder.Entity<BotAccount>()
+            .Property(e => e.RefreshToken)
+            .HasConversion(
+                v => TokenStore.EncryptToken(v),
+                v => TokenStore.DecryptToken(v));
+        
         base.OnModelCreating(modelBuilder);
     }
 
@@ -174,4 +197,5 @@ public class AppDbContext : DbContext
     public DbSet<Service> Services { get; set; }
     public DbSet<Pronoun> Pronouns { get; set; }
     public DbSet<EventSubscription> EventSubscriptions { get; set; }
+    public DbSet<BotAccount> BotAccounts { get; set; }
 }

@@ -34,10 +34,10 @@ public class SeedService : IHostedService
             await EnsureDatabaseCreated(dbContext);
             
             // Seed services first (they're required by other seeds)
-            await ServiceSeed.SeedServices(dbContext);
+            await ServiceSeed.Init(dbContext);
             
             // Seed event subscriptions
-            await dbContext.SeedEventSubscriptions();
+            await EventSubscriptionSeed.Init(dbContext);
             
             // Get the PronounService to load pronouns from the API
             PronounService pronounService = scope.ServiceProvider.GetRequiredService<PronounService>();

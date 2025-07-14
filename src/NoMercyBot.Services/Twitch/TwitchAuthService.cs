@@ -140,6 +140,7 @@ public class TwitchAuthService : IAuthService
                             query.Add("client_id", ClientId);
                             query.Add("redirect_uri", TwitchConfig.RedirectUri);
                             query.Add("scope", string.Join(' ', Scopes));
+                            query.Add("force_verify", "true");
         
         UriBuilder uriBuilder = new(TwitchConfig.AuthUrl + "/authorize")
         {
@@ -150,13 +151,13 @@ public class TwitchAuthService : IAuthService
         return uriBuilder.ToString();
     }
 
-    public async Task<DeviceCodeResponse> Authorize()
+    public async Task<DeviceCodeResponse> Authorize(string[]? scopes = null)
     {        
         RestClient client = new(TwitchConfig.AuthUrl);
         
         RestRequest request = new("device", Method.Post);
                     request.AddParameter("client_id", ClientId);
-                    request.AddParameter("scopes", string.Join(' ', Scopes));
+                    request.AddParameter("scopes", string.Join(' ', scopes ?? Scopes));
 
         RestResponse response = await client.ExecuteAsync(request);
         
@@ -264,5 +265,43 @@ public class TwitchAuthService : IAuthService
             _logger.LogError("Failed to configure Twitch service: {Error}", ex.Message);
             return false;
         }
+    }
+
+    public string GetRedirectUrlWithScopes(string[] specificScopes)
+    {        
+        NameValueCollection query = HttpUtility.ParseQueryString(string.Empty);
+                            query.Add("response_type", "code");
+                            query.Add("client_id", ClientId);
+                            query.Add("redirect_uri", TwitchConfig.RedirectUri);
+                            query.Add("scope", string.Join(' ', specificScopes));
+                            query.Add("force_verify", "true");
+        
+        UriBuilder uriBuilder = new(TwitchConfig.AuthUrl + "/authorize")
+        {
+            Query = query.ToString(),
+            Scheme = Uri.UriSchemeHttps,
+        };
+        
+        return uriBuilder.ToString();
+    }
+
+    // Method to authorize with specific scopes (used by BotAuthService)
+    public async Task<DeviceCodeResponse> AuthorizeWithScopes(string[] specificScopes)
+    {        
+        RestClient client = new(TwitchConfig.AuthUrl);
+        
+        RestRequest request = new("device", Method.Post);
+                    request.AddParameter("client_id", ClientId);
+                    request.AddParameter("scopes", string.Join(' ', specificScopes));
+
+        RestResponse response = await client.ExecuteAsync(request);
+        
+        if (!response.IsSuccessful || response.Content is null) 
+            throw new(response.Content ?? "Failed to fetch device code from Twitch.");
+
+        DeviceCodeResponse? deviceCodeResponse = response.Content.FromJson<DeviceCodeResponse>();
+        if (deviceCodeResponse == null) throw new("Invalid response from Twitch.");
+
+        return deviceCodeResponse;
     }
 }

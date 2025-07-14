@@ -136,7 +136,7 @@ public class SpotifyAuthService : IAuthService
         return Task.CompletedTask;
     }
 
-    public Task<DeviceCodeResponse> Authorize()
+    public Task<DeviceCodeResponse> Authorize(string[]? scopes = null)
     {
         // Spotify doesn't support device code flow in the same way as Twitch
         throw new NotImplementedException("Spotify doesn't support device code flow");

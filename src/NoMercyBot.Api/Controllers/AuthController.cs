@@ -22,7 +22,8 @@ public class AuthController : BaseController
         [FromServices] TwitchAuthService twitchAuthService,
         [FromServices] SpotifyAuthService spotifyAuthService,
         [FromServices] DiscordAuthService discordAuthService,
-        [FromServices] ObsAuthService obsAuthService
+        [FromServices] ObsAuthService obsAuthService,
+        [FromServices] BotAuthService botAuthService
     )
     {
         _authServices = new()
@@ -30,7 +31,8 @@ public class AuthController : BaseController
             ["twitch"] = twitchAuthService,
             ["spotify"] = spotifyAuthService,
             ["discord"] = discordAuthService,
-            ["obs"] = obsAuthService
+            ["obs"] = obsAuthService,
+            ["bot"] = botAuthService
         };
     }
 
@@ -183,7 +185,7 @@ public class AuthController : BaseController
         
         try
         {
-            if (string.IsNullOrEmpty(request?.RefreshToken))
+            if (string.IsNullOrEmpty(request.RefreshToken))
             {
                 return BadRequestResponse("Refresh token is required");
             }
@@ -214,7 +216,7 @@ public class AuthController : BaseController
     {
         try
         {
-            if (string.IsNullOrEmpty(request?.AccessToken))
+            if (string.IsNullOrEmpty(request.AccessToken))
             {
                 return BadRequestResponse("Access token is required");
             }
@@ -317,6 +319,46 @@ public class AuthController : BaseController
         catch (Exception ex)
         {
             return InternalServerErrorResponse($"Error retrieving available scopes: {ex.Message}");
+        }
+    }
+
+    [HttpGet("bot/login")]
+    public IActionResult BotLogin()
+    {
+        try
+        {
+            IActionResult serviceResult = GetAuthService("twitch", out IAuthService? authService);
+            if (serviceResult is not OkResult) return serviceResult;
+
+            string authorizationUrl = authService!.GetRedirectUrl();
+
+            return Redirect(authorizationUrl);
+        } 
+        catch (Exception e)
+        {
+            return BadRequestResponse(e.Message);
+        }
+    }
+
+    [HttpGet("bot-popup")]
+    public IActionResult BotPopupLogin()
+    {
+        try
+        {
+            IActionResult serviceResult = GetAuthService("twitch", out IAuthService? authService);
+            if (serviceResult is not OkResult) return serviceResult;
+
+            // Get the redirect URL with force_verify to ensure a fresh login
+            string authorizationUrl = authService!.GetRedirectUrl();
+            
+            // Add special parameters for the popup flow
+            authorizationUrl += "&prompt=consent&response_type=code&force_verify=true";
+
+            return Redirect(authorizationUrl);
+        } 
+        catch (Exception e)
+        {
+            return BadRequestResponse(e.Message);
         }
     }
 }

@@ -40,11 +40,11 @@ const toggle = () => (open.value = !open.value);
     </button>
     <div
         :class="{
-				'grid-rows-1': open,
-				'grid-rows-[repeat(1,minmax(0,0fr))]': !open,
-			}"
-        :inert="!open"
+          'grid-rows-1': open,
+          'grid-rows-[repeat(1,minmax(0,0fr))]': !open,
+        }"
         class="grid h-auto w-full transition-all duration-200"
+        :inert="!open"
     >
       <div
           class="flex flex-col gap-1 overflow-hidden transition-all duration-200 p-0.5"

@@ -1,5 +1,9 @@
 <script lang="ts" setup>
 import {ref, watch} from 'vue';
+import router from "@/router";
+import {useRoute} from "vue-router";
+
+const route = useRoute();
 
 const props = defineProps({
   tabs: {
@@ -12,22 +16,20 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['update:tab']);
+const selectedTab = ref<string>(route.hash?.replace('#tab=', '') || props.initialTab || props.tabs[0].name);
 
-const selectedTab = ref(props.initialTab || (props.tabs.length > 0 ? props.tabs[0].name : ''));
-
-watch(() => props.initialTab, (newValue) => {
-  if (newValue && newValue !== selectedTab.value) {
-    selectedTab.value = newValue;
-  }
-}, {immediate: true});
-
-watch(selectedTab, (newValue) => {
-  emit('update:tab', newValue);
+router.afterEach((to, from, next) => {
+  const tabName = to.hash.replace('#tab=', '');
+  selectedTab.value = tabName || props.initialTab;
 });
 
 function selectTab(tabName: string) {
   selectedTab.value = tabName;
+
+  router.replace({ 
+    path: route.path,
+    hash: `#tab=${tabName}` 
+  });
 }
 </script>
 

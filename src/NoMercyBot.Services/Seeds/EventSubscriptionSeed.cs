@@ -8,7 +8,7 @@ namespace NoMercyBot.Services.Seeds;
 
 public static class EventSubscriptionSeed
 {
-    public static async Task SeedEventSubscriptions(this AppDbContext dbContext)
+    public static async Task Init(this AppDbContext dbContext)
     {
         if (await dbContext.EventSubscriptions.AnyAsync())
             return;

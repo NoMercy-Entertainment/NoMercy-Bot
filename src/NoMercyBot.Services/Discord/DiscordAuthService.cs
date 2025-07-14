@@ -147,7 +147,7 @@ public class DiscordAuthService : IAuthService
             throw new("Failed to revoke token from Discord.");
     }
 
-    public Task<DeviceCodeResponse> Authorize()
+    public Task<DeviceCodeResponse> Authorize(string[]? scopes = null)
     {
         // Discord doesn't support device code flow
         throw new NotImplementedException("Discord doesn't support device code flow");

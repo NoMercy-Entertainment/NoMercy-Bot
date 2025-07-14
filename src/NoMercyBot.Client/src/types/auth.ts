@@ -38,3 +38,16 @@ export interface User {
     enabled: boolean;
     is_live: boolean;
 }
+
+export interface DeviceCode {
+    device_code: string;
+    user_code: string;
+    verification_uri: string;
+    expires_in: number;
+    interval: number;
+}
+
+export interface BotTokenResponse {
+    success: true;
+    username: string;
+}

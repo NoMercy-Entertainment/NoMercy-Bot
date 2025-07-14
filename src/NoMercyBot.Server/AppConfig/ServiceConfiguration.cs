@@ -243,6 +243,7 @@ public static class ServiceConfiguration
             {
                 builder
                     .WithOrigins("http://localhost:6037")
+                    .WithOrigins("http://localhost:6038")
                     .WithOrigins("https://qirldtzxyrkjv4k8x9zppsiqvg6foanr.nomercy.tv")
                     .AllowAnyMethod()
                     .AllowCredentials()

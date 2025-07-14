@@ -4,7 +4,6 @@ using System.Drawing;
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using TwitchLib.Client.Enums;
-using TwitchLib.Client.Models;
 using TwitchLib.EventSub.Core.Models.Chat;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 using TwitchLib.EventSub.Websockets.Core.Models;

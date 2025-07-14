@@ -1,35 +1,43 @@
 <script lang="ts" setup>
-import type {Provider} from '@/types/providers.ts';
-
-import useServerClient from '@/lib/clients/useServerClient.ts';
 import {onMounted, ref} from 'vue';
 import {useRoute} from 'vue-router';
+import router from "@/router";
+
+import type {Provider} from '@/types/providers';
+
+import useServerClient from '@/lib/clients/useServerClient';
+
 import ProviderLogo from '@/components/icons/ProviderLogo.vue';
 import DashboardLayout from '@/layout/DashboardLayout.vue';
 import TabsNavigation from './components/TabsNavigation.vue';
 import EventsTab from './components/EventsTab.vue';
 import ConfigurationTab from './components/ConfigurationTab.vue';
+import BotAccountsTab from './components/BotAccountsTab.vue';
 
 const route = useRoute();
 
 const {data: provider, isLoading, refetch} = useServerClient<Provider>({});
 
-const selectedTab = ref('Configuration');
+const selectedTab = ref<string>('Configuration');
 const tabs = [
   {name: 'Configuration', label: 'settings.provider.tabConfig'},
   {name: 'Events', label: 'settings.provider.tabEvents'},
   {name: 'Advanced', label: 'settings.provider.tabAdvanced'},
+  {name: 'BotAccounts', label: 'settings.provider.tabBotAccounts'},
 ];
 
-// Set the initial tab based on the query parameter if available
 onMounted(() => {
-  if (route.query.tab && typeof route.query.tab === 'string') {
-    const tabName = route.query.tab;
+  if (route.hash && typeof route.hash === 'string') {
+    const tabName = route.hash.replace('#tab=', '');
     // Verify the tab exists before setting it
     if (tabs.some(tab => tab.name === tabName)) {
       selectedTab.value = tabName;
     }
   }
+});
+
+router.afterEach((to, from, next) => {
+  selectedTab.value = to.hash?.replace('#tab=', '') || 'Configuration';
 });
 </script>
 
@@ -63,8 +71,11 @@ onMounted(() => {
         {{ $t('settings.provider.advancedComingSoon') }}
       </div>
     </div>
+    <div v-else-if="selectedTab === 'BotAccounts'" class="w-full px-8 py-12">
+      <BotAccountsTab :provider="route.params.provider as string"/>
+    </div>
     <div v-if="isLoading" class="text-center text-gray-500 mt-6">
-      Loading...
+      {{ $t('common.loading') }}...
     </div>
   </DashboardLayout>
 </template>

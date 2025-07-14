@@ -15,7 +15,7 @@ public interface IAuthService
     Task<(User, TokenResponse)> RefreshToken(string refreshToken);
     Task RevokeToken(string accessToken);
     string GetRedirectUrl();
-    Task<DeviceCodeResponse> Authorize();
+    Task<DeviceCodeResponse> Authorize(string[]? scopes = null);
     Task StoreTokens(TokenResponse tokenResponse); 
     Task<bool> ConfigureService(ProviderConfigRequest config);
 }

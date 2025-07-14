@@ -21,17 +21,6 @@ public class ServiceResolver
         _logger = logger;
     }
 
-    public async Task InitializeAllServices()
-    {
-        using IServiceScope scope = _serviceScopeFactory.CreateScope();
-        AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-        await InitializeTwitch(dbContext);
-        await InitializeSpotify(dbContext);
-        await InitializeDiscord(dbContext);
-        await InitializeObs(dbContext);
-    }
-
     private async Task InitializeTwitch(AppDbContext dbContext)
     {
         Service? service = await dbContext.Services.FirstOrDefaultAsync(s => s.Name == "Twitch");
@@ -82,5 +71,44 @@ public class ServiceResolver
         {
             _logger.LogWarning("OBS service not found in database");
         }
+    }
+
+    private async Task InitializeBotProvider(AppDbContext dbContext)
+    {
+        BotAccount? botAccount = await dbContext.BotAccounts.FirstOrDefaultAsync();
+        if (botAccount != null)
+        {
+            // Validate bot's OAuth credentials
+            bool isValid = ValidateBotOAuth(botAccount);
+            if (isValid)
+            {
+                _logger.LogInformation("Bot provider initialized with username: {Username}", botAccount.Username);
+            }
+            else
+            {
+                _logger.LogWarning("Bot provider's OAuth credentials are invalid.");
+            }
+        }
+        else
+        {
+            _logger.LogWarning("No bot provider configured.");
+        }
+    }
+
+    private bool ValidateBotOAuth(BotAccount botAccount)
+    {
+        return !string.IsNullOrEmpty(botAccount.AccessToken) && botAccount.TokenExpiry.HasValue && botAccount.TokenExpiry.Value > DateTime.UtcNow;
+    }
+
+    public async Task InitializeAllServices()
+    {
+        using IServiceScope scope = _serviceScopeFactory.CreateScope();
+        AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        await InitializeTwitch(dbContext);
+        await InitializeBotProvider(dbContext);
+        await InitializeSpotify(dbContext);
+        await InitializeDiscord(dbContext);
+        await InitializeObs(dbContext);
     }
 }

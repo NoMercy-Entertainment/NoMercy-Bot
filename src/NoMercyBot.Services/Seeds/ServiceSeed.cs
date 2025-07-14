@@ -6,7 +6,7 @@ namespace NoMercyBot.Services.Seeds;
 
 public static class ServiceSeed
 {
-    public static async Task SeedServices(AppDbContext dbContext)
+    public static async Task Init(this AppDbContext dbContext)
     {
         if (!await dbContext.Services.AnyAsync())
         {

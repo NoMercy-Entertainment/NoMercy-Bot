@@ -113,6 +113,38 @@ public class ServiceController : BaseController
         
         return Ok(new { name = service.Name, enabled = service.Enabled });
     }
+
+    [HttpGet("bot-status")]
+    public async Task<IActionResult> GetBotStatus()
+    {
+        BotAccount? botAccount = await _dbContext.BotAccounts.FirstOrDefaultAsync();
+        if (botAccount == null)
+        {
+            return Ok(new { status = "No bot account configured", fallback = "Using Twitch provider" });
+        }
+
+        return Ok(new { status = "Bot account configured", username = botAccount.Username });
+    }
+
+    [HttpGet("bot-provider")]
+    public async Task<IActionResult> GetBotProvider()
+    {
+        BotAccount? botAccount = await _dbContext.BotAccounts.FirstOrDefaultAsync();
+        if (botAccount == null)
+        {
+            return NotFound(new { message = "Bot provider not configured" });
+        }
+
+        return Ok(new
+        {
+            provider = "Bot",
+            clientId = botAccount.ClientId,
+            clientSecret = botAccount.ClientSecret,
+            accessToken = botAccount.AccessToken,
+            refreshToken = botAccount.RefreshToken,
+            tokenExpiry = botAccount.TokenExpiry
+        });
+    }
 }
 
 public class ServiceUpdateRequest
