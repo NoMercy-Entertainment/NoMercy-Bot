@@ -22,8 +22,7 @@ public class AuthController : BaseController
         [FromServices] TwitchAuthService twitchAuthService,
         [FromServices] SpotifyAuthService spotifyAuthService,
         [FromServices] DiscordAuthService discordAuthService,
-        [FromServices] ObsAuthService obsAuthService,
-        [FromServices] BotAuthService botAuthService
+        [FromServices] ObsAuthService obsAuthService
     )
     {
         _authServices = new()
@@ -32,7 +31,6 @@ public class AuthController : BaseController
             ["spotify"] = spotifyAuthService,
             ["discord"] = discordAuthService,
             ["obs"] = obsAuthService,
-            ["bot"] = botAuthService
         };
     }
 

@@ -80,8 +80,8 @@ public class BotAuthController : BaseController
                 botAccount = new()
                 {
                     Username = user.Username,
-                    ClientId = _botAuthService.Service.ClientId,
-                    ClientSecret = _botAuthService.Service.ClientSecret,
+                    ClientId = _botAuthService.ClientId,
+                    ClientSecret = _botAuthService.ClientSecret,
                     AccessToken = tokenResponse.AccessToken,
                     RefreshToken = tokenResponse.RefreshToken,
                     TokenExpiry = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn)

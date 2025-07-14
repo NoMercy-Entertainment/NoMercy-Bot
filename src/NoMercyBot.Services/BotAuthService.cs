@@ -27,8 +27,8 @@ public class BotAuthService
         _twitchAuthService = twitchAuthService;
     }
 
-    private string ClientId => TwitchConfig.Service().ClientId ?? throw new InvalidOperationException("Twitch ClientId is not set.");
-    private string ClientSecret => TwitchConfig.Service().ClientSecret ?? throw new InvalidOperationException("Twitch ClientSecret is not set.");
+    public string ClientId => TwitchConfig.Service().ClientId ?? throw new InvalidOperationException("Twitch ClientId is not set.");
+    public string ClientSecret => TwitchConfig.Service().ClientSecret ?? throw new InvalidOperationException("Twitch ClientSecret is not set.");
     private string[] Scopes => BotConfig.AvailableScopes.Keys.ToArray() ?? throw new InvalidOperationException("Twitch Scopes are not set.");
 
     public Task<(User, TokenResponse)> Callback(string code)
