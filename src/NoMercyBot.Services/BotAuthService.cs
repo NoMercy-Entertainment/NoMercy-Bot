@@ -9,7 +9,7 @@ using NoMercyBot.Services.Twitch.Dto;
 
 namespace NoMercyBot.Services;
 
-public class BotAuthService : IAuthService
+public class BotAuthService
 {
     private readonly IServiceScope _scope;
     private readonly ILogger<BotAuthService> _logger;
@@ -27,16 +27,9 @@ public class BotAuthService : IAuthService
         _twitchAuthService = twitchAuthService;
     }
 
-    // For bot accounts, we use the Twitch provider's service config
-    public Service Service => _twitchAuthService.Service;
-
-    public static Dictionary<string, string> AvailableScopes => new()
-    {
-        ["chat:read"] = "Read messages in chat",
-        ["chat:edit"] = "Send messages to chat",
-        ["channel:moderate"] = "Moderate a channel",
-        ["moderator:manage:automod"] = "Manage AutoMod settings"
-    };
+    private string ClientId => TwitchConfig.Service().ClientId ?? throw new InvalidOperationException("Twitch ClientId is not set.");
+    private string ClientSecret => TwitchConfig.Service().ClientSecret ?? throw new InvalidOperationException("Twitch ClientSecret is not set.");
+    private string[] Scopes => BotConfig.AvailableScopes.Keys.ToArray() ?? throw new InvalidOperationException("Twitch Scopes are not set.");
 
     public Task<(User, TokenResponse)> Callback(string code)
     {
@@ -72,13 +65,13 @@ public class BotAuthService : IAuthService
 
     public string GetRedirectUrl()
     {
-        return _twitchAuthService.GetRedirectUrlWithScopes(AvailableScopes.Keys.ToArray());
+        return _twitchAuthService.GetRedirectUrlWithScopes(Scopes);
     }
 
     public async Task<DeviceCodeResponse> Authorize(string[]? scopes = null)
     {
         // Use the Twitch auth service for device code flow
-        return await _twitchAuthService.Authorize(AvailableScopes.Keys.ToArray());
+        return await _twitchAuthService.Authorize(Scopes);
     }
     
     public async Task<TokenResponse> PollForToken(string deviceCode)
@@ -95,14 +88,14 @@ public class BotAuthService : IAuthService
         if (botAccount == null)
         {
             // Create a new bot account
-            botAccount = new BotAccount
+            botAccount = new()
             {
                 Username = "BotAccount", // This will be updated when we fetch the user info
                 AccessToken = tokenResponse.AccessToken,
                 RefreshToken = tokenResponse.RefreshToken,
                 TokenExpiry = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn),
-                ClientId = Service.ClientId ?? string.Empty,
-                ClientSecret = Service.ClientSecret ?? string.Empty
+                ClientId = ClientId,
+                ClientSecret = ClientSecret
             };
             
             _db.BotAccounts.Add(botAccount);

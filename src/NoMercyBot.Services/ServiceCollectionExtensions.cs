@@ -29,7 +29,6 @@ public static class ServiceCollectionExtensions
     private static void AddOtherServices(this IServiceCollection services)
     {
         services.AddScoped<PronounService>();
-        services.AddScoped<BotAuthService>();
     }
     
     private static void AddEmoteServices(this IServiceCollection services)

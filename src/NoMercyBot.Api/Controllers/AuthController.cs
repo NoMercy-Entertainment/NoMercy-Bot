@@ -51,7 +51,7 @@ public class AuthController : BaseController
         }
 
         service = foundService;
-        return Ok();
+        return Ok(service);
     }
 
     // get a redirect url for the user to login directly to twitch
