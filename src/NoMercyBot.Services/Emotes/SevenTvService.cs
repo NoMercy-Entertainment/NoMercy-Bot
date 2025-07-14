@@ -25,7 +25,27 @@ public class SevenTvService : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        await Initialize();
+        _logger.LogInformation("Starting 7TV emote service initialization");
+        try
+        {
+            // Run initialization in background so it doesn't block startup
+            _ = Task.Run(async () => 
+            {
+                try
+                {
+                    await Initialize();
+                    _logger.LogInformation("7TV emote service initialized successfully");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to initialize 7TV emotes, but continuing startup");
+                }
+            }, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error starting 7TV emote service, but continuing startup");
+        }
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
@@ -36,7 +56,16 @@ public class SevenTvService : IHostedService
     public async Task Initialize()
     {
         _logger.LogInformation("Initializing 7TV emotes cache...");
-        await GetGlobalEmotes();
+        try
+        {
+            await GetGlobalEmotes();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get global 7TV emotes");
+            // Initialize empty array to prevent null reference exceptions
+            SevenTvEmotes = Array.Empty<SevenTvEmote>();
+        }
     }
 
     public async Task<SevenTvEmote[]?> GetGlobalEmotes()

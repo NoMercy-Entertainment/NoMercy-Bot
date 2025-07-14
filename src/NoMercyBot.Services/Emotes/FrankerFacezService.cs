@@ -25,7 +25,27 @@ public class FrankerFacezService : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        await Initialize();
+        _logger.LogInformation("Starting FrankerFacez emote service initialization");
+        try
+        {
+            // Run initialization in background so it doesn't block startup
+            _ = Task.Run(async () => 
+            {
+                try
+                {
+                    await Initialize();
+                    _logger.LogInformation("FrankerFacez emote service initialized successfully");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to initialize FrankerFacez emotes, but continuing startup");
+                }
+            }, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error starting FrankerFacez emote service, but continuing startup");
+        }
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
@@ -36,7 +56,16 @@ public class FrankerFacezService : IHostedService
     public async Task Initialize()
     {
         _logger.LogInformation("Initializing FrankerFacez emotes cache...");
-        await GetGlobalEmotes();
+        try
+        {
+            await GetGlobalEmotes();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get global FrankerFacez emotes");
+            // Initialize empty array to prevent null reference exceptions
+            FrankerFacezEmotes = Array.Empty<Emoticon>();
+        }
     }
 
     public async Task<Emoticon[]?> GetGlobalEmotes()

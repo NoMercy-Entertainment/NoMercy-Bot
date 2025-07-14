@@ -25,7 +25,27 @@ public class BttvService : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        await Initialize();
+        _logger.LogInformation("Starting BTTV emote service initialization");
+        try
+        {
+            // Run initialization in background so it doesn't block startup
+            _ = Task.Run(async () => 
+            {
+                try
+                {
+                    await Initialize();
+                    _logger.LogInformation("BTTV emote service initialized successfully");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to initialize BTTV emotes, but continuing startup");
+                }
+            }, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error starting BTTV emote service, but continuing startup");
+        }
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
@@ -36,16 +56,27 @@ public class BttvService : IHostedService
     public async Task Initialize()
     {
         _logger.LogInformation("Initializing BTTV emotes cache...");
-        await GetGlobalEmotes();
-    }
-
-    public async Task<BttvEmote[]?> GetGlobalEmotes()
-    {
-        if (BttvEmotes != null)
-            return BttvEmotes;
-
         try
         {
+            await GetGlobalEmotes();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get global BTTV emotes");
+            // Initialize empty array to prevent null reference exceptions
+            BttvEmotes = Array.Empty<BttvEmote>();
+        }
+    }
+
+    public async Task<BttvEmote[]> GetGlobalEmotes()
+    {
+        try
+        {
+            _logger.LogInformation("Fetching global BTTV emotes");
+
+            if (BttvEmotes != null)
+                return BttvEmotes;
+
             RestRequest request = new("cached/emotes/global");
             RestResponse response = await _client.ExecuteAsync(request);
 
@@ -58,8 +89,8 @@ public class BttvService : IHostedService
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error loading global BTTV emotes: {ex.Message}");
-            return null;
+            _logger.LogError(ex, "Error fetching global BTTV emotes");
+            return Array.Empty<BttvEmote>();
         }
     }
 
@@ -96,4 +127,3 @@ public class BttvService : IHostedService
         _getChannelBttvCache.TryRemove(broadcasterId, out _);
     }
 }
-
