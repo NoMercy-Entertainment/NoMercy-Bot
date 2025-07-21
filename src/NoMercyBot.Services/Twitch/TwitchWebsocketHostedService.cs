@@ -13,6 +13,7 @@ using TwitchLib.EventSub.Websockets;
 using TwitchLib.EventSub.Websockets.Core.EventArgs;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Stream;
+using Stream = NoMercyBot.Database.Models.Stream;
 using UserUpdateArgs = TwitchLib.EventSub.Websockets.Core.EventArgs.User.UserUpdateArgs;
 
 namespace NoMercyBot.Services.Twitch;
@@ -29,6 +30,8 @@ public class TwitchWebsocketHostedService : IHostedService
     private readonly TwitchEventBus _eventBus;
     private readonly TwitchMessageDecorator _twitchMessageDecorator;
     private bool _isConnected = false;
+    private ChannelInfo? _channelInfo;
+    private Stream? _currentStream;
 
     public TwitchWebsocketHostedService(
         AppDbContext dbContext,
@@ -48,6 +51,12 @@ public class TwitchWebsocketHostedService : IHostedService
         _twitchMessageDecorator = twitchMessageDecorator;
         // Subscribe to the event
         twitchEventSubService.OnEventSubscriptionChanged += HandleEventSubscriptionChange;
+        
+        _channelInfo = dbContext.ChannelInfo
+            .FirstOrDefault(channelInfo => channelInfo.Id == TwitchConfig.Service().UserId);
+        
+        _currentStream = dbContext.Streams
+            .FirstOrDefault(stream => stream.UpdatedAt == stream.CreatedAt);
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -412,7 +421,7 @@ public class TwitchWebsocketHostedService : IHostedService
 
         try
         {
-            ChatMessage chatMessage = new(args.Notification);
+            ChatMessage chatMessage = new(args.Notification, _currentStream);
             
             await _twitchMessageDecorator.DecorateMessage(chatMessage);
 
@@ -437,6 +446,16 @@ public class TwitchWebsocketHostedService : IHostedService
     {
         _logger.LogInformation("Chat clear: Chat was cleared in {Channel}",
             args.Notification.Payload.Event.BroadcasterUserLogin);
+        
+        List<ChatMessage> messages = await _dbContext.ChatMessages
+            .Where(c => _currentStream != null && c.StreamId == _currentStream.Id)
+            .ToListAsync(_cts.Token);
+        
+        foreach (ChatMessage message in messages)
+        {
+            message.DeletedAt = DateTime.UtcNow;
+        }
+        await _dbContext.SaveChangesAsync(_cts.Token);
 
         await Task.CompletedTask;
     }
@@ -446,6 +465,17 @@ public class TwitchWebsocketHostedService : IHostedService
         _logger.LogInformation("User messages cleared: {User}'s messages were cleared in {Channel}",
             args.Notification.Payload.Event.TargetUserLogin,
             args.Notification.Payload.Event.BroadcasterUserLogin);
+        
+        List<ChatMessage> messages = await _dbContext.ChatMessages
+            .Where(c => _currentStream != null && c.StreamId == _currentStream.Id
+                && c.UserId == args.Notification.Payload.Event.TargetUserId)
+            .ToListAsync(_cts.Token);
+        
+        foreach (ChatMessage message in messages)
+        {
+            message.DeletedAt = DateTime.UtcNow;
+        }
+        await _dbContext.SaveChangesAsync(_cts.Token);
 
         await Task.CompletedTask;
     }
@@ -455,6 +485,17 @@ public class TwitchWebsocketHostedService : IHostedService
         _logger.LogInformation("Message deleted: A message from {User} was deleted in {Channel}",
             args.Notification.Payload.Event.TargetUserLogin,
             args.Notification.Payload.Event.BroadcasterUserLogin);
+        
+        ChatMessage? message = await _dbContext.ChatMessages
+            .FirstOrDefaultAsync(c => c.Id == args.Notification.Payload.Event.MessageId, _cts.Token);
+
+        if (message != null)
+        {
+            message.DeletedAt = DateTime.UtcNow;
+            await _dbContext.SaveChangesAsync(_cts.Token);
+            _logger.LogInformation("Marked message as deleted: {MessageId} in {Channel}",
+                message.Id, args.Notification.Payload.Event.BroadcasterUserLogin);
+        }
 
         await Task.CompletedTask;
     }
@@ -476,16 +517,36 @@ public class TwitchWebsocketHostedService : IHostedService
     {
         _logger.LogInformation("Stream online: {Channel}", args.Notification.Payload.Event.BroadcasterUserLogin);
 
-        Channel? channel = await _dbContext.Channels
-            .Include(channel => channel.User)
+        ChannelInfo? channelInfo = await _dbContext.ChannelInfo
             .FirstOrDefaultAsync(c => c.Id == args.Notification.Payload.Event.BroadcasterUserId, _cts.Token);
 
-        if (channel != null)
+        if (channelInfo != null)
         {
-            channel.User.IsLive = true;
+            channelInfo.IsLive = true;
             await _dbContext.SaveChangesAsync(_cts.Token);
             _logger.LogInformation("Updated stream status to online for {Channel}",
                 args.Notification.Payload.Event.BroadcasterUserLogin);
+
+            Stream stream = new()
+            {
+                Id = args.Notification.Payload.Event.Id,
+                ChannelId = args.Notification.Payload.Event.BroadcasterUserId,
+                Title = channelInfo.Title,
+                GameId = channelInfo.GameId,
+                GameName = channelInfo.GameName,
+                Language = channelInfo.Language,
+                Delay = channelInfo.Delay,
+                Tags = channelInfo.Tags,
+                ContentLabels = channelInfo.ContentLabels,
+                IsBrandedContent = channelInfo.IsBrandedContent
+            };
+            
+            _currentStream = stream;
+            
+           _dbContext.Streams.Add(stream);
+            await _dbContext.SaveChangesAsync(_cts.Token);
+            _logger.LogInformation("Created new stream entry for {Channel} with ID {StreamId}",
+                args.Notification.Payload.Event.BroadcasterUserLogin, stream.Id);
         }
     }
 
@@ -493,16 +554,29 @@ public class TwitchWebsocketHostedService : IHostedService
     {
         _logger.LogInformation("Stream offline: {Channel}", args.Notification.Payload.Event.BroadcasterUserLogin);
 
-        Channel? channel = await _dbContext.Channels
-            .Include(channel => channel.User)
+        ChannelInfo? channelInfo = await _dbContext.ChannelInfo
             .FirstOrDefaultAsync(c => c.Id == args.Notification.Payload.Event.BroadcasterUserId, _cts.Token);
+        
+        _currentStream = null;
 
-        if (channel != null)
+        if (channelInfo != null)
         {
-            channel.User.IsLive = false;
+            channelInfo.IsLive = false;
             await _dbContext.SaveChangesAsync(_cts.Token);
             _logger.LogInformation("Updated stream status to offline for {Channel}",
                 args.Notification.Payload.Event.BroadcasterUserLogin);
+            
+            Stream? stream = await _dbContext.Streams
+                .OrderByDescending(s => s.CreatedAt)
+                .FirstOrDefaultAsync(s => s.ChannelId == channelInfo.Id, _cts.Token);
+            
+            if (stream != null)
+            {
+                stream.UpdatedAt = DateTime.UtcNow;
+                await _dbContext.SaveChangesAsync(_cts.Token);
+                _logger.LogInformation("Updated last stream entry for {Channel} with ID {StreamId}",
+                    args.Notification.Payload.Event.BroadcasterUserLogin, stream?.Id);
+            }
         }
     }
 

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NoMercyBot.Database;
 
@@ -10,9 +11,11 @@ using NoMercyBot.Database;
 namespace NoMercyBot.Database.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250721143319_Init27")]
+    partial class Init27
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.6");
@@ -130,9 +133,6 @@ namespace NoMercyBot.Database.Migrations
                     b.Property<bool>("IsBrandedContent")
                         .HasColumnType("INTEGER");
 
-                    b.Property<bool>("IsLive")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("Language")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -230,15 +230,14 @@ namespace NoMercyBot.Database.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Badges")
-                        .IsRequired()
                         .HasColumnType("TEXT");
-
-                    b.Property<int?>("BitsAmount")
-                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ChannelId")
                         .IsRequired()
                         .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Color")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ColorHex")
@@ -252,9 +251,6 @@ namespace NoMercyBot.Database.Migrations
                         .HasColumnType("TEXT")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -263,9 +259,6 @@ namespace NoMercyBot.Database.Migrations
                     b.Property<string>("Fragments")
                         .IsRequired()
                         .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsCheer")
-                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsCommand")
                         .HasColumnType("INTEGER");
@@ -279,14 +272,6 @@ namespace NoMercyBot.Database.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ReplyToMessageId")
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("StreamId")
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("SuccessfulReply")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
@@ -321,8 +306,6 @@ namespace NoMercyBot.Database.Migrations
                     b.HasIndex("ChannelId");
 
                     b.HasIndex("ReplyToMessageId");
-
-                    b.HasIndex("StreamId");
 
                     b.HasIndex("UserId");
 
@@ -624,70 +607,6 @@ namespace NoMercyBot.Database.Migrations
                     b.ToTable("Shoutout");
                 });
 
-            modelBuilder.Entity("NoMercyBot.Database.Models.Stream", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ChannelId")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.PrimitiveCollection<string>("ContentLabels")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("TEXT")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int>("Delay")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("GameId")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("GameName")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsBrandedContent")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Language")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.PrimitiveCollection<string>("Tags")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("TEXT")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ChannelId");
-
-                    b.ToTable("Streams");
-                });
-
             modelBuilder.Entity("NoMercyBot.Database.Models.User", b =>
                 {
                     b.Property<string>("Id")
@@ -720,6 +639,9 @@ namespace NoMercyBot.Database.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("Enabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsLive")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("NickName")
@@ -812,11 +734,6 @@ namespace NoMercyBot.Database.Migrations
                         .HasForeignKey("ReplyToMessageId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("NoMercyBot.Database.Models.Stream", "Stream")
-                        .WithMany()
-                        .HasForeignKey("StreamId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
                     b.HasOne("NoMercyBot.Database.Models.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
@@ -826,8 +743,6 @@ namespace NoMercyBot.Database.Migrations
                     b.Navigation("Broadcaster");
 
                     b.Navigation("ReplyToMessage");
-
-                    b.Navigation("Stream");
 
                     b.Navigation("User");
                 });
@@ -874,17 +789,6 @@ namespace NoMercyBot.Database.Migrations
                     b.Navigation("Channel");
 
                     b.Navigation("ShoutedUser");
-                });
-
-            modelBuilder.Entity("NoMercyBot.Database.Models.Stream", b =>
-                {
-                    b.HasOne("NoMercyBot.Database.Models.Channel", "Channel")
-                        .WithMany()
-                        .HasForeignKey("ChannelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Channel");
                 });
 
             modelBuilder.Entity("NoMercyBot.Database.Models.Channel", b =>

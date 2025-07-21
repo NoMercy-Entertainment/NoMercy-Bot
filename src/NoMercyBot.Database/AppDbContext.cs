@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using NoMercyBot.Database.Models;
 using NoMercyBot.Database.Models.ChatMessage;
 using NoMercyBot.Globals.Information;
+using Stream = NoMercyBot.Database.Models.Stream;
 
 namespace NoMercyBot.Database;
 
@@ -95,16 +96,10 @@ public class AppDbContext : DbContext
             .OnDelete(DeleteBehavior.Restrict);
         
         modelBuilder.Entity<ChatMessage>()
-            .Property(e => e.Color)
-            .HasConversion(
-                v => JsonConvert.SerializeObject(v),
-                v => JsonConvert.DeserializeObject<Color>(v));
-        
-        modelBuilder.Entity<ChatMessage>()
             .Property(e => e.Badges)
             .HasConversion(
                 v => JsonConvert.SerializeObject(v),
-                v => JsonConvert.DeserializeObject<List<KeyValuePair<string, string>>>(v) ?? new List<KeyValuePair<string, string>>());
+                v => JsonConvert.DeserializeObject<List<ChatBadge>>(v) ?? new List<ChatBadge>());
 
         modelBuilder.Entity<ChatMessage>()
             .Property(e => e.Fragments)
@@ -210,4 +205,5 @@ public class AppDbContext : DbContext
     public DbSet<Pronoun> Pronouns { get; set; }
     public DbSet<EventSubscription> EventSubscriptions { get; set; }
     public DbSet<BotAccount> BotAccounts { get; set; }
+    public DbSet<Stream> Streams { get; set; }
 }

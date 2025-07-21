@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 namespace NoMercyBot.Database.Models.ChatMessage;
 
 [NotMapped]
-public sealed class ChatEmote
+public class ChatEmote
 {
     [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)] public string Id { get; set; } = string.Empty;
     [JsonProperty("emote_set_id", NullValueHandling = NullValueHandling.Ignore)] public string EmoteSetId { get; set; } = string.Empty;

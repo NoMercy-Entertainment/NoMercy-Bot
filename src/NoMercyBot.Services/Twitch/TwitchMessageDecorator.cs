@@ -2,11 +2,12 @@
 using NoMercyBot.Database.Models.ChatMessage;
 using NoMercyBot.Services.Emotes;
 using NoMercyBot.Services.Emotes.Dto;
+using NoMercyBot.Services.Interfaces;
 using NoMercyBot.Services.Other;
 
 namespace NoMercyBot.Services.Twitch;
 
-public class TwitchMessageDecorator
+public class TwitchMessageDecorator: IService
 {
     private readonly FrankerFacezService _frankerFacezService;
     private readonly BttvService _bttvService;
@@ -66,6 +67,8 @@ public class TwitchMessageDecorator
 
     private void ExplodeTextFragments()
     {
+        if(DecorateCommand()) return;
+        
         List<ChatMessageFragment> newFragments = [];
 
         foreach (ChatMessageFragment fragment in _fragments)
@@ -176,6 +179,41 @@ public class TwitchMessageDecorator
         }
 
         _fragments = newFragments;
+    }
+    
+    private bool DecorateCommand()
+    {
+        ChatMessageFragment? firstFragment = _fragments.FirstOrDefault();
+        
+        if (firstFragment is null || firstFragment.Type != "text" || !firstFragment.Text.StartsWith("!"))
+            return false;
+
+        ChatMessage.IsCommand = true;
+
+        string text = string.Join("", _fragments.Select(x => x.Text));
+    
+        string[] parts = text
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .ToArray();
+
+        if (parts.Length == 0)
+            return false;
+        
+        string commandName = parts[0].TrimStart('!').ToLowerInvariant();
+        string[] args = parts.Skip(1).ToArray();
+
+        _fragments = [
+            new()
+            {
+                Type = "command",
+                Text = text,
+                Command = commandName,
+                Args = args
+            }
+        ];
+
+        return true;
     }
     
     private void DecorateTwitchEmotes()

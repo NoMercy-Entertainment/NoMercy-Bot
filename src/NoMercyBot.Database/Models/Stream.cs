@@ -6,17 +6,15 @@ using Newtonsoft.Json;
 namespace NoMercyBot.Database.Models;
 
 [PrimaryKey(nameof(Id))]
-public class ChannelInfo: Timestamps
+public class Stream: Timestamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
     [MaxLength(50)]
-    [JsonProperty("broadcaster_id")]
+    [JsonProperty("id")]
     public string Id { get; set; } = null!;
-
-    [JsonProperty("is_live")] public bool IsLive { get; set; }
     
     [MaxLength(50)]
-    [JsonProperty("broadcaster_language")] public string Language { get; set; } = string.Empty;
+    [JsonProperty("language")] public string Language { get; set; } = string.Empty;
     
     [MaxLength(50)]
     [JsonProperty("game_id")] public string GameId { get; set; } = string.Empty;
@@ -31,7 +29,10 @@ public class ChannelInfo: Timestamps
     
     [JsonProperty("tags")] public List<string> Tags { get; set; } = [];
     
-    [JsonProperty("content_classification_labels")] public List<string> ContentLabels { get; set; } = [];
+    [JsonProperty("content_labels")] public List<string> ContentLabels { get; set; } = [];
     
     [JsonProperty("is_branded_content")] public bool IsBrandedContent { get; set; }
+    
+    [JsonProperty("channel_id")] public string ChannelId { get; set; } = null!;
+    [JsonProperty("channel")] public virtual Channel Channel { get; set; } = new();
 }

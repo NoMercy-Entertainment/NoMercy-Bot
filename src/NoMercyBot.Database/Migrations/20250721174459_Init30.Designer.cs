@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NoMercyBot.Database;
 
@@ -10,9 +11,11 @@ using NoMercyBot.Database;
 namespace NoMercyBot.Database.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250721174459_Init30")]
+    partial class Init30
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.6");
@@ -241,6 +244,9 @@ namespace NoMercyBot.Database.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Color")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ColorHex")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -283,10 +289,6 @@ namespace NoMercyBot.Database.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("StreamId")
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("SuccessfulReply")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 

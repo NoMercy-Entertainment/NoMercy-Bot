@@ -18,6 +18,9 @@ public class User: Timestamps
     [MaxLength(255)]
     [JsonProperty("display_name")] public string DisplayName { get; set; } = string.Empty;
 
+    [MaxLength(255)]
+    [JsonProperty("nickname")] public string NickName { get; set; } = string.Empty;
+
     [MaxLength(50)]
     [JsonProperty("timezone")] public string? Timezone { get; set; }
     
@@ -43,8 +46,6 @@ public class User: Timestamps
     [JsonProperty("broadcaster_type")] public string BroadcasterType { get; set; } = string.Empty;
     
     [JsonProperty("enabled")] public bool Enabled { get; set; }
-
-    [JsonProperty("is_live")] public bool IsLive { get; set; }
 
     [JsonProperty("channel")] public virtual Channel Channel { get; set; } = new();
     
@@ -78,7 +79,6 @@ public class SimpleUser
         Color = user.Color;
         BroadcasterType = user.BroadcasterType;
         Enabled = user.Enabled;
-        IsLive = user.IsLive;
         Pronoun = user.Pronoun;
         Channel = user.Channel;
     }

@@ -67,22 +67,7 @@ namespace NoMercyBot.Database.Migrations
                 {
                     table.PrimaryKey("PK_ChatCheermote", x => x.Id);
                 });
-
-            migrationBuilder.CreateTable(
-                name: "ChatEmote",
-                columns: table => new
-                {
-                    Id = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
-                    EmoteSetId = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
-                    OwnerId = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
-                    Format = table.Column<string>(type: "TEXT", nullable: false),
-                    Urls = table.Column<string>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ChatEmote", x => x.Id);
-                });
-
+            
             migrationBuilder.CreateTable(
                 name: "ChatMention",
                 columns: table => new

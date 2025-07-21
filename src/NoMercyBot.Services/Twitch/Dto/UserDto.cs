@@ -28,7 +28,6 @@ public record UserDto
         Color = user.Color;
         Link = new($"/profile/{Username}", UriKind.Relative);
         Enabled = user.Enabled;
-        IsLive = user.IsLive;
     }
 }
 

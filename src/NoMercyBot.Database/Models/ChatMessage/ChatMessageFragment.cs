@@ -12,7 +12,9 @@ public class ChatMessageFragment
     [JsonProperty("emote", NullValueHandling = NullValueHandling.Ignore)] public ChatEmote? Emote { get; set; }
     [JsonProperty("mention", NullValueHandling = NullValueHandling.Ignore)] public ChatMention? Mention { get; set; }
     
-    [JsonProperty("html_preview", NullValueHandling = NullValueHandling.Ignore)] public HtmlPreviewCustomContent HtmlContent { get; set; }
+    [JsonProperty("command", NullValueHandling = NullValueHandling.Ignore)] public string? Command { get; set; }
+    [JsonProperty("args", NullValueHandling = NullValueHandling.Ignore)] public string[]? Args { get; set; }
+    [JsonProperty("html_preview", NullValueHandling = NullValueHandling.Ignore)] public HtmlPreviewCustomContent? HtmlContent { get; set; }
 
     public ChatMessageFragment()
     {
