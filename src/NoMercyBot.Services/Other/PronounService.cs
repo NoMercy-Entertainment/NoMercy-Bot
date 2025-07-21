@@ -3,12 +3,13 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercyBot.Database;
 using NoMercyBot.Database.Models;
+using NoMercyBot.Services.Interfaces;
 using NoMercyBot.Services.Other.Dto;
 using RestSharp;
 
 namespace NoMercyBot.Services.Other;
 
-public class PronounService
+public class PronounService: IService
 {
     private readonly RestClient _client;
     private readonly AppDbContext _dbContext;

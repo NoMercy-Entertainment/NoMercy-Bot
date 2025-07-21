@@ -1,10 +1,10 @@
 using Microsoft.Extensions.Logging;
 using NoMercyBot.Database;
 using RestSharp;
-using System.Collections.Concurrent;
 using Newtonsoft.Json;
 using NoMercyBot.Services.Emotes.Dto;
 using Microsoft.Extensions.Hosting;
+using NoMercyBot.Services.Twitch;
 
 namespace NoMercyBot.Services.Emotes;
 
@@ -13,13 +13,14 @@ public class FrankerFacezService : IHostedService
     private readonly RestClient _client;
     private readonly AppDbContext _dbContext;
     private readonly ILogger<FrankerFacezService> _logger;
-    public Emoticon[]? FrankerFacezEmotes;
-    private readonly ConcurrentDictionary<string, Emoticon[]> _getChannelFfzCache = new();
+    private readonly TwitchAuthService _twitchAuthService;
+    public List<Emoticon> FrankerFacezEmotes { get; private set; } = [];
 
-    public FrankerFacezService(AppDbContext dbContext, ILogger<FrankerFacezService> logger)
+    public FrankerFacezService(AppDbContext dbContext, ILogger<FrankerFacezService> logger, TwitchAuthService twitchAuthService)
     {
         _dbContext = dbContext;
         _logger = logger;
+        _twitchAuthService = twitchAuthService;
         _client = new("https://api.frankerfacez.com/v1/");
     }
 
@@ -53,90 +54,69 @@ public class FrankerFacezService : IHostedService
         return Task.CompletedTask;
     }
 
-    public async Task Initialize()
+    private async Task Initialize()
     {
         _logger.LogInformation("Initializing FrankerFacez emotes cache...");
         try
         {
             await GetGlobalEmotes();
+            await GetChannelEmotes(_twitchAuthService.UserName);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get global FrankerFacez emotes");
-            // Initialize empty array to prevent null reference exceptions
-            FrankerFacezEmotes = Array.Empty<Emoticon>();
         }
     }
 
-    public async Task<Emoticon[]?> GetGlobalEmotes()
+    private async Task GetGlobalEmotes()
     {
-        if (FrankerFacezEmotes != null)
-            return FrankerFacezEmotes;
-
         try
         {
             RestRequest request = new("set/global");
             RestResponse response = await _client.ExecuteAsync(request);
 
             if (!response.IsSuccessful || response.Content == null)
-                throw new Exception("Failed to fetch global FFZ emotes");
+                throw new("Failed to fetch global FFZ emotes");
 
             FrankerFacezResponse? obj = JsonConvert.DeserializeObject<FrankerFacezResponse>(response.Content);
             
-            List<Emoticon> list = [];
             foreach (int setId in obj?.DefaultSets ?? [])
                 if (obj?.Sets.TryGetValue(setId.ToString(), out FrankerFacezSet? set) ?? false)
                     foreach (Emoticon emote in set.Emoticons)
-                        list.Add(emote);
+                        FrankerFacezEmotes.Add(emote);
                         
-            FrankerFacezEmotes = list.ToArray();
-            _logger.LogInformation($"Loaded {FrankerFacezEmotes.Length} global FFZ emotes");
-            return FrankerFacezEmotes;
+            _logger.LogInformation($"Loaded {FrankerFacezEmotes.Count} global FFZ emotes");
         }
         catch (Exception ex)
         {
             _logger.LogError($"Error loading global FFZ emotes: {ex.Message}");
-            return null;
         }
     }
 
-    public async Task<Emoticon[]?> GetChannelEmotes(string channelName)
+    private async Task GetChannelEmotes(string channelName)
     {
-        if (_getChannelFfzCache.TryGetValue(channelName, out Emoticon[]? cached))
-            return cached;
-
         try
         {
             RestRequest request = new($"room/{channelName}");
             RestResponse response = await _client.ExecuteAsync(request);
 
             if (!response.IsSuccessful || response.Content == null)
-                return null;
+                return;
 
             FrankerFacezResponse? frankerFacezResponse = JsonConvert.DeserializeObject<FrankerFacezResponse>(response.Content);
             
-            List<Emoticon> list = [];
             if (frankerFacezResponse?.Sets != null)
             {
                 foreach (FrankerFacezSet set in frankerFacezResponse.Sets.Values)
                     foreach (Emoticon emote in set.Emoticons)
-                        list.Add(emote);
+                        FrankerFacezEmotes.Add(emote);
+                
+                _logger.LogInformation($"Loaded {frankerFacezResponse.Sets.Count} FFZ sets for channel {channelName}");
             }
-            
-            Emoticon[] result = list.ToArray();
-            _getChannelFfzCache.AddOrUpdate(channelName, result, (_, _) => result);
-            _logger.LogInformation($"Loaded {result.Length} channel FFZ emotes for {channelName}");
-            return result;
         }
         catch (Exception ex)
         {
             _logger.LogError($"Error loading channel FFZ emotes for {channelName}: {ex.Message}");
-            return null;
         }
-    }
-
-    public void ResetChannelCache(string channelName)
-    {
-        _getChannelFfzCache.TryRemove(channelName, out _);
     }
 }

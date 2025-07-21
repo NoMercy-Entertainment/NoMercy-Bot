@@ -19,9 +19,9 @@ public static class Program
         {
             Exception exception = (Exception)eventArgs.ExceptionObject;
         };
-
+        
         Console.CancelKeyPress += (_, _) => { Environment.Exit(0); };
-
+        
         AppDomain.CurrentDomain.ProcessExit += (_, _) => { Environment.Exit(0); };
 
         await Parser.Default.ParseArguments<StartupOptions>(args)
@@ -53,8 +53,8 @@ public static class Program
         await Setup.Start.Init(startupTasks);
         
         IWebHost app = CreateWebHostBuilder(options).Build();
-        
-        new Thread(() => app.RunAsync()).Start();
+
+        await app.RunAsync();
 
         await Task.Delay(-1);
     }
@@ -81,7 +81,7 @@ public static class Program
             })
             .ConfigureLogging(logging =>
             {
-                logging.ClearProviders();
+                // logging.ClearProviders();
             })
             .UseUrls(urls.ToArray())
             .UseKestrel(options =>

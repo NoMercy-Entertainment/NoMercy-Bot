@@ -1,7 +1,7 @@
 ﻿using NoMercyBot.Database.Models;
 using NoMercyBot.Services.Twitch.Dto;
 
-namespace NoMercyBot.Services;
+namespace NoMercyBot.Services.Interfaces;
 
 public interface IAuthService
 {
@@ -16,6 +16,6 @@ public interface IAuthService
     Task RevokeToken(string accessToken);
     string GetRedirectUrl();
     Task<DeviceCodeResponse> Authorize(string[]? scopes = null);
-    Task StoreTokens(TokenResponse tokenResponse); 
+    Task StoreTokens(TokenResponse tokenResponse, User user); 
     Task<bool> ConfigureService(ProviderConfigRequest config);
 }

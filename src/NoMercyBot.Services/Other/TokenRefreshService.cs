@@ -1,28 +1,31 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NoMercyBot.Database;
 using NoMercyBot.Database.Models;
-using Microsoft.EntityFrameworkCore;
 using NoMercyBot.Services.Discord;
+using NoMercyBot.Services.Interfaces;
 using NoMercyBot.Services.Obs;
 using NoMercyBot.Services.Spotify;
 using NoMercyBot.Services.Twitch;
 using NoMercyBot.Services.Twitch.Dto;
 
-namespace NoMercyBot.Services;
+namespace NoMercyBot.Services.Other;
 
 public class TokenRefreshService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<TokenRefreshService> _logger;
+    private readonly AppDbContext _context;
     private readonly TimeSpan _checkInterval = TimeSpan.FromMinutes(1);
     private readonly TimeSpan _refreshThreshold = TimeSpan.FromMinutes(5);
 
-    public TokenRefreshService(IServiceScopeFactory scopeFactory, ILogger<TokenRefreshService> logger)
+    public TokenRefreshService(IServiceScopeFactory scopeFactory, ILogger<TokenRefreshService> logger, AppDbContext context)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
+        _context = context;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -73,20 +76,33 @@ public class TokenRefreshService : BackgroundService
     {
         try
         {
-            _logger.LogInformation("Refreshing token for service {ServiceName}", service.Name);
-            
             IAuthService? authService = GetAuthServiceForProvider(service.Name, scope);
             
-            if (authService == null)
-            {
-                _logger.LogWarning("No auth service found for {ServiceName}", service.Name);
-                return;
-            }
-
-            (User, TokenResponse) tokenResponse = await authService.RefreshToken(service.RefreshToken);
-            await authService.StoreTokens(tokenResponse.Item2);
+            if (authService == null) return;
             
-            _logger.LogInformation("Successfully refreshed token for {ServiceName}", service.Name);
+            _logger.LogDebug("Refreshing token for service {ServiceName}", service.Name);
+            
+            (User user, TokenResponse response) = await authService.RefreshToken(service.RefreshToken!);
+            
+            authService.Service.AccessToken = response.AccessToken;
+            authService.Service.RefreshToken = response.RefreshToken;
+            authService.Service.TokenExpiry = DateTime.UtcNow.AddSeconds(response.ExpiresIn);
+            authService.Service.UserId = user.Id;
+            authService.Service.UserName = user.Username;
+            
+            await _context.Services.Upsert(authService.Service)
+                .On(u => u.Name)
+                .WhenMatched((oldService, newService) => new()
+                {
+                    AccessToken = newService.AccessToken,
+                    RefreshToken = newService.RefreshToken,
+                    TokenExpiry = newService.TokenExpiry,
+                    UserId = newService.UserId,
+                    UserName = newService.UserName
+                })
+                .RunAsync(cancellationToken);
+            
+            _logger.LogDebug("Successfully refreshed token for {ServiceName}", service.Name);
         }
         catch (Exception ex)
         {

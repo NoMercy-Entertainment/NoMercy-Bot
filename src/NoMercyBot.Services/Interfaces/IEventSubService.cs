@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using NoMercyBot.Database.Models;
 
-namespace NoMercyBot.Services;
+namespace NoMercyBot.Services.Interfaces;
 
 public interface IEventSubService
 {

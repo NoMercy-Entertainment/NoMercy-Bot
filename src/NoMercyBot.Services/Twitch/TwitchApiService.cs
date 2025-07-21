@@ -121,8 +121,8 @@ public class TwitchApiService
                     GameName = newChannel.GameName,
                     Title = newChannel.Title,
                     Delay = newChannel.Delay,
-                    TagsJson = newChannel.TagsJson,
-                    LabelsJson = newChannel.LabelsJson,
+                    Tags = newChannel.Tags,
+                    ContentLabels = newChannel.ContentLabels,
                     IsBrandedContent = newChannel.IsBrandedContent
                 })
                 .RunAsync();

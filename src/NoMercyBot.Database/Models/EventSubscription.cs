@@ -6,7 +6,7 @@ namespace NoMercyBot.Database.Models;
 
 [PrimaryKey(nameof(Id))]
 [Index(nameof(Provider), nameof(EventType), IsUnique = true)]
-public class EventSubscription
+public class EventSubscription: Timestamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     [JsonProperty("id")] public string Id { get; set; } = null!;
@@ -19,37 +19,11 @@ public class EventSubscription
     
     [JsonProperty("subscription_id")] public string? SubscriptionId { get; set; }
     [JsonProperty("session_id")] public string? SessionId { get; set; }
-    [JsonProperty("created_at")] public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    [JsonProperty("updated_at")] public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     [JsonProperty("expires_at")] public DateTime? ExpiresAt { get; set; }
     
-    [JsonProperty("metadata_json")]
-    public string? MetadataJson { get; set; }
-
-    [NotMapped]
-    [JsonProperty("metadata")]
-    public Dictionary<string, string> Metadata
-    {
-        get => !string.IsNullOrEmpty(MetadataJson) 
-            ? JsonConvert.DeserializeObject<Dictionary<string, string>>(MetadataJson) ?? new()
-            : new();
-        set => MetadataJson = JsonConvert.SerializeObject(value);
-    }
+    [JsonProperty("metadata")] public Dictionary<string, string> Metadata { get; set; } = new();
+    [JsonProperty("condition")] public string[] Condition { get; set; } = [];
     
-    [JsonProperty("condition_json")]
-    public string? ConditionJson { get; set; }
-
-    [NotMapped]
-    [JsonProperty("condition")]
-    public string[] Condition
-    {
-        get => !string.IsNullOrEmpty(ConditionJson) 
-            ? JsonConvert.DeserializeObject<string[]>(ConditionJson) ?? []
-            : [];
-        set => ConditionJson = JsonConvert.SerializeObject(value);
-    }
-    
-    // Create a new subscription entry
     public EventSubscription() {}
 
     public EventSubscription(string provider, string eventType, bool enabled = true, string? version = null)

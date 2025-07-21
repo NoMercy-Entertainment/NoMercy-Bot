@@ -6,7 +6,7 @@ namespace NoMercyBot.Database.Models;
 
 [PrimaryKey(nameof(Id))]
 [Index(nameof(ChannelId), nameof(UserId), IsUnique = true)]
-public class ChatPresence
+public class ChatPresence: Timestamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     [MaxLength(50)]

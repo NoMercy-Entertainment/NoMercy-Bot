@@ -2,10 +2,8 @@ using System.Drawing;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercyBot.Database.Models;
+using NoMercyBot.Database.Models.ChatMessage;
 using NoMercyBot.Globals.Information;
-using TwitchLib.Client.Enums;
-using TwitchLib.EventSub.Core.Models.Chat;
-using ChatMessage = NoMercyBot.Database.Models.ChatMessage;
 
 namespace NoMercyBot.Database;
 
@@ -56,10 +54,10 @@ public class AppDbContext : DbContext
 
         modelBuilder.Model.GetEntityTypes()
             .SelectMany(t => t.GetProperties())
-            .Where(p => p.ClrType == typeof(DateTime) && p.IsNullable)
+            .Where(p => p.ClrType == typeof(DateTime))
             .ToList()
             .ForEach(p => p.SetDefaultValue(null));
-
+        
         modelBuilder.Model.GetEntityTypes()
             .SelectMany(t => t.GetForeignKeys())
             .ToList()
@@ -89,20 +87,12 @@ public class AppDbContext : DbContext
             .HasConversion(
                 v => TokenStore.EncryptToken(v),
                 v =>  TokenStore.DecryptToken(v));
-
         
         modelBuilder.Entity<ChatMessage>()
             .HasOne(m => m.ReplyToMessage)
             .WithMany(m => m.Replies)
             .HasForeignKey(m => m.ReplyToMessageId)
             .OnDelete(DeleteBehavior.Restrict);
-        
-        modelBuilder.Entity<ChatMessage>()
-            .Property(e => e.BadgeInfo)
-            .HasConversion(
-                v => JsonConvert.SerializeObject(v),
-                v => JsonConvert.DeserializeObject<List<KeyValuePair<string, string>>>(v) ?? new List<KeyValuePair<string, string>>());
-        
         
         modelBuilder.Entity<ChatMessage>()
             .Property(e => e.Color)
@@ -120,26 +110,44 @@ public class AppDbContext : DbContext
             .Property(e => e.Fragments)
             .HasConversion(
                 v => JsonConvert.SerializeObject(v),
-                v => JsonConvert.DeserializeObject<ChatMessageFragment[]>(v) ?? Array.Empty<ChatMessageFragment>());
+                v => JsonConvert.DeserializeObject<List<ChatMessageFragment>>(v) ?? new List<ChatMessageFragment>());
         
-        // modelBuilder.Entity<ChatMessage>()
-        //     .Property(e => e.EmoteSet)
-        //     .HasConversion(
-        //         v => JsonConvert.SerializeObject(v, new JsonSerializerSettings 
-        //         { 
-        //             TypeNameHandling = TypeNameHandling.All 
-        //         }),
-        //         v => JsonConvert.DeserializeObject<MyEmoteSet>(v, new JsonSerializerSettings 
-        //         { 
-        //             TypeNameHandling = TypeNameHandling.All 
-        //         }) ?? new MyEmoteSet());
-        
-        modelBuilder.Entity<ChatMessage>()
-            .Property(e => e.UserType)
+        modelBuilder.Entity<ChatEmote>()
+            .Property(e => e.Urls)
             .HasConversion(
-                v => v.ToString(),
-                v => Enum.Parse<UserType>(v));
-    
+                v => JsonConvert.SerializeObject(v),
+                v => JsonConvert.DeserializeObject<Dictionary<string, Uri>>(v) ?? new Dictionary<string, Uri>());
+        
+        modelBuilder.Entity<ChannelInfo>()
+            .Property(e => e.Tags)
+            .HasConversion(
+                v => JsonConvert.SerializeObject(v),
+                v => JsonConvert.DeserializeObject<List<string>>(v) ?? new List<string>());
+        
+        modelBuilder.Entity<ChannelInfo>()
+            .Property(e => e.ContentLabels)
+            .HasConversion(
+                v => JsonConvert.SerializeObject(v),
+                v => JsonConvert.DeserializeObject<List<string>>(v) ?? new List<string>());
+        
+        modelBuilder.Entity<EventSubscription>()
+            .Property(e => e.Metadata)
+            .HasConversion(
+                v => JsonConvert.SerializeObject(v),
+                v => JsonConvert.DeserializeObject<Dictionary<string, string>>(v) ?? new Dictionary<string, string>());
+        
+        modelBuilder.Entity<EventSubscription>()
+            .Property(e => e.Condition)
+            .HasConversion(
+                v => JsonConvert.SerializeObject(v),
+                v => JsonConvert.DeserializeObject<string[]>(v) ?? Array.Empty<string>());
+        
+        modelBuilder.Entity<User>()
+            .Property(e => e.Pronoun)
+            .HasConversion(
+                v => JsonConvert.SerializeObject(v),
+                v => JsonConvert.DeserializeObject<Pronoun>(v) ?? new Pronoun());
+        
         // Configure the ChatPresence-User (as Channel) relationship
         modelBuilder.Entity<ChatPresence>()
             .HasOne(cp => cp.Channel)
@@ -184,6 +192,10 @@ public class AppDbContext : DbContext
             .HasConversion(
                 v => TokenStore.EncryptToken(v),
                 v => TokenStore.DecryptToken(v));
+        
+        modelBuilder.Entity<BotAccount>()
+            .Property(e => e.TokenExpiry)
+            .IsRequired(false);
         
         base.OnModelCreating(modelBuilder);
     }

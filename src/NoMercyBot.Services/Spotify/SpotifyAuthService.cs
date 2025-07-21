@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using NoMercyBot.Database;
 using NoMercyBot.Database.Models;
 using NoMercyBot.Globals.NewtonSoftConverters;
+using NoMercyBot.Services.Interfaces;
 using NoMercyBot.Services.Twitch.Dto;
 using RestSharp;
 
@@ -27,6 +28,8 @@ public class SpotifyAuthService : IAuthService
     public string ClientId => Service.ClientId ?? throw new InvalidOperationException("Spotify ClientId is not set.");
     private string ClientSecret => Service.ClientSecret ?? throw new InvalidOperationException("Spotify ClientSecret is not set.");
     private string[] Scopes => Service.Scopes ?? throw new InvalidOperationException("Spotify Scopes are not set.");
+    public string UserId => Service.UserId ?? throw new InvalidOperationException("Spotify UserId is not set.");
+    public string UserName => Service.UserName ?? throw new InvalidOperationException("Spotify UserName is not set.");
     public Dictionary<string, string> AvailableScopes => SpotifyConfig.AvailableScopes ?? throw new InvalidOperationException("Spotify Scopes are not set.");
     
     public SpotifyAuthService(IServiceScopeFactory serviceScopeFactory, IConfiguration conf, ILogger<SpotifyAuthService> logger, SpotifyApiService api)
@@ -72,6 +75,12 @@ public class SpotifyAuthService : IAuthService
         TokenResponse? tokenResponse = response.Content.FromJson<TokenResponse>();
         if (tokenResponse == null) 
             throw new("Invalid response from Spotify.");
+        
+        await StoreTokens(tokenResponse, new()
+        {
+            Id = "",
+            Username = ""
+        });
 
         return (new(), tokenResponse);
     }
@@ -142,14 +151,16 @@ public class SpotifyAuthService : IAuthService
         throw new NotImplementedException("Spotify doesn't support device code flow");
     }
     
-    public async Task StoreTokens(TokenResponse tokenResponse)
+    public async Task StoreTokens(TokenResponse tokenResponse, User user)
     {
         Service updateService = new()
         {
             Name = Service.Name,
             AccessToken = tokenResponse.AccessToken,
             RefreshToken = tokenResponse.RefreshToken,
-            TokenExpiry = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn)
+            TokenExpiry = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn),
+            UserId = user.Id,
+            UserName = user.Username
         };
 
         AppDbContext dbContext = new();
@@ -159,13 +170,17 @@ public class SpotifyAuthService : IAuthService
             {
                 AccessToken = newUser.AccessToken,
                 RefreshToken = newUser.RefreshToken,
-                TokenExpiry = newUser.TokenExpiry
+                TokenExpiry = newUser.TokenExpiry,
+                UserId = newUser.UserId,
+                UserName = newUser.UserName,
             })
             .RunAsync();
     
         Service.AccessToken = updateService.AccessToken;
         Service.RefreshToken = updateService.RefreshToken;
         Service.TokenExpiry = updateService.TokenExpiry;
+        Service.UserId = updateService.UserId;
+        Service.UserName = updateService.UserName;
     }
 
     public Task<bool> ConfigureService(ProviderConfigRequest config)

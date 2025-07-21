@@ -4,6 +4,7 @@ using NoMercyBot.Api.Helpers;
 using NoMercyBot.Database.Models;
 using NoMercyBot.Services;
 using NoMercyBot.Services.Discord;
+using NoMercyBot.Services.Interfaces;
 using NoMercyBot.Services.Obs;
 using NoMercyBot.Services.Spotify;
 using NoMercyBot.Services.Twitch;
@@ -49,7 +50,7 @@ public class AuthController : BaseController
         }
 
         service = foundService;
-        return Ok(service);
+        return Ok();
     }
 
     // get a redirect url for the user to login directly to twitch
@@ -128,8 +129,6 @@ public class AuthController : BaseController
             if (serviceResult is not OkResult) return serviceResult;
 
             (User, TokenResponse) tokenResponse = await authService!.Callback(code);
-            
-            await authService.StoreTokens(tokenResponse.Item2);
             
             return Ok(new
             {

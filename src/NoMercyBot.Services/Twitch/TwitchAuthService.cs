@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using NoMercyBot.Database;
 using NoMercyBot.Database.Models;
 using NoMercyBot.Globals.NewtonSoftConverters;
+using NoMercyBot.Services.Interfaces;
 using NoMercyBot.Services.Twitch.Dto;
 using RestSharp;
 
@@ -29,6 +30,8 @@ public class TwitchAuthService : IAuthService
     public string ClientId => Service.ClientId ?? throw new InvalidOperationException("Twitch ClientId is not set.");
     private string ClientSecret => Service.ClientSecret ?? throw new InvalidOperationException("Twitch ClientSecret is not set.");
     private string[] Scopes => Service.Scopes ?? throw new InvalidOperationException("Twitch Scopes are not set.");
+    public string UserId => Service.UserId ?? throw new InvalidOperationException("Twitch UserId is not set.");
+    public string UserName => Service.UserName ?? throw new InvalidOperationException("Twitch UserName is not set.");
     public Dictionary<string, string> AvailableScopes => TwitchConfig.AvailableScopes ?? throw new InvalidOperationException("Twitch Scopes are not set.");
     
     public TwitchAuthService(IServiceScopeFactory serviceScopeFactory, IConfiguration conf, ILogger<TwitchAuthService> logger, TwitchApiService twitchApiService)
@@ -61,6 +64,8 @@ public class TwitchAuthService : IAuthService
         if (tokenResponse == null) throw new("Invalid response from Twitch.");
         
         User user = await _twitchApiService.FetchUser(tokenResponse);
+        
+        await StoreTokens(tokenResponse, user);
 
         return (user, tokenResponse);
     }
@@ -140,7 +145,7 @@ public class TwitchAuthService : IAuthService
                             query.Add("client_id", ClientId);
                             query.Add("redirect_uri", TwitchConfig.RedirectUri);
                             query.Add("scope", string.Join(' ', Scopes));
-                            query.Add("force_verify", "true");
+                            // query.Add("force_verify", "true");
         
         UriBuilder uriBuilder = new(TwitchConfig.AuthUrl + "/authorize")
         {
@@ -209,15 +214,16 @@ public class TwitchAuthService : IAuthService
         return botToken;
     }
     
-    
-    public async Task StoreTokens(TokenResponse tokenResponse)
+    public async Task StoreTokens(TokenResponse tokenResponse, User user)
     {
         Service updateService = new()
         {
             Name = Service.Name,
             AccessToken = tokenResponse.AccessToken,
             RefreshToken = tokenResponse.RefreshToken,
-            TokenExpiry = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn)
+            TokenExpiry = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn),
+            UserId = user.Id,
+            UserName = user.Username
         };
 
         AppDbContext dbContext = new();
@@ -227,13 +233,17 @@ public class TwitchAuthService : IAuthService
             {
                 AccessToken = newUser.AccessToken,
                 RefreshToken = newUser.RefreshToken,
-                TokenExpiry = newUser.TokenExpiry
+                TokenExpiry = newUser.TokenExpiry,
+                UserId = newUser.UserId,
+                UserName = newUser.UserName,
             })
             .RunAsync();
     
         Service.AccessToken = updateService.AccessToken;
         Service.RefreshToken = updateService.RefreshToken;
         Service.TokenExpiry = updateService.TokenExpiry;
+        Service.UserId = updateService.UserId;
+        Service.UserName = updateService.UserName;
     }
 
     public async Task<bool> ConfigureService(ProviderConfigRequest config)

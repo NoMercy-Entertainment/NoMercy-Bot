@@ -1,6 +1,7 @@
 ﻿using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using NoMercyBot.Services;
+using NoMercyBot.Services.Interfaces;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace NoMercyBot.Server.Swagger;

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using NoMercyBot.Services.Discord;
+using NoMercyBot.Services.Interfaces;
 using NoMercyBot.Services.Obs;
 using NoMercyBot.Services.Twitch;
 using TwitchLib.EventSub.Websockets;

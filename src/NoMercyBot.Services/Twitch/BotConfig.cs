@@ -1,5 +1,5 @@
 ﻿
-namespace NoMercyBot.Services;
+namespace NoMercyBot.Services.Twitch;
 
 public class BotConfig
 {

@@ -9,6 +9,8 @@
     <ItemGroup>
         <PackageReference Include="AspNet.Security.OAuth.Twitch" Version="9.4.0"/>
         <PackageReference Include="DotNetBungieAPI.AspNet.Security.OAuth.Providers" Version="1.0.2"/>
+        <PackageReference Include="HtmlAgilityPack" Version="1.12.2" />
+        <PackageReference Include="HtmlAgilityPack.CssSelectors.NetCore" Version="1.2.1" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="9.0.6"/>
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.6"/>
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.6" />

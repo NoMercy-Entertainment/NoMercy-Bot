@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NoMercyBot.Database;
 using NoMercyBot.Database.Models;
+using NoMercyBot.Services.Interfaces;
 using NoMercyBot.Services.Twitch.Dto;
 
 namespace NoMercyBot.Services.Obs;
@@ -22,6 +23,8 @@ public class ObsAuthService : IAuthService
     public string ClientId => Service.ClientId ?? throw new InvalidOperationException("OBS ClientId is not set.");
     private string ClientSecret => Service.ClientSecret ?? throw new InvalidOperationException("OBS ClientSecret is not set.");
     private string[] Scopes => Service.Scopes ?? throw new InvalidOperationException("OBS Scopes are not set.");
+    public string UserId => Service.UserId ?? throw new InvalidOperationException("Twitch UserId is not set.");
+    public string UserName => Service.UserName ?? throw new InvalidOperationException("Twitch UserName is not set.");
     public Dictionary<string, string> AvailableScopes => ObsConfig.AvailableScopes ?? throw new InvalidOperationException("OBS Scopes are not set.");
 
     public ObsAuthService(IServiceScopeFactory serviceScopeFactory, IConfiguration conf, ILogger<ObsAuthService> logger, ObsApiService api)
@@ -78,14 +81,16 @@ public class ObsAuthService : IAuthService
         throw new NotImplementedException();
     }
     
-    public async Task StoreTokens(TokenResponse tokenResponse)
+    public async Task StoreTokens(TokenResponse tokenResponse, User user)
     {
         Service updateService = new()
         {
             Name = Service.Name,
             AccessToken = tokenResponse.AccessToken,
             RefreshToken = tokenResponse.RefreshToken,
-            TokenExpiry = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn)
+            TokenExpiry = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn),
+            UserId = user.Id,
+            UserName = user.Username
         };
 
         AppDbContext dbContext = new();

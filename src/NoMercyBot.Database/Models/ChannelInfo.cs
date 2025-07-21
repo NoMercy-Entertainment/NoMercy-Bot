@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 namespace NoMercyBot.Database.Models;
 
 [PrimaryKey(nameof(Id))]
-public class ChannelInfo
+public class ChannelInfo: Timestamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
     [MaxLength(50)]
@@ -27,24 +27,9 @@ public class ChannelInfo
     
     [JsonProperty("delay")] public int Delay { get; set; }
     
-    [JsonIgnore]
-    public string TagsJson { get; set; } = "[]";
+    [JsonProperty("tags")] public List<string> Tags { get; set; } = [];
     
-    [NotMapped]
-    [JsonProperty("tags")] public List<string> Tags
-    {
-        get => JsonConvert.DeserializeObject<List<string>>(TagsJson) ?? [];
-        set => TagsJson = JsonConvert.SerializeObject(value);
-    }
-    
-    [JsonProperty("content_classification_labels")] public string LabelsJson { get; set; } = "[]";
-    
-    [NotMapped]
-    public List<string> ContentLabels
-    {
-        get => JsonConvert.DeserializeObject<List<string>>(LabelsJson) ?? [];
-        set => LabelsJson = JsonConvert.SerializeObject(value);
-    }
+    [JsonProperty("content_classification_labels")] public List<string> ContentLabels { get; set; } = [];
     
     [JsonProperty("is_branded_content")] public bool IsBrandedContent { get; set; }
 }

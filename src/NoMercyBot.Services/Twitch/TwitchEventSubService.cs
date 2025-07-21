@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NoMercyBot.Database;
 using NoMercyBot.Database.Models;
+using NoMercyBot.Services.Interfaces;
 using TwitchLib.EventSub.Websockets;
 
 namespace NoMercyBot.Services.Twitch;
@@ -14,8 +15,6 @@ public class TwitchEventSubService : IEventSubService
 {
     private readonly ILogger<TwitchEventSubService> _logger;
     private readonly AppDbContext _dbContext;
-    private readonly TwitchApiService _twitchApiService;
-    private readonly EventSubWebsocketClient _eventSubWebsocketClient;
 
     // Define an event that will notify subscribers about subscription changes
     public delegate Task EventSubscriptionChangedHandler(string eventType, bool enabled);
@@ -26,14 +25,10 @@ public class TwitchEventSubService : IEventSubService
     
     public TwitchEventSubService(
         ILogger<TwitchEventSubService> logger,
-        AppDbContext dbContext,
-        TwitchApiService twitchApiService,
-        EventSubWebsocketClient eventSubWebsocketClient)
+        AppDbContext dbContext)
     {
         _logger = logger;
         _dbContext = dbContext;
-        _twitchApiService = twitchApiService;
-        _eventSubWebsocketClient = eventSubWebsocketClient;
     }
 
     internal static readonly Dictionary<string, (string Description, string Version, string[] Condition)>

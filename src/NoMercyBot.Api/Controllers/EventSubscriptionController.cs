@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using NoMercyBot.Database.Models;
 using NoMercyBot.Services;
 using NoMercyBot.Services.Discord;
+using NoMercyBot.Services.Interfaces;
 using NoMercyBot.Services.Obs;
 using NoMercyBot.Services.Twitch;
 

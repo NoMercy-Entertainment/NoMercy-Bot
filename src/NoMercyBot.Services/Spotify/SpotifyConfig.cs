@@ -1,5 +1,6 @@
 ﻿using NoMercyBot.Database.Models;
 using NoMercyBot.Globals.Information;
+using NoMercyBot.Services.Interfaces;
 
 namespace NoMercyBot.Services.Spotify;
 

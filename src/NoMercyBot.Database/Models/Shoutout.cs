@@ -7,7 +7,7 @@ namespace NoMercyBot.Database.Models;
 
 [PrimaryKey(nameof(Id))]
 [Index(nameof(ChannelId), nameof(ShoutedUserId), IsUnique = true)]
-public class Shoutout
+public class Shoutout: Timestamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     [MaxLength(50)]

@@ -1,16 +1,19 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using NoMercyBot.Services.Interfaces;
+using NoMercyBot.Services.Other;
 
 namespace NoMercyBot.Services.Twitch;
 
 public static class TwitchServiceExtensions
 {
-    public static IServiceCollection AddTwitchServices(this IServiceCollection services)
+    public static void AddTwitchServices(this IServiceCollection services)
     {
+        services.AddSingleton<TwitchEventBus>();
         services.AddSingleton<TwitchAuthService>();
         services.AddSingleton<BotAuthService>();
         services.AddSingleton<TwitchApiService>();
         services.AddSingleton<IAuthService>(sp => sp.GetRequiredService<TwitchAuthService>());
-
-        return services;
+        services.AddTransient<HtmlMetadataService>();
+        services.AddTransient<TwitchMessageDecorator>();
     }
 }

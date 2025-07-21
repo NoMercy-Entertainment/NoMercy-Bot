@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 namespace NoMercyBot.Database.Models;
 
 [PrimaryKey(nameof(Id))]
-public class Channel
+public class Channel: Timestamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
     [MaxLength(50)]

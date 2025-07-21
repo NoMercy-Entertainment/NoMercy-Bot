@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using NoMercyBot.Database;
 using NoMercyBot.Database.Models;
 using NoMercyBot.Globals.NewtonSoftConverters;
+using NoMercyBot.Services.Interfaces;
 using NoMercyBot.Services.Twitch.Dto;
 using RestSharp;
 
@@ -26,6 +27,8 @@ public class DiscordAuthService : IAuthService
     public string ClientId => Service.ClientId ?? throw new InvalidOperationException("Discord ClientId is not set.");
     private string ClientSecret => Service.ClientSecret ?? throw new InvalidOperationException("Discord ClientSecret is not set.");
     private string[] Scopes => Service.Scopes ?? throw new InvalidOperationException("Discord Scopes are not set.");
+    public string UserId => Service.UserId ?? throw new InvalidOperationException("Twitch UserId is not set.");
+    public string UserName => Service.UserName ?? throw new InvalidOperationException("Twitch UserName is not set.");
     public Dictionary<string, string> AvailableScopes => DiscordConfig.AvailableScopes ?? throw new InvalidOperationException("Discord Scopes are not set.");
     
     public DiscordAuthService(IServiceScopeFactory serviceScopeFactory, IConfiguration conf, ILogger<DiscordAuthService> logger, DiscordApiService api)
@@ -73,6 +76,12 @@ public class DiscordAuthService : IAuthService
         TokenResponse? tokenResponse = response.Content.FromJson<TokenResponse>();
         if (tokenResponse == null)
             throw new("Invalid response from Discord.");
+        
+        await StoreTokens(tokenResponse, new()
+        {
+            Id = "",
+            Username = "",
+        });
 
         return (new(), tokenResponse);
     }
@@ -153,14 +162,16 @@ public class DiscordAuthService : IAuthService
         throw new NotImplementedException("Discord doesn't support device code flow");
     }
     
-    public async Task StoreTokens(TokenResponse tokenResponse)
+    public async Task StoreTokens(TokenResponse tokenResponse, User user)
     {
         Service updateService = new()
         {
             Name = Service.Name,
             AccessToken = tokenResponse.AccessToken,
             RefreshToken = tokenResponse.RefreshToken,
-            TokenExpiry = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn)
+            TokenExpiry = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn),
+            UserId = user.Id,
+            UserName = user.Username
         };
 
         AppDbContext dbContext = new();
@@ -170,13 +181,17 @@ public class DiscordAuthService : IAuthService
             {
                 AccessToken = newUser.AccessToken,
                 RefreshToken = newUser.RefreshToken,
-                TokenExpiry = newUser.TokenExpiry
+                TokenExpiry = newUser.TokenExpiry,
+                UserId = newUser.UserId,
+                UserName = newUser.UserName,
             })
             .RunAsync();
     
         Service.AccessToken = updateService.AccessToken;
         Service.RefreshToken = updateService.RefreshToken;
         Service.TokenExpiry = updateService.TokenExpiry;
+        Service.UserId = updateService.UserId;
+        Service.UserName = updateService.UserName;
     }
 
     public Task<bool> ConfigureService(ProviderConfigRequest config)

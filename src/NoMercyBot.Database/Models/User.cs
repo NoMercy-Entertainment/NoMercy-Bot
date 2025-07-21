@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 namespace NoMercyBot.Database.Models;
 
 [PrimaryKey(nameof(Id))]
-public class User
+public class User: Timestamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
     [MaxLength(50)]
@@ -48,19 +48,8 @@ public class User
 
     [JsonProperty("channel")] public virtual Channel Channel { get; set; } = new();
     
-    [JsonIgnore]
-    public string? PronounData { get; set; }
-
-    [NotMapped]
-    [JsonProperty("pronoun")] public Pronoun? Pronoun
-    {
-        get => !string.IsNullOrEmpty(PronounData) 
-            ? JsonConvert.DeserializeObject<Pronoun>(PronounData) 
-            : null;
-        init => PronounData = value != null 
-            ? JsonConvert.SerializeObject(value) 
-            : null;
-    }
+    [Column("PronounData")]
+    [JsonProperty("pronoun")] public Pronoun? Pronoun { get; set; }
 }
 
 public class SimpleUser

@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using NoMercyBot.Services.Interfaces;
 
 namespace NoMercyBot.Services.Obs;
 

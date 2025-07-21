@@ -62,6 +62,12 @@ namespace NoMercyBot.Database.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
                     b.Property<bool>("Enabled")
                         .HasColumnType("INTEGER");
 
@@ -81,6 +87,12 @@ namespace NoMercyBot.Database.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
                     b.HasKey("Id");
 
                     b.ToTable("Channels");
@@ -91,6 +103,16 @@ namespace NoMercyBot.Database.Migrations
                     b.Property<string>("Id")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("ContentLabels")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<int>("Delay")
                         .HasColumnType("INTEGER");
@@ -108,25 +130,25 @@ namespace NoMercyBot.Database.Migrations
                     b.Property<bool>("IsBrandedContent")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("LabelsJson")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Language")
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("TagsJson")
+                    b.Property<string>("Tags")
                         .IsRequired()
-                        .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.HasKey("Id");
 
@@ -143,6 +165,18 @@ namespace NoMercyBot.Database.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
                     b.HasKey("ChannelId", "UserId");
 
                     b.HasIndex("ChannelId");
@@ -152,26 +186,42 @@ namespace NoMercyBot.Database.Migrations
                     b.ToTable("ChannelModerator");
                 });
 
-            modelBuilder.Entity("NoMercyBot.Database.Models.ChatMessage", b =>
+            modelBuilder.Entity("NoMercyBot.Database.Models.ChatMessage.ChatEmote", b =>
                 {
                     b.Property<string>("Id")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("BadgeInfo")
+                    b.Property<string>("EmoteSetId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.PrimitiveCollection<string>("Format")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Urls")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ChatEmote");
+                });
+
+            modelBuilder.Entity("NoMercyBot.Database.Models.ChatMessage.ChatMessage", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Badges")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Bits")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<double>("BitsInDollars")
-                        .HasColumnType("REAL");
-
-                    b.Property<string>("BotUsername")
-                        .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ChannelId")
@@ -193,10 +243,6 @@ namespace NoMercyBot.Database.Migrations
                         .HasColumnType("TEXT")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-                    b.Property<string>("CustomRewardId")
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -206,40 +252,7 @@ namespace NoMercyBot.Database.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<bool>("IsBroadcaster")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsFirstMessage")
-                        .HasColumnType("INTEGER");
-
                     b.Property<bool>("IsHighlighted")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsMe")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsModerator")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsPartner")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsReturningChatter")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsSkippingSubMode")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsStaff")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsSubscriber")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsTurbo")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsVip")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Message")
@@ -247,19 +260,9 @@ namespace NoMercyBot.Database.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Noisy")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("ReplyToMessageId")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
-
-                    b.Property<string>("RewardId")
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("SubscribedMonthCount")
-                        .HasColumnType("INTEGER");
 
                     b.Property<string>("TmiSentTs")
                         .IsRequired()
@@ -279,6 +282,7 @@ namespace NoMercyBot.Database.Migrations
 
                     b.Property<string>("UserType")
                         .IsRequired()
+                        .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Username")
@@ -309,8 +313,20 @@ namespace NoMercyBot.Database.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
                     b.Property<bool>("IsPresent")
                         .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("UserId")
                         .IsRequired()
@@ -370,12 +386,13 @@ namespace NoMercyBot.Database.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("ConditionJson")
-                        .HasMaxLength(256)
+                    b.Property<string>("Condition")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("TEXT")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
@@ -395,8 +412,8 @@ namespace NoMercyBot.Database.Migrations
                     b.Property<DateTime?>("ExpiresAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("MetadataJson")
-                        .HasMaxLength(256)
+                    b.Property<string>("Metadata")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Provider")
@@ -413,7 +430,8 @@ namespace NoMercyBot.Database.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("TEXT")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
@@ -510,6 +528,16 @@ namespace NoMercyBot.Database.Migrations
                         .HasColumnType("TEXT")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Name")
@@ -530,6 +558,12 @@ namespace NoMercyBot.Database.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
                     b.Property<bool>("Enabled")
                         .HasColumnType("INTEGER");
 
@@ -545,6 +579,12 @@ namespace NoMercyBot.Database.Migrations
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.HasKey("Id");
 
@@ -570,6 +610,12 @@ namespace NoMercyBot.Database.Migrations
                     b.Property<string>("Color")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -597,13 +643,19 @@ namespace NoMercyBot.Database.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("PronounData")
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
+                    b.Property<string>("Pronoun")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("PronounData");
 
                     b.Property<string>("Timezone")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("Username")
                         .IsRequired()
@@ -653,7 +705,7 @@ namespace NoMercyBot.Database.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("NoMercyBot.Database.Models.ChatMessage", b =>
+            modelBuilder.Entity("NoMercyBot.Database.Models.ChatMessage.ChatMessage", b =>
                 {
                     b.HasOne("NoMercyBot.Database.Models.User", "Broadcaster")
                         .WithMany()
@@ -661,12 +713,12 @@ namespace NoMercyBot.Database.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("NoMercyBot.Database.Models.ChatMessage", "ReplyToMessage")
+                    b.HasOne("NoMercyBot.Database.Models.ChatMessage.ChatMessage", "ReplyToMessage")
                         .WithMany("Replies")
                         .HasForeignKey("ReplyToMessageId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("NoMercyBot.Database.Models.User", "Moderator")
+                    b.HasOne("NoMercyBot.Database.Models.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -674,9 +726,9 @@ namespace NoMercyBot.Database.Migrations
 
                     b.Navigation("Broadcaster");
 
-                    b.Navigation("Moderator");
-
                     b.Navigation("ReplyToMessage");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("NoMercyBot.Database.Models.ChatPresence", b =>
@@ -732,7 +784,7 @@ namespace NoMercyBot.Database.Migrations
                     b.Navigation("UsersInChat");
                 });
 
-            modelBuilder.Entity("NoMercyBot.Database.Models.ChatMessage", b =>
+            modelBuilder.Entity("NoMercyBot.Database.Models.ChatMessage.ChatMessage", b =>
                 {
                     b.Navigation("Replies");
                 });

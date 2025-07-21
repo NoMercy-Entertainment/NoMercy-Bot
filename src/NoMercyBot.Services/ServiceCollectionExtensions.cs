@@ -29,6 +29,7 @@ public static class ServiceCollectionExtensions
     private static void AddOtherServices(this IServiceCollection services)
     {
         services.AddScoped<PronounService>();
+        services.AddSingleton<PermissionService>();
     }
     
     private static void AddEmoteServices(this IServiceCollection services)

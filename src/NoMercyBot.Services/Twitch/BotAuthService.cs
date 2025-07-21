@@ -4,10 +4,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NoMercyBot.Database;
 using NoMercyBot.Database.Models;
-using NoMercyBot.Services.Twitch;
 using NoMercyBot.Services.Twitch.Dto;
 
-namespace NoMercyBot.Services;
+namespace NoMercyBot.Services.Twitch;
 
 public class BotAuthService
 {
@@ -33,7 +32,6 @@ public class BotAuthService
 
     public Task<(User, TokenResponse)> Callback(string code)
     {
-        // Use the Twitch auth service to handle the OAuth callback
         return _twitchAuthService.Callback(code);
     }
 
@@ -47,19 +45,16 @@ public class BotAuthService
 
     public async Task<(User, TokenResponse)> ValidateToken(string accessToken)
     {
-        // Delegate to the Twitch auth service
         return await _twitchAuthService.ValidateToken(accessToken);
     }
 
     public async Task<(User, TokenResponse)> RefreshToken(string refreshToken)
     {
-        // Delegate to the Twitch auth service
         return await _twitchAuthService.RefreshToken(refreshToken);
     }
 
     public async Task RevokeToken(string accessToken)
     {
-        // Delegate to the Twitch auth service
         await _twitchAuthService.RevokeToken(accessToken);
     }
 
@@ -70,27 +65,23 @@ public class BotAuthService
 
     public async Task<DeviceCodeResponse> Authorize(string[]? scopes = null)
     {
-        // Use the Twitch auth service for device code flow
         return await _twitchAuthService.Authorize(Scopes);
     }
     
     public async Task<TokenResponse> PollForToken(string deviceCode)
     {
-        // Delegate to the Twitch auth service
         return await _twitchAuthService.PollForToken(deviceCode);
     }
 
     public async Task StoreTokens(TokenResponse tokenResponse)
     {
-        // Store the tokens in the BotAccount instead of the Service
         BotAccount? botAccount = await _db.BotAccounts.FirstOrDefaultAsync();
         
         if (botAccount == null)
         {
-            // Create a new bot account
             botAccount = new()
             {
-                Username = "BotAccount", // This will be updated when we fetch the user info
+                Username = "BotAccount",
                 AccessToken = tokenResponse.AccessToken,
                 RefreshToken = tokenResponse.RefreshToken,
                 TokenExpiry = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn),
@@ -102,7 +93,6 @@ public class BotAuthService
         }
         else
         {
-            // Update existing bot account
             botAccount.AccessToken = tokenResponse.AccessToken;
             botAccount.RefreshToken = tokenResponse.RefreshToken;
             botAccount.TokenExpiry = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn);
@@ -110,7 +100,6 @@ public class BotAuthService
         
         await _db.SaveChangesAsync();
         
-        // Update username with the Twitch API
         try
         {
             TwitchApiService twitchApiService = _scope.ServiceProvider.GetRequiredService<TwitchApiService>();
@@ -130,7 +119,6 @@ public class BotAuthService
 
     public Task<bool> ConfigureService(ProviderConfigRequest config)
     {
-        // Bot service uses the Twitch provider's configuration
         return _twitchAuthService.ConfigureService(config);
     }
 }

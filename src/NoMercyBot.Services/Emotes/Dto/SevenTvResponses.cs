@@ -11,7 +11,7 @@ public class SevenTvGlobalResponse
     [JsonProperty("tags")] public object[] Tags { get; set; } = [];
     [JsonProperty("immutable")] public bool Immutable { get; set; }
     [JsonProperty("privileged")] public bool Privileged { get; set; }
-    [JsonProperty("emotes")] public SevenTvEmote[] Emotes { get; set; } = [];
+    [JsonProperty("emote_set")] public SevenTvEmote[] Emotes { get; set; } = [];
     [JsonProperty("emote_count")] public int EmoteCount { get; set; }
     [JsonProperty("capacity")] public int Capacity { get; set; }
     [JsonProperty("owner")] public SevenTvOwner Owner { get; set; } = new();
@@ -86,4 +86,62 @@ public class SevenTvStyle
     [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)] public int? Color { get; set; }
     [JsonProperty("paint_id", NullValueHandling = NullValueHandling.Ignore)] public string PaintId { get; set; } = string.Empty;
     [JsonProperty("badge_id", NullValueHandling = NullValueHandling.Ignore)] public string BadgeId { get; set; } = string.Empty;
+}
+
+public class SevenTvChannelEmotesResponse
+{
+    [JsonProperty("id")] public string Id { get; set; }
+    [JsonProperty("platform")] public string Platform { get; set; }
+    [JsonProperty("username")] public string Username { get; set; }
+    [JsonProperty("display_name")] public string DisplayName { get; set; }
+    [JsonProperty("linked_at")] public long LinkedAt { get; set; }
+    [JsonProperty("emote_capacity")] public long EmoteCapacity { get; set; }
+    [JsonProperty("emote_set_id")] public string EmoteSetId { get; set; }
+    [JsonProperty("emote_set")] public SevenTvEmoteResponseEmoteSet EmoteSet { get; set; }
+    // [JsonProperty("user", NullValueHandling = NullValueHandling.Ignore)] public SevenTvUser User { get; set; }
+}
+
+public class SevenTvUser
+{
+    [JsonProperty("id")] public string Id { get; set; }
+    [JsonProperty("username")] public string Username { get; set; }
+    [JsonProperty("display_name")] public string DisplayName { get; set; }
+    [JsonProperty("created_at")] public long CreatedAt { get; set; }
+    [JsonProperty("avatar_url")] public Uri AvatarUrl { get; set; }
+    [JsonProperty("style")] public string Style { get; set; }
+    [JsonProperty("emote_sets")] public SevenTvEmoteSetElement[] EmoteSets { get; set; }
+    [JsonProperty("editors")] public SevenTvEditor[] Editors { get; set; }
+    [JsonProperty("roles")] public string[] Roles { get; set; }
+    [JsonProperty("connections")] public SevenTvChannelEmotesResponse[] Connections { get; set; }    
+}
+
+public class SevenTvEmoteResponseEmoteSet
+{
+    [JsonProperty("id")] public string Id { get; set; }
+    [JsonProperty("name")] public string Name { get; set; }
+    [JsonProperty("flags")] public long Flags { get; set; }
+    [JsonProperty("tags")] public object[] Tags { get; set; }
+    [JsonProperty("immutable")] public bool Immutable { get; set; }
+    [JsonProperty("privileged")] public bool Privileged { get; set; }
+    [JsonProperty("emotes")] public SevenTvEmote[] Emotes { get; set; }
+    [JsonProperty("emote_count")] public long EmoteCount { get; set; }
+    [JsonProperty("capacity")] public long Capacity { get; set; }
+    [JsonProperty("owner")] public object Owner { get; set; }    
+}
+
+public class SevenTvEditor
+{
+    [JsonProperty("id")] public string Id { get; set; }
+    [JsonProperty("permissions")] public long Permissions { get; set; }
+    [JsonProperty("visible")] public bool Visible { get; set; }
+    [JsonProperty("added_at")] public long AddedAt { get; set; }    
+}
+
+public class SevenTvEmoteSetElement
+{
+    [JsonProperty("id")] public string Id { get; set; }
+    [JsonProperty("name")] public string Name { get; set; }
+    [JsonProperty("flags")] public long Flags { get; set; }
+    [JsonProperty("tags")] public object[] Tags { get; set; }
+    [JsonProperty("capacity")] public long Capacity { get; set; }    
 }

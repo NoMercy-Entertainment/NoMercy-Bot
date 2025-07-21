@@ -156,14 +156,14 @@ public class Startup
 
             // Run seeds after ensuring the database is properly set up
             seedService.StartAsync(CancellationToken.None).Wait();
-            
-            // Initialize services
-            serviceResolver.InitializeAllServices().Wait();
         }
         catch (Exception ex)
         {
             _logger.LogInformation("Error during database setup: {ErrorMessage}", ex.Message);
         }
+            
+        // Initialize services
+        serviceResolver.InitializeAllServices().Wait();
         
         ApplicationConfiguration.ConfigureApp(app, _provider);
     }

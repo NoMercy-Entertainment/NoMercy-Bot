@@ -5,6 +5,7 @@ using NoMercyBot.Database;
 using NoMercyBot.Database.Models;
 using NoMercyBot.Services;
 using NoMercyBot.Services.Discord;
+using NoMercyBot.Services.Interfaces;
 using NoMercyBot.Services.Obs;
 using NoMercyBot.Services.Spotify;
 using NoMercyBot.Services.Twitch;

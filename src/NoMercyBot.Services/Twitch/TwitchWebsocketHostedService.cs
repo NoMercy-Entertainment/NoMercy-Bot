@@ -3,6 +3,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NoMercyBot.Database;
 using NoMercyBot.Database.Models;
+using NoMercyBot.Database.Models.ChatMessage;
 using NoMercyBot.Globals.NewtonSoftConverters;
 using TwitchLib.Api;
 using TwitchLib.Api.Core.Enums;
@@ -13,7 +14,6 @@ using TwitchLib.EventSub.Websockets.Core.EventArgs;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Stream;
 using UserUpdateArgs = TwitchLib.EventSub.Websockets.Core.EventArgs.User.UserUpdateArgs;
-
 
 namespace NoMercyBot.Services.Twitch;
 
@@ -26,6 +26,8 @@ public class TwitchWebsocketHostedService : IHostedService
     private readonly TwitchAPI _twitchApi = new();
     private readonly TwitchApiService _twitchApiService;
     private readonly TwitchEventSubService _twitchEventSubService;
+    private readonly TwitchEventBus _eventBus;
+    private readonly TwitchMessageDecorator _twitchMessageDecorator;
     private bool _isConnected = false;
 
     public TwitchWebsocketHostedService(
@@ -33,14 +35,17 @@ public class TwitchWebsocketHostedService : IHostedService
         ILogger<TwitchWebsocketHostedService> logger,
         EventSubWebsocketClient eventSubWebsocketClient,
         TwitchApiService twitchApiService,
-        TwitchEventSubService twitchEventSubService)
+        TwitchEventSubService twitchEventSubService, 
+        TwitchMessageDecorator twitchMessageDecorator,
+        TwitchEventBus eventBus)
     {
         _dbContext = dbContext;
         _logger = logger;
         _eventSubWebsocketClient = eventSubWebsocketClient;
         _twitchApiService = twitchApiService;
         _twitchEventSubService = twitchEventSubService;
-
+        _eventBus = eventBus;
+        _twitchMessageDecorator = twitchMessageDecorator;
         // Subscribe to the event
         twitchEventSubService.OnEventSubscriptionChanged += HandleEventSubscriptionChange;
     }
@@ -151,7 +156,7 @@ public class TwitchWebsocketHostedService : IHostedService
         {
             // Get broadcaster ID from configuration
             string? accessToken = TwitchConfig.Service().AccessToken;
-            string broadcasterId = _twitchApiService.GetUsers(accessToken).Result.First().Id;
+            string broadcasterId = TwitchConfig.Service().UserId;
 
             if (string.IsNullOrEmpty(broadcasterId) || string.IsNullOrEmpty(accessToken))
             {
@@ -408,9 +413,14 @@ public class TwitchWebsocketHostedService : IHostedService
         try
         {
             ChatMessage chatMessage = new(args.Notification);
+            
+            await _twitchMessageDecorator.DecorateMessage(chatMessage);
 
-            await _dbContext.ChatMessages.Upsert(chatMessage)
+            await _dbContext.ChatMessages
+                .Upsert(chatMessage)
                 .RunAsync();
+            
+            _eventBus.RaiseChatMessage(chatMessage);
         }
         catch (Exception e)
         {
