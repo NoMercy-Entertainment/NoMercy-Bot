@@ -18,7 +18,7 @@ public class HtmlMetadataService: IService
     
     private readonly string[] _trustedDomains = ["youtube.com", "youtu.be", "twitch.tv", "twitter.com", "instagram.com"];
     private readonly string[] _trustedImageDomains = ["imgur.com", "i.imgur.com", "cdn.discordapp.com", "twimg.com"];
-    private readonly string[] _trustedUsers = ["ljtech", "stoney_eagle", "vvvvvedma_anna"];
+    private readonly string[] _trustedUsers = ["ljtech", "stoney_eagle", "kanawanagasaki"];
 
     public HtmlMetadataService(PermissionService permissionService)
     {
@@ -40,104 +40,21 @@ public class HtmlMetadataService: IService
     public async Task<HtmlPreviewCustomContent> MakeComponent(Uri uri)
     {
         _uri = uri;
+        SiteTitle = "No title";
+        SiteDescription = null;
+        SiteImageUrl = null;
         
         await DecorateOgData();
         await DecorateYoutube();
         await DecorateTwitch();
         
         return new(){
-            Host = uri.Host,
+            Host = _uri.Host,
             ImageUrl = SiteImageUrl,
             Title = SiteTitle,
             Description = SiteDescription,
         };
     }
-
-    // public async Task<HtmlPreviewCustomContent?> GetMetadataAsync(Uri uri, string username, bool isBroadcaster, bool isModerator, bool isVip)
-    // {
-    //     try
-    //     {
-    //         HttpResponseMessage response = await _httpClient.GetAsync(uri);
-    //         if (!response.IsSuccessStatusCode)
-    //             return null;
-    //
-    //         string? contentType = response.Content.Headers.ContentType?.MediaType;
-    //
-    //         if (contentType == "text/html")
-    //         {
-    //             return await ProcessHtmlContent(response, uri);
-    //         }
-    //         else if (contentType?.StartsWith("image/") == true)
-    //         {
-    //             return await ProcessImageContent(response, uri, username, isBroadcaster, isModerator, isVip);
-    //         }
-    //
-    //         return null;
-    //     }
-    //     catch
-    //     {
-    //         return null;
-    //     }
-    // }
-
-    // private async Task<HtmlPreviewCustomContent?> ProcessHtmlContent(HttpResponseMessage response, Uri uri)
-    // {
-    //     string html = await response.Content.ReadAsStringAsync();
-    //     var doc = new HtmlDocument();
-    //     doc.LoadHtml(html);
-    //
-    //     NameValueCollection query = HttpUtility.ParseQueryString(uri.Query);
-    //     string? youtubeVideoId = null;
-    //
-    //     // Check for YouTube URLs
-    //     if (uri.Host.EndsWith("youtu.be") || (uri.Host.EndsWith("youtube.com") && query.AllKeys.Contains("v")))
-    //     {
-    //         youtubeVideoId = uri.Host.EndsWith("youtu.be") ? uri.LocalPath.Substring(1) : query["v"];
-    //     }
-    //
-    //     var titleTag = doc.QuerySelector("title");
-    //     var titleOgTag = doc.QuerySelector("meta[property=og:title]");
-    //     var descriptionTag = doc.QuerySelector("meta[name=description]");
-    //     var descriptionOgTag = doc.QuerySelector("meta[property=og:description]");
-    //     var imageOgTag = doc.QuerySelector("meta[property=og:image]")?.GetAttributeValue("content", "");
-    //
-    //     if (!string.IsNullOrWhiteSpace(imageOgTag) && Uri.IsWellFormedUriString(imageOgTag, UriKind.Relative))
-    //     {
-    //         imageOgTag = uri.Scheme + "://" + uri.Host + imageOgTag;
-    //     }
-    //
-    //     var title = titleOgTag?.GetAttributeValue("content", "") ?? titleTag?.InnerText;
-    //     var description = descriptionOgTag?.GetAttributeValue("content", "") ?? descriptionTag?.GetAttributeValue("content", "");
-    //
-    //     if (string.IsNullOrWhiteSpace(title))
-    //         return null;
-    //
-    //     return new()
-    //     {
-    //         Host = uri.Host,
-    //         Title = title,
-    //         Description = description,
-    //         ImageUrl = imageOgTag,
-    //         YoutubeVideoId = youtubeVideoId
-    //     };
-    // }
-    //
-    // private async Task<HtmlPreviewCustomContent?> ProcessImageContent(HttpResponseMessage response, Uri uri, string username, bool isBroadcaster, bool isModerator, bool isVip)
-    // {
-    //     // Only allow trusted users to embed images
-    //     if (!isBroadcaster && !isModerator && !isVip && !_trustedUsers.Contains(username.ToLower()))
-    //         return null;
-    //
-    //     byte[] bytes = await response.Content.ReadAsByteArrayAsync();
-    //     string base64 = $"data:{response.Content.Headers.ContentType.MediaType};base64," + Convert.ToBase64String(bytes);
-    //
-    //     return new()
-    //     {
-    //         Host = uri.Host,
-    //         ImageUrl = base64,
-    //         IsDirectImage = true
-    //     };
-    // }
 
     public void Dispose()
     {
@@ -154,48 +71,75 @@ public class HtmlMetadataService: IService
             if (!response.IsSuccessStatusCode) return;
 
             string? contentType = response.Content.Headers.ContentType?.MediaType;
-            if (contentType != "text/html") return;
-
-            string html = await response.Content.ReadAsStringAsync();
-            HtmlDocument doc = new();
-            doc.LoadHtml(html);
-
-            // Get OpenGraph meta tags
-            HtmlNode? titleOgTag = doc.QuerySelector("meta[property='og:title']");
-            HtmlNode? descriptionOgTag = doc.QuerySelector("meta[property='og:description']");
-            HtmlNode? imageOgTag = doc.QuerySelector("meta[property='og:image']");
-
-            // Fallback to standard HTML tags if OG tags don't exist
-            HtmlNode? titleTag = doc.QuerySelector("title");
-            HtmlNode? descriptionTag = doc.QuerySelector("meta[name='description']");
-
-            string? title = titleOgTag?.GetAttributeValue("content", "") ?? titleTag?.InnerText.Trim();
-            if (!string.IsNullOrWhiteSpace(title))
+            
+            if (contentType == "text/html")
             {
-                SiteTitle = title;
+                await ProcessHtmlContent(response, _uri);
+                return;
             }
-
-            string? description = descriptionOgTag?.GetAttributeValue("content", "") ?? 
-                                 descriptionTag?.GetAttributeValue("content", "");
-            if (!string.IsNullOrWhiteSpace(description))
+            
+            if (contentType?.StartsWith("image/") == true)
             {
-                SiteDescription = description;
-            }
-
-            string? imageUrl = imageOgTag?.GetAttributeValue("content", "");
-            if (!string.IsNullOrWhiteSpace(imageUrl))
-            {
-                // Convert relative URLs to absolute
-                if (Uri.IsWellFormedUriString(imageUrl, UriKind.Relative))
-                {
-                    imageUrl = _uri.Scheme + "://" + _uri.Host + imageUrl;
-                }
-                SiteImageUrl = imageUrl;
+                await ProcessImageContent(response, _uri);
+                return;
             }
         }
         catch (Exception)
         {
             // Keep default values if fetching fails
+        }
+    }
+
+    private async Task ProcessImageContent(HttpResponseMessage response, Uri uri)
+    {
+        string imageUrl = uri.ToString();
+        // Convert relative URLs to absolute
+        if (Uri.IsWellFormedUriString(imageUrl, UriKind.Absolute))
+        {
+            byte[] bytes = await response.Content.ReadAsByteArrayAsync();
+            string base64 = $"data:{response.Content.Headers.ContentType.MediaType};base64," + Convert.ToBase64String(bytes);
+            SiteImageUrl = base64;
+        }
+    }
+
+    private async Task ProcessHtmlContent(HttpResponseMessage response, Uri uri)
+    {
+        string html = await response.Content.ReadAsStringAsync();
+        HtmlDocument doc = new();
+        doc.LoadHtml(html);
+
+        // Get OpenGraph meta tags
+        HtmlNode? titleOgTag = doc.QuerySelector("meta[property='og:title']");
+        HtmlNode? descriptionOgTag = doc.QuerySelector("meta[property='og:description']");
+        HtmlNode? imageOgTag = doc.QuerySelector("meta[property='og:image']");
+
+        // Fallback to standard HTML tags if OG tags don't exist
+        HtmlNode? titleTag = doc.QuerySelector("title");
+        HtmlNode? descriptionTag = doc.QuerySelector("meta[name='description']");
+
+        string? title = titleOgTag?.GetAttributeValue("content", "") ?? titleTag?.InnerText.Trim();
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            SiteTitle = title;
+        }
+
+        string? description = descriptionOgTag?.GetAttributeValue("content", "") ?? 
+                              descriptionTag?.GetAttributeValue("content", "");
+        if (!string.IsNullOrWhiteSpace(description))
+        {
+            SiteDescription = description;
+        }
+
+        string? imageUrl = imageOgTag?.GetAttributeValue("content", "");
+        if (!string.IsNullOrWhiteSpace(imageUrl))
+        {
+            // Convert relative URLs to absolute
+            if (Uri.IsWellFormedUriString(imageUrl, UriKind.Relative))
+            {
+                imageUrl = uri.Scheme + "://" + uri.Host + imageUrl;
+            }
+
+            SiteImageUrl = imageUrl;
         }
     }
 
@@ -212,5 +156,19 @@ public class HtmlMetadataService: IService
         // if is channel resolve shoutout
         // if is video resolve video
         await Task.CompletedTask;
+    }
+
+    public bool ValidateHtml(string fragmentText, out HtmlDocument htmlDocument)
+    {
+        htmlDocument = new();
+        try
+        {
+            htmlDocument.LoadHtml(fragmentText);
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
     }
 }

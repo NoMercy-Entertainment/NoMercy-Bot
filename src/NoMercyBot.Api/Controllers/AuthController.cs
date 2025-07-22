@@ -319,6 +319,7 @@ public class AuthController : BaseController
         }
     }
 
+    [NonAction]
     [HttpGet("bot/login")]
     public IActionResult BotLogin()
     {
@@ -337,6 +338,7 @@ public class AuthController : BaseController
         }
     }
 
+    [NonAction]
     [HttpGet("bot-popup")]
     public IActionResult BotPopupLogin()
     {

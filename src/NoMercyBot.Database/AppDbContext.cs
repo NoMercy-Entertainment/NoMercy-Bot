@@ -206,4 +206,5 @@ public class AppDbContext : DbContext
     public DbSet<EventSubscription> EventSubscriptions { get; set; }
     public DbSet<BotAccount> BotAccounts { get; set; }
     public DbSet<Stream> Streams { get; set; }
+    public DbSet<Widget> Widgets { get; set; }
 }

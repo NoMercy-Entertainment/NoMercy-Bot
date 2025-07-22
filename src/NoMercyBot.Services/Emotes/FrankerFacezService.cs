@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NoMercyBot.Database;
 using RestSharp;
@@ -11,14 +12,16 @@ namespace NoMercyBot.Services.Emotes;
 public class FrankerFacezService : IHostedService
 {
     private readonly RestClient _client;
+    private readonly IServiceScope _scope;
     private readonly AppDbContext _dbContext;
     private readonly ILogger<FrankerFacezService> _logger;
     private readonly TwitchAuthService _twitchAuthService;
     public List<Emoticon> FrankerFacezEmotes { get; private set; } = [];
 
-    public FrankerFacezService(AppDbContext dbContext, ILogger<FrankerFacezService> logger, TwitchAuthService twitchAuthService)
-    {
-        _dbContext = dbContext;
+    public FrankerFacezService(IServiceScopeFactory serviceScopeFactory,  ILogger<FrankerFacezService> logger, TwitchAuthService twitchAuthService)
+    {;
+        _scope = serviceScopeFactory.CreateScope();
+        _dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
         _logger = logger;
         _twitchAuthService = twitchAuthService;
         _client = new("https://api.frankerfacez.com/v1/");

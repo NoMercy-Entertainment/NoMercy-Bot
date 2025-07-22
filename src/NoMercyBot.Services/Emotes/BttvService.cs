@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NoMercyBot.Database;
 using RestSharp;
@@ -11,14 +12,16 @@ namespace NoMercyBot.Services.Emotes;
 public class BttvService : IHostedService
 {
     private readonly RestClient _client;
+    private readonly IServiceScope _scope;
     private readonly AppDbContext _dbContext;
     private readonly ILogger<BttvService> _logger;
     private readonly TwitchAuthService _twitchAuthService;
     public List<BttvEmote> BttvEmotes { get; private set; } = [];
 
-    public BttvService(AppDbContext dbContext, ILogger<BttvService> logger, TwitchAuthService twitchAuthService)
+    public BttvService(IServiceScopeFactory serviceScopeFactory,  ILogger<BttvService> logger, TwitchAuthService twitchAuthService)
     {
-        _dbContext = dbContext;
+        _scope = serviceScopeFactory.CreateScope();
+        _dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
         _logger = logger;
         _twitchAuthService = twitchAuthService;
         _client = new("https://api.betterttv.net/3/");

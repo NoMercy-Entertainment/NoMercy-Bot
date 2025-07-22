@@ -1,18 +1,20 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using NoMercyBot.Database;
 using NoMercyBot.Services.Other;
 
 namespace NoMercyBot.Services.Seeds;
 
 public class PronounSeeder : IHostedService
 {
-    private readonly IServiceScopeFactory _serviceScopeFactory;
+    private readonly IServiceScope _scope;
+    private readonly AppDbContext _dbContext;
     private readonly ILogger<PronounSeeder> _logger;
 
     public PronounSeeder(IServiceScopeFactory serviceScopeFactory, ILogger<PronounSeeder> logger)
     {
-        _serviceScopeFactory = serviceScopeFactory;
+        _scope = serviceScopeFactory.CreateScope();
         _logger = logger;
     }
 
@@ -20,12 +22,10 @@ public class PronounSeeder : IHostedService
     {
         _logger.LogInformation("Starting PronounSeeder");
         
-        using IServiceScope scope = _serviceScopeFactory.CreateScope();
-        
         try
         {
             // Get the PronounService to load pronouns from the API
-            PronounService pronounService = scope.ServiceProvider.GetRequiredService<PronounService>();
+            PronounService pronounService = _scope.ServiceProvider.GetRequiredService<PronounService>();
             await pronounService.LoadPronouns();
             
             _logger.LogInformation("Successfully seeded pronouns");

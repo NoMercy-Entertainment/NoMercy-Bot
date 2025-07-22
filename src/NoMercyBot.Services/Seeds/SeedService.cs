@@ -11,12 +11,15 @@ namespace NoMercyBot.Services.Seeds;
 
 public class SeedService : IHostedService
 {
+    private readonly IServiceScope _scope;
+    private readonly AppDbContext _dbContext;
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly ILogger<SeedService> _logger;
 
     public SeedService(IServiceScopeFactory serviceScopeFactory, ILogger<SeedService> logger)
     {
-        _serviceScopeFactory = serviceScopeFactory;
+        _scope = serviceScopeFactory.CreateScope();
+        _dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
         _logger = logger;
     }
 
@@ -24,23 +27,19 @@ public class SeedService : IHostedService
     {
         _logger.LogInformation("Starting database seeding process");
         
-        using IServiceScope scope = _serviceScopeFactory.CreateScope();
-        
         try
         {
-            AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            
             // Ensure database is created
-            await EnsureDatabaseCreated(dbContext);
+            await EnsureDatabaseCreated(_dbContext);
             
             // Seed services first (they're required by other seeds)
-            await ServiceSeed.Init(dbContext);
+            await ServiceSeed.Init(_dbContext);
             
             // Seed event subscriptions
-            await EventSubscriptionSeed.Init(dbContext);
+            await EventSubscriptionSeed.Init(_dbContext);
             
             // Get the PronounService to load pronouns from the API
-            PronounService pronounService = scope.ServiceProvider.GetRequiredService<PronounService>();
+            PronounService pronounService = _scope.ServiceProvider.GetRequiredService<PronounService>();
             await pronounService.LoadPronouns();
             
             _logger.LogInformation("Successfully completed database seeding");

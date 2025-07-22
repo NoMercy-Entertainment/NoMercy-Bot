@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json.Linq;
@@ -13,8 +14,9 @@ namespace NoMercyBot.Services.Discord;
 
 public class DiscordEventSubService : IEventSubService
 {
-    private readonly ILogger<DiscordEventSubService> _logger;
+    private readonly IServiceScope _scope;
     private readonly AppDbContext _dbContext;
+    private readonly ILogger<DiscordEventSubService> _logger;
     private readonly DiscordApiService _discordApiService;
     
     public string ProviderName => "discord";
@@ -44,11 +46,12 @@ public class DiscordEventSubService : IEventSubService
     
     public DiscordEventSubService(
         ILogger<DiscordEventSubService> logger,
-        AppDbContext dbContext,
+        IServiceScopeFactory serviceScopeFactory,
         DiscordApiService discordApiService)
     {
+        _scope = serviceScopeFactory.CreateScope();
+        _dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
         _logger = logger;
-        _dbContext = dbContext;
         _discordApiService = discordApiService;
     }
     

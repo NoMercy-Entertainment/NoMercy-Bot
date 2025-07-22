@@ -15,17 +15,17 @@ namespace NoMercyBot.Services.Other;
 
 public class TokenRefreshService : BackgroundService
 {
-    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<TokenRefreshService> _logger;
-    private readonly AppDbContext _context;
+    private readonly IServiceScope _scope;
+    private readonly AppDbContext _dbContext;
     private readonly TimeSpan _checkInterval = TimeSpan.FromMinutes(1);
     private readonly TimeSpan _refreshThreshold = TimeSpan.FromMinutes(5);
 
-    public TokenRefreshService(IServiceScopeFactory scopeFactory, ILogger<TokenRefreshService> logger, AppDbContext context)
+    public TokenRefreshService(IServiceScopeFactory serviceScopeFactory, ILogger<TokenRefreshService> logger)
     {
-        _scopeFactory = scopeFactory;
+        _scope = serviceScopeFactory.CreateScope();
+        _dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
         _logger = logger;
-        _context = context;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -49,10 +49,7 @@ public class TokenRefreshService : BackgroundService
 
     private async Task RefreshTokensIfNeeded(CancellationToken cancellationToken)
     {
-        using IServiceScope scope = _scopeFactory.CreateScope();
-        AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        
-        List<Service> services = await dbContext.Services.ToListAsync(cancellationToken);
+        List<Service> services = await _dbContext.Services.ToListAsync(cancellationToken);
         
         foreach (Service service in services)
         {
@@ -67,7 +64,7 @@ public class TokenRefreshService : BackgroundService
             
             if (DateTime.UtcNow >= refreshTime)
             {
-                await RefreshServiceToken(service, scope, cancellationToken);
+                await RefreshServiceToken(service, _scope, cancellationToken);
             }
         }
     }
@@ -90,15 +87,19 @@ public class TokenRefreshService : BackgroundService
             authService.Service.UserId = user.Id;
             authService.Service.UserName = user.Username;
             
-            await _context.Services.Upsert(authService.Service)
+            await _dbContext.Services.Upsert(authService.Service)
                 .On(u => u.Name)
                 .WhenMatched((oldService, newService) => new()
                 {
                     AccessToken = newService.AccessToken,
                     RefreshToken = newService.RefreshToken,
                     TokenExpiry = newService.TokenExpiry,
-                    UserId = newService.UserId,
-                    UserName = newService.UserName
+                    UserId = string.IsNullOrWhiteSpace(newService.UserId) 
+                        ? oldService.UserId 
+                        : newService.UserId,
+                    UserName = string.IsNullOrWhiteSpace(newService.UserName) 
+                        ? oldService.UserName 
+                        : newService.UserName
                 })
                 .RunAsync(cancellationToken);
             

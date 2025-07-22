@@ -13,6 +13,8 @@ namespace NoMercyBot.Server;
 
 public static class Program
 {
+    private static readonly CancellationTokenSource CancellationTokenSource = new();
+    
     public static async Task Main(string[] args)
     {
         AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
@@ -20,9 +22,17 @@ public static class Program
             Exception exception = (Exception)eventArgs.ExceptionObject;
         };
         
-        Console.CancelKeyPress += (_, _) => { Environment.Exit(0); };
+        Console.CancelKeyPress += (_, eventArgs) => 
+        {
+            eventArgs.Cancel = true;
+            Logger.App("Shutting down gracefully...");
+            CancellationTokenSource.Cancel();
+        };
         
-        AppDomain.CurrentDomain.ProcessExit += (_, _) => { Environment.Exit(0); };
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => 
+        {
+            CancellationTokenSource.Cancel();
+        };
 
         await Parser.Default.ParseArguments<StartupOptions>(args)
             .MapResult(Start, ErrorParsingArguments);
@@ -54,9 +64,14 @@ public static class Program
         
         IWebHost app = CreateWebHostBuilder(options).Build();
 
-        await app.RunAsync();
-
-        await Task.Delay(-1);
+        try
+        {
+            await app.RunAsync(CancellationTokenSource.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            Logger.App("Application shutdown completed.");
+        }
     }
 
     private static IWebHostBuilder CreateWebHostBuilder(StartupOptions options)

@@ -57,7 +57,7 @@ public class ChatMessage: Timestamps
         
     }
     
-    public ChatMessage(EventSubNotification<ChannelChatMessage> payloadEvent, Stream? currentStream)
+    public ChatMessage(EventSubNotification<ChannelChatMessage> payloadEvent, Stream? currentStream, User user)
     {
         Id = payloadEvent.Payload.Event.MessageId;
         ChannelId = payloadEvent.Payload.Event.BroadcasterUserId;
@@ -76,6 +76,7 @@ public class ChatMessage: Timestamps
         ReplyToMessageId = payloadEvent.Payload.Event.Reply?.ParentMessageId;
         TmiSentTs = payloadEvent.Metadata.MessageTimestamp.Date.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
         UserType = GetUserType(payloadEvent);
+        User = user;
         
         StreamId = currentStream?.Id;
     }

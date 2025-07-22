@@ -12,28 +12,39 @@ namespace NoMercyBot.Services;
 
 public class ServiceResolver
 {
-    private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly ILogger<ServiceResolver> _logger;
+    private readonly IServiceScope _scope;
+    private readonly AppDbContext _dbContext;
 
     public ServiceResolver(IServiceScopeFactory serviceScopeFactory, ILogger<ServiceResolver> logger)
     {
-        _serviceScopeFactory = serviceScopeFactory;
+        _scope = serviceScopeFactory.CreateScope();
+        _dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
         _logger = logger;
     }
 
-    private async Task InitializeTwitch(AppDbContext dbContext)
+    private async Task InitializeTwitch()
     {
-        Service? service = await dbContext.Services.FirstOrDefaultAsync(s => s.Name == "Twitch");
+        // Force reload from database, ignoring any cached/tracked entities
+        Service? service = await _dbContext.Services
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Name == "Twitch");
+            
         if (service != null)
         {
             TwitchConfig._service = service;
-            _logger.LogInformation("Twitch service initialized. Enabled: {Enabled}", service.Enabled);
+            _logger.LogInformation("Twitch service initialized. Enabled: {Enabled}, UserId: {UserId}, UserName: {UserName}", 
+                service.Enabled, service.UserId, service.UserName);
+        }
+        else
+        {
+            _logger.LogWarning("Twitch service not found in database");
         }
     }
 
-    private async Task InitializeSpotify(AppDbContext dbContext)
+    private async Task InitializeSpotify()
     {
-        Service? service = await dbContext.Services.FirstOrDefaultAsync(s => s.Name == "Spotify");
+        Service? service = await _dbContext.Services.FirstOrDefaultAsync(s => s.Name == "Spotify");
         if (service != null)
         {
             SpotifyConfig._service = service;
@@ -45,9 +56,9 @@ public class ServiceResolver
         }
     }
 
-    private async Task InitializeDiscord(AppDbContext dbContext)
+    private async Task InitializeDiscord()
     {
-        Service? service = await dbContext.Services.FirstOrDefaultAsync(s => s.Name == "Discord");
+        Service? service = await _dbContext.Services.FirstOrDefaultAsync(s => s.Name == "Discord");
         if (service != null)
         {
             DiscordConfig._service = service;
@@ -59,9 +70,9 @@ public class ServiceResolver
         }
     }
 
-    private async Task InitializeObs(AppDbContext dbContext)
+    private async Task InitializeObs()
     {
-        Service? service = await dbContext.Services.FirstOrDefaultAsync(s => s.Name == "OBS");
+        Service? service = await _dbContext.Services.FirstOrDefaultAsync(s => s.Name == "OBS");
         if (service != null)
         {
             ObsConfig._service = service;
@@ -73,9 +84,9 @@ public class ServiceResolver
         }
     }
 
-    private async Task InitializeBotProvider(AppDbContext dbContext)
+    private async Task InitializeBotProvider()
     {
-        BotAccount? botAccount = await dbContext.BotAccounts.FirstOrDefaultAsync();
+        BotAccount? botAccount = await _dbContext.BotAccounts.FirstOrDefaultAsync();
         if (botAccount != null)
         {
             // Validate bot's OAuth credentials
@@ -102,13 +113,12 @@ public class ServiceResolver
 
     public async Task InitializeAllServices()
     {
-        using IServiceScope scope = _serviceScopeFactory.CreateScope();
-        AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-        await InitializeTwitch(dbContext);
-        await InitializeBotProvider(dbContext);
-        await InitializeSpotify(dbContext);
-        await InitializeDiscord(dbContext);
-        await InitializeObs(dbContext);
+        _dbContext.ChangeTracker.Clear();
+        
+        await InitializeTwitch();
+        await InitializeBotProvider();
+        await InitializeSpotify();
+        await InitializeDiscord();
+        await InitializeObs();
     }
 }

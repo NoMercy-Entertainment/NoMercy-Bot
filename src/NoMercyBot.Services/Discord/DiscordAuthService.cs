@@ -17,9 +17,9 @@ namespace NoMercyBot.Services.Discord;
 public class DiscordAuthService : IAuthService
 {
     private readonly IServiceScope _scope;
+    private readonly AppDbContext _dbContext;
     private readonly IConfiguration _conf;
     private readonly ILogger<DiscordAuthService> _logger;
-    private readonly AppDbContext _db;
     private readonly DiscordApiService _api;
     
     public Service Service => DiscordConfig.Service();
@@ -34,7 +34,7 @@ public class DiscordAuthService : IAuthService
     public DiscordAuthService(IServiceScopeFactory serviceScopeFactory, IConfiguration conf, ILogger<DiscordAuthService> logger, DiscordApiService api)
     {
         _scope = serviceScopeFactory.CreateScope();
-        _db = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        _dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
         _conf = conf;
         _logger = logger;
         _api = api;

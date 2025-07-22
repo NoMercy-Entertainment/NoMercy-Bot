@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using HtmlAgilityPack;
 using NoMercyBot.Database.Models.ChatMessage;
 using NoMercyBot.Services.Emotes;
 using NoMercyBot.Services.Emotes.Dto;
@@ -14,6 +15,7 @@ public class TwitchMessageDecorator: IService
     private readonly SevenTvService _sevenTvService;
     private readonly HtmlMetadataService _htmlMetadataService;
     private readonly ParallelOptions _parallelOptions;
+    private readonly TwitchBadgeService _twitchBadgeService;
     
     private ChatMessage ChatMessage { get; set; }
     private List<ChatMessageFragment> _fragments = [];
@@ -22,12 +24,14 @@ public class TwitchMessageDecorator: IService
         FrankerFacezService frankerFacezService,
         BttvService bttvService,
         SevenTvService sevenTvService, 
+        TwitchBadgeService twitchBadgeService,
         HtmlMetadataService htmlMetadataService, 
         CancellationToken cancellationToken = default)
     {
         _frankerFacezService = frankerFacezService;
         _bttvService = bttvService;
         _sevenTvService = sevenTvService;
+        _twitchBadgeService = twitchBadgeService;
         _htmlMetadataService = htmlMetadataService;
         
         ChatMessage = new();
@@ -45,10 +49,13 @@ public class TwitchMessageDecorator: IService
         // Copy the fragments to a new list to avoid modifying the original message
         _fragments = chatMessage.Fragments.ToList();
         
+        DecorateBadges();
+        DecorateTwitchEmotes();
+        
+        DecrateHtml();
+        
         // Split up all text fragments into individual word fragments so that we can decorate them with emotes
         ExplodeTextFragments();
-        
-        DecorateTwitchEmotes();
         
         DecorateFrankerFaceEmotes();
         DecorateBttvEmotes();
@@ -172,13 +179,10 @@ public class TwitchMessageDecorator: IService
                 Text = currentText.ToString()
             });
         }
-        
-        if(newFragments.LastOrDefault()?.Text == " ")
-        {
-            newFragments.RemoveAt(newFragments.Count - 1);
-        }
 
-        _fragments = newFragments;
+        _fragments = newFragments
+            .Where(fragment => fragment.Text != " ")
+            .ToList();
     }
     
     private bool DecorateCommand()
@@ -323,10 +327,10 @@ public class TwitchMessageDecorator: IService
                     Provider = "7tv",
                     Urls = new()
                     {
-                        { "1", new($"https://7tv.app/emotes/{emote.Id}/1x") },
-                        { "2", new($"https://7tv.app/emotes/{emote.Id}/2x") },
-                        { "3", new($"https://7tv.app/emotes/{emote.Id}/3x") },
-                        { "4", new($"https://7tv.app/emotes/{emote.Id}/4x") },
+                        { "1", new($"https://cdn.7tv.app/emote/{emote.Id}/1x") },
+                        { "2", new($"https://cdn.7tv.app/emote/{emote.Id}/2x") },
+                        { "3", new($"https://cdn.7tv.app/emote/{emote.Id}/3x") },
+                        { "4", new($"https://cdn.7tv.app/emote/{emote.Id}/4x") },
                     }
                 }
             };
@@ -336,6 +340,26 @@ public class TwitchMessageDecorator: IService
     private void DecorateCodeSnippet()
     {
         // throw new NotImplementedException();
+    }
+    
+    private void DecrateHtml()
+    {
+        // turn all text fragments containing valid html into html fragments
+        Parallel.ForEach(_fragments.ToList(), _parallelOptions, fragment =>
+        {
+            if (fragment.Type != "text" || string.IsNullOrWhiteSpace(fragment.Text)) return;
+            
+            if (!fragment.Text.Contains("<") || !fragment.Text.Contains(">")) return;
+            
+            if (!_htmlMetadataService.ValidateHtml(fragment.Text, out HtmlDocument document)) return;
+            
+            int index = _fragments.IndexOf(fragment);
+            _fragments[index] = new()
+            {
+                Type = "html",
+                Text = document.DocumentNode.OuterHtml,
+            };
+        });
     }
     
     private async Task DecorateUrlFragments()
@@ -356,5 +380,27 @@ public class TwitchMessageDecorator: IService
                 HtmlContent = await _htmlMetadataService.MakeComponent(uri),
             };
         }
+    }
+
+    private void DecorateBadges()
+    {
+        if (ChatMessage.Badges.Count == 0)
+        {
+            ChatMessage.Badges = [];
+        }
+
+        List<ChatBadge> badges = [];
+        foreach (ChatBadge badge in ChatMessage.Badges)
+        {
+            ChatBadge? badgeResult = _twitchBadgeService.TwitchBadges
+                .LastOrDefault(b => b.SetId == badge.SetId && b.Id == badge.Id);
+            
+            if (badgeResult != null)
+            {
+                badges.Add(badgeResult);
+            }
+        }
+        
+        ChatMessage.Badges = badges;
     }
 }

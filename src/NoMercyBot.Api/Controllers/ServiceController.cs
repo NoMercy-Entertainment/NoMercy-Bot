@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using NoMercyBot.Database;
 using NoMercyBot.Database.Models;
 using NoMercyBot.Services;
@@ -22,7 +23,7 @@ public class ServiceController : BaseController
     private readonly Dictionary<string, IAuthService> _authServices;
     
     public ServiceController(
-        AppDbContext dbContext, 
+        AppDbContext dbContext,
         ServiceResolver serviceResolver,
         [FromServices] TwitchAuthService twitchAuthService,
         [FromServices] SpotifyAuthService spotifyAuthService,

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercyBot.Database;
@@ -11,14 +12,16 @@ namespace NoMercyBot.Services.Emotes;
 public class SevenTvService : IHostedService
 {
     private readonly RestClient _client;
+    private readonly IServiceScope _scope;
     private readonly AppDbContext _dbContext;
     private readonly ILogger<SevenTvService> _logger;
     private readonly TwitchAuthService _twitchAuthService;
     public List<SevenTvEmote> SevenTvEmotes { get; private set; } = [];
 
-    public SevenTvService(AppDbContext dbContext, ILogger<SevenTvService> logger, TwitchAuthService twitchAuthService)
+    public SevenTvService(IServiceScopeFactory serviceScopeFactory,  ILogger<SevenTvService> logger, TwitchAuthService twitchAuthService)
     {
-        _dbContext = dbContext;
+        _scope = serviceScopeFactory.CreateScope();
+        _dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
         _logger = logger;
         _twitchAuthService = twitchAuthService;
         _client = new("https://7tv.io/v3/");

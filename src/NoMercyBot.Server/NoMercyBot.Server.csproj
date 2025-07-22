@@ -87,6 +87,13 @@
     </ItemGroup>
 
     <ItemGroup>
+        <Content Include="..\NoMercyBot.Services\Widgets\Stubs\**\*.*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <Link>Widgets\Stubs\%(RecursiveDir)%(Filename)%(Extension)</Link>
+        </Content>
+    </ItemGroup>
+
+    <ItemGroup>
       <ProjectReference Include="..\NoMercyBot.Api\NoMercyBot.Api.csproj" />
       <ProjectReference Include="..\NoMercyBot.Globals\NoMercyBot.Globals.csproj" />
       <ProjectReference Include="..\NoMercyBot.Api\NoMercyBot.Api.csproj" />

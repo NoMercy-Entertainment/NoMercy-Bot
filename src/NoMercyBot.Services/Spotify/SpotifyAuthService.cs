@@ -17,10 +17,10 @@ namespace NoMercyBot.Services.Spotify;
 
 public class SpotifyAuthService : IAuthService
 {
-    private readonly IServiceScope _scope;
     private readonly IConfiguration _conf;
     private readonly ILogger<SpotifyAuthService> _logger;
-    private readonly AppDbContext _db;
+    private readonly IServiceScope _scope;
+    private readonly AppDbContext _dbContext;
     private readonly SpotifyApiService _api;
 
     public Service Service => SpotifyConfig.Service();
@@ -35,7 +35,7 @@ public class SpotifyAuthService : IAuthService
     public SpotifyAuthService(IServiceScopeFactory serviceScopeFactory, IConfiguration conf, ILogger<SpotifyAuthService> logger, SpotifyApiService api)
     {
         _scope = serviceScopeFactory.CreateScope();
-        _db = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        _dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
         _conf = conf;
         _logger = logger;
         _api = api;
@@ -163,8 +163,7 @@ public class SpotifyAuthService : IAuthService
             UserName = user.Username
         };
 
-        AppDbContext dbContext = new();
-        await dbContext.Services.Upsert(updateService)
+        await _dbContext.Services.Upsert(updateService)
             .On(u => u.Name)
             .WhenMatched((oldUser, newUser) => new()
             {

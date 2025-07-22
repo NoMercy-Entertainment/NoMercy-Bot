@@ -6,6 +6,7 @@ using NoMercyBot.Services.Seeds;
 using NoMercyBot.Services.Spotify;
 using NoMercyBot.Services.Twitch;
 using NoMercyBot.Services.Emotes;
+using NoMercyBot.Services.Widgets;
 using Microsoft.Extensions.Hosting;
 
 namespace NoMercyBot.Services;
@@ -22,14 +23,16 @@ public static class ServiceCollectionExtensions
         services.AddObsServices();
         services.AddOtherServices();
         services.AddEmoteServices();
+        services.AddWidgetServices();
         
         services.AddTokenRefreshService();
     }
 
     private static void AddOtherServices(this IServiceCollection services)
     {
-        services.AddScoped<PronounService>();
+        services.AddSingleton<PronounService>();
         services.AddSingleton<PermissionService>();
+        services.AddHostedService<GracefulShutdownService>();
     }
     
     private static void AddEmoteServices(this IServiceCollection services)
@@ -37,6 +40,14 @@ public static class ServiceCollectionExtensions
         services.AddSingletonHostedService<BttvService>();
         services.AddSingletonHostedService<FrankerFacezService>();
         services.AddSingletonHostedService<SevenTvService>();
+        services.AddSingletonHostedService<TwitchBadgeService>();
+    }
+
+    private static void AddWidgetServices(this IServiceCollection services)
+    {
+        services.AddSingleton<IWidgetEventService, WidgetEventService>();
+        services.AddSingleton<IWidgetScaffoldService, WidgetScaffoldService>();
+        services.AddSignalR();
     }
 
     private static void AddTokenRefreshService(this IServiceCollection services)

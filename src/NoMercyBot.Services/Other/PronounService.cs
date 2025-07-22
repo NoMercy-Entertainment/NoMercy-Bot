@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercyBot.Database;
@@ -12,13 +13,15 @@ namespace NoMercyBot.Services.Other;
 public class PronounService: IService
 {
     private readonly RestClient _client;
+    private readonly IServiceScope _scope;
     private readonly AppDbContext _dbContext;
     private readonly ILogger<PronounService> _logger;
     private static readonly Dictionary<string, Pronoun> Pronouns = new();
 
-    public PronounService(AppDbContext dbContext, ILogger<PronounService> logger)
+    public PronounService(IServiceScopeFactory serviceScopeFactory,  ILogger<PronounService> logger)
     {
-        _dbContext = dbContext;
+        _scope = serviceScopeFactory.CreateScope();
+        _dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
         _logger = logger;
         _client = new("https://api.pronouns.alejo.io/v1/");
     }

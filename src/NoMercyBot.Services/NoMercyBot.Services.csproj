@@ -31,4 +31,10 @@
       <ProjectReference Include="..\NoMercyBot.Globals\NoMercyBot.Globals.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+        <Content Include="Widgets\Stubs\**\*.*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
+
 </Project>

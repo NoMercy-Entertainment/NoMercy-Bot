@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using NoMercyBot.Database;
@@ -13,6 +14,7 @@ namespace NoMercyBot.Services.Obs;
 public class ObsEventSubService : IEventSubService
 {
     private readonly ILogger<ObsEventSubService> _logger;
+    private readonly IServiceScope _scope;
     private readonly AppDbContext _dbContext;
     private readonly ObsApiService _obsApiService;
     
@@ -31,12 +33,13 @@ public class ObsEventSubService : IEventSubService
     };
     
     public ObsEventSubService(
+        IServiceScopeFactory serviceScopeFactory, 
         ILogger<ObsEventSubService> logger,
-        AppDbContext dbContext,
         ObsApiService obsApiService)
     {
+        _scope = serviceScopeFactory.CreateScope();
+        _dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
         _logger = logger;
-        _dbContext = dbContext;
         _obsApiService = obsApiService;
     }
     

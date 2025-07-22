@@ -3,6 +3,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NodaTime.TimeZones;
 using NoMercyBot.Database;
@@ -19,6 +20,8 @@ namespace NoMercyBot.Services.Twitch;
 public class TwitchApiService
 {
     private readonly IConfiguration _conf;
+    private readonly IServiceScope _scope;
+    private readonly AppDbContext _dbContext;
     private readonly ILogger<TwitchApiService> _logger;
     private readonly PronounService _pronounService;
 
@@ -26,8 +29,10 @@ public class TwitchApiService
     
     public string ClientId => Service.ClientId ?? throw new InvalidOperationException("Twitch ClientId is not set.");
     
-    public TwitchApiService(IConfiguration conf, ILogger<TwitchApiService> logger, PronounService pronounService)
+    public TwitchApiService(IServiceScopeFactory serviceScopeFactory, IConfiguration conf, ILogger<TwitchApiService> logger, PronounService pronounService)
     {
+        _scope = serviceScopeFactory.CreateScope();
+        _dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
         _conf = conf;
         _logger = logger;
         _pronounService = pronounService;

@@ -3,6 +3,7 @@ using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NoMercyBot.Database;
 using NoMercyBot.Database.Models;
@@ -14,6 +15,7 @@ namespace NoMercyBot.Services.Twitch;
 public class TwitchEventSubService : IEventSubService
 {
     private readonly ILogger<TwitchEventSubService> _logger;
+    private readonly IServiceScope _scope;
     private readonly AppDbContext _dbContext;
 
     // Define an event that will notify subscribers about subscription changes
@@ -24,11 +26,12 @@ public class TwitchEventSubService : IEventSubService
     public string ProviderName => "twitch";
     
     public TwitchEventSubService(
-        ILogger<TwitchEventSubService> logger,
-        AppDbContext dbContext)
+        IServiceScopeFactory serviceScopeFactory,
+        ILogger<TwitchEventSubService> logger)
     {
+        _scope = serviceScopeFactory.CreateScope();
+        _dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
         _logger = logger;
-        _dbContext = dbContext;
     }
 
     internal static readonly Dictionary<string, (string Description, string Version, string[] Condition)>

@@ -11,8 +11,8 @@ namespace NoMercyBot.Services.Twitch;
 public class BotAuthService
 {
     private readonly IServiceScope _scope;
+    private readonly AppDbContext _dbContext;
     private readonly ILogger<BotAuthService> _logger;
-    private readonly AppDbContext _db;
     private readonly TwitchAuthService _twitchAuthService;
 
     public BotAuthService(
@@ -21,7 +21,7 @@ public class BotAuthService
         TwitchAuthService twitchAuthService)
     {
         _scope = serviceScopeFactory.CreateScope();
-        _db = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        _dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
         _logger = logger;
         _twitchAuthService = twitchAuthService;
     }
@@ -75,7 +75,7 @@ public class BotAuthService
 
     public async Task StoreTokens(TokenResponse tokenResponse)
     {
-        BotAccount? botAccount = await _db.BotAccounts.FirstOrDefaultAsync();
+        BotAccount? botAccount = await _dbContext.BotAccounts.FirstOrDefaultAsync();
         
         if (botAccount == null)
         {
@@ -89,7 +89,7 @@ public class BotAuthService
                 ClientSecret = ClientSecret
             };
             
-            _db.BotAccounts.Add(botAccount);
+            _dbContext.BotAccounts.Add(botAccount);
         }
         else
         {
@@ -98,7 +98,7 @@ public class BotAuthService
             botAccount.TokenExpiry = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn);
         }
         
-        await _db.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync();
         
         try
         {
@@ -108,7 +108,7 @@ public class BotAuthService
             if (user != null && user.Any())
             {
                 botAccount.Username = user.First().Login;
-                await _db.SaveChangesAsync();
+                await _dbContext.SaveChangesAsync();
             }
         }
         catch (Exception ex)

@@ -20,9 +20,9 @@ namespace NoMercyBot.Services.Twitch;
 public class TwitchAuthService : IAuthService
 {
     private readonly IServiceScope _scope;
+    private readonly AppDbContext _dbContext;
     private readonly IConfiguration _conf;
     private readonly ILogger<TwitchAuthService> _logger;
-    private readonly AppDbContext _db;
     private readonly TwitchApiService _twitchApiService;
 
     public Service Service => TwitchConfig.Service();
@@ -37,7 +37,7 @@ public class TwitchAuthService : IAuthService
     public TwitchAuthService(IServiceScopeFactory serviceScopeFactory, IConfiguration conf, ILogger<TwitchAuthService> logger, TwitchApiService twitchApiService)
     {
         _scope = serviceScopeFactory.CreateScope();
-        _db = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        _dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
         _conf = conf;
         _logger = logger;
         _twitchApiService = twitchApiService;
@@ -91,7 +91,7 @@ public class TwitchAuthService : IAuthService
         TokenResponse? tokenResponse = response.Content.FromJson<TokenResponse>();
         if (tokenResponse == null) throw new("Invalid response from Twitch.");
 
-        Service service = await _db.Services
+        Service service = await _dbContext.Services
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.Name == Service.Name)
             ?? throw new InvalidOperationException($"Service {Service.Name} not found in database.");
@@ -251,7 +251,7 @@ public class TwitchAuthService : IAuthService
         try
         {
             // Find existing service or create new one
-            Service service = await _db.Services
+            Service service = await _dbContext.Services
                 .FirstAsync(s => s.Name == "Twitch");
 
             // Update the configuration
@@ -260,9 +260,9 @@ public class TwitchAuthService : IAuthService
             service.Scopes = config.Scopes;
             service.Enabled = true;
 
-            _db.Services.Update(service);
+            _dbContext.Services.Update(service);
 
-            await _db.SaveChangesAsync();
+            await _dbContext.SaveChangesAsync();
 
             // Update the static reference
             TwitchConfig._service = service;

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using NoMercyBot.Api.Middleware;
 using NoMercyBot.Globals.Information;
 using NoMercyBot.Globals.SystemCalls;
+using NoMercyBot.Services.Widgets;
 
 namespace NoMercyBot.Server.AppConfig;
 
@@ -21,6 +22,7 @@ public static class ApplicationConfiguration
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapControllers();
+            endpoints.MapHub<WidgetHub>("/hubs/widgets");
         });
     }
 

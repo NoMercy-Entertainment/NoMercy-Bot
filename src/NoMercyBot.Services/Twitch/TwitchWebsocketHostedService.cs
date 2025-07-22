@@ -1,10 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NoMercyBot.Database;
 using NoMercyBot.Database.Models;
 using NoMercyBot.Database.Models.ChatMessage;
 using NoMercyBot.Globals.NewtonSoftConverters;
+using NoMercyBot.Services.Widgets;
 using TwitchLib.Api;
 using TwitchLib.Api.Core.Enums;
 using TwitchLib.Api.Helix.Models.EventSub;
@@ -20,6 +22,7 @@ namespace NoMercyBot.Services.Twitch;
 
 public class TwitchWebsocketHostedService : IHostedService
 {
+    private readonly IServiceScope _scope;
     private readonly AppDbContext _dbContext;
     private readonly EventSubWebsocketClient _eventSubWebsocketClient;
     private readonly ILogger<TwitchWebsocketHostedService> _logger;
@@ -29,33 +32,37 @@ public class TwitchWebsocketHostedService : IHostedService
     private readonly TwitchEventSubService _twitchEventSubService;
     private readonly TwitchEventBus _eventBus;
     private readonly TwitchMessageDecorator _twitchMessageDecorator;
+    private readonly IWidgetEventService _widgetEventService;
     private bool _isConnected = false;
     private ChannelInfo? _channelInfo;
     private Stream? _currentStream;
 
     public TwitchWebsocketHostedService(
-        AppDbContext dbContext,
+        IServiceScopeFactory serviceScopeFactory,
         ILogger<TwitchWebsocketHostedService> logger,
         EventSubWebsocketClient eventSubWebsocketClient,
         TwitchApiService twitchApiService,
         TwitchEventSubService twitchEventSubService, 
         TwitchMessageDecorator twitchMessageDecorator,
-        TwitchEventBus eventBus)
+        TwitchEventBus eventBus,
+        IWidgetEventService widgetEventService)
     {
-        _dbContext = dbContext;
+        _scope = serviceScopeFactory.CreateScope();
+        _dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
         _logger = logger;
         _eventSubWebsocketClient = eventSubWebsocketClient;
         _twitchApiService = twitchApiService;
         _twitchEventSubService = twitchEventSubService;
         _eventBus = eventBus;
         _twitchMessageDecorator = twitchMessageDecorator;
+        _widgetEventService = widgetEventService;
         // Subscribe to the event
         twitchEventSubService.OnEventSubscriptionChanged += HandleEventSubscriptionChange;
         
-        _channelInfo = dbContext.ChannelInfo
+        _channelInfo = _dbContext.ChannelInfo
             .FirstOrDefault(channelInfo => channelInfo.Id == TwitchConfig.Service().UserId);
-        
-        _currentStream = dbContext.Streams
+
+        _currentStream = _dbContext.Streams
             .FirstOrDefault(stream => stream.UpdatedAt == stream.CreatedAt);
     }
 
@@ -150,9 +157,27 @@ public class TwitchWebsocketHostedService : IHostedService
         // Unsubscribe from event changes
         _twitchEventSubService.OnEventSubscriptionChanged -= HandleEventSubscriptionChange;
 
-        await _eventSubWebsocketClient.DisconnectAsync();
-
-        await _cts.CancelAsync();
+        try
+        {
+            // Cancel the internal CTS first to stop any ongoing operations
+            await _cts.CancelAsync();
+            
+            // Try to disconnect with a timeout to prevent hanging
+            using CancellationTokenSource timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(5)); // 5-second timeout for disconnect
+            
+            await _eventSubWebsocketClient.DisconnectAsync();
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("TwitchWebsocketHostedService shutdown was cancelled or timed out");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during TwitchWebsocketHostedService shutdown");
+        }
+        
+        _logger.LogInformation("TwitchWebsocketHostedService stopped.");
     }
 
     private async Task OnWebsocketConnected(object sender, WebsocketConnectedArgs e)
@@ -411,25 +436,34 @@ public class TwitchWebsocketHostedService : IHostedService
             args.Notification.Payload.Event.ChatterUserLogin,
             args.Notification.Payload.Event.BroadcasterUserLogin,
             args.Notification.Payload.Event.Message.Text);
+        
+        User? user = _dbContext.Users.FirstOrDefault(u => u.Id == args.Notification.Payload.Event.ChatterUserId);
 
-        if (!_dbContext.Users.Any(u => u.Id == args.Notification.Payload.Event.ChatterUserId))
+        if (user is null)
         {
-            await _twitchApiService.FetchUser(
+            user = await _twitchApiService.FetchUser(
                 new() { AccessToken = TwitchConfig.Service().AccessToken },
                 id: args.Notification.Payload.Event.ChatterUserId);
         }
 
         try
         {
-            ChatMessage chatMessage = new(args.Notification, _currentStream);
-            
+            ChatMessage chatMessage = new(args.Notification, _currentStream, user);
+
             await _twitchMessageDecorator.DecorateMessage(chatMessage);
 
             await _dbContext.ChatMessages
                 .Upsert(chatMessage)
                 .RunAsync();
-            
+
+            // Send to existing event bus (keep for backward compatibility)
             _eventBus.RaiseChatMessage(chatMessage);
+            
+            // Publish complete ChatMessage to widget system for maximum flexibility
+            await _widgetEventService.PublishEventAsync("twitch.chat.message", chatMessage);
+            
+            _logger.LogDebug("Published twitch.chat.message event to widget system with complete ChatMessage from {User}", 
+                args.Notification.Payload.Event.ChatterUserLogin);
         }
         catch (Exception e)
         {
@@ -450,7 +484,7 @@ public class TwitchWebsocketHostedService : IHostedService
         List<ChatMessage> messages = await _dbContext.ChatMessages
             .Where(c => _currentStream != null && c.StreamId == _currentStream.Id)
             .ToListAsync(_cts.Token);
-        
+
         foreach (ChatMessage message in messages)
         {
             message.DeletedAt = DateTime.UtcNow;
@@ -470,7 +504,7 @@ public class TwitchWebsocketHostedService : IHostedService
             .Where(c => _currentStream != null && c.StreamId == _currentStream.Id
                 && c.UserId == args.Notification.Payload.Event.TargetUserId)
             .ToListAsync(_cts.Token);
-        
+
         foreach (ChatMessage message in messages)
         {
             message.DeletedAt = DateTime.UtcNow;
@@ -540,9 +574,9 @@ public class TwitchWebsocketHostedService : IHostedService
                 ContentLabels = channelInfo.ContentLabels,
                 IsBrandedContent = channelInfo.IsBrandedContent
             };
-            
+
             _currentStream = stream;
-            
+
            _dbContext.Streams.Add(stream);
             await _dbContext.SaveChangesAsync(_cts.Token);
             _logger.LogInformation("Created new stream entry for {Channel} with ID {StreamId}",
@@ -556,7 +590,7 @@ public class TwitchWebsocketHostedService : IHostedService
 
         ChannelInfo? channelInfo = await _dbContext.ChannelInfo
             .FirstOrDefaultAsync(c => c.Id == args.Notification.Payload.Event.BroadcasterUserId, _cts.Token);
-        
+
         _currentStream = null;
 
         if (channelInfo != null)
@@ -565,11 +599,11 @@ public class TwitchWebsocketHostedService : IHostedService
             await _dbContext.SaveChangesAsync(_cts.Token);
             _logger.LogInformation("Updated stream status to offline for {Channel}",
                 args.Notification.Payload.Event.BroadcasterUserLogin);
-            
+
             Stream? stream = await _dbContext.Streams
                 .OrderByDescending(s => s.CreatedAt)
                 .FirstOrDefaultAsync(s => s.ChannelId == channelInfo.Id, _cts.Token);
-            
+
             if (stream != null)
             {
                 stream.UpdatedAt = DateTime.UtcNow;

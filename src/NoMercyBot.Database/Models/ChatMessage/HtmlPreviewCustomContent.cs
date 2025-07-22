@@ -6,7 +6,7 @@ namespace NoMercyBot.Database.Models.ChatMessage;
 [NotMapped]
 public class HtmlPreviewCustomContent
 {
-    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)] public required string Host { get; set; }
+    [JsonProperty("host", NullValueHandling = NullValueHandling.Ignore)] public required string Host { get; set; }
 
     [JsonProperty("title", NullValueHandling = NullValueHandling.Ignore)] public string? Title { get; set; }
     [JsonProperty("description", NullValueHandling = NullValueHandling.Ignore)] public string? Description { get; set; }
