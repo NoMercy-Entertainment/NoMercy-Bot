@@ -57,7 +57,7 @@ public class TwitchEventSubService : IEventSubService
 
             // Channel events
             { "channel.update", ("A broadcaster updates their channel properties", "2", ["broadcaster_user_id", "user_id"]) },
-            { "channel.follow", ("A specified channel receives a follow", "2", ["broadcaster_user_id", "user_id"]) },
+            { "channel.follow", ("A specified channel receives a follow", "2", ["broadcaster_user_id", "moderator_user_id"]) },
             {
                 "channel.ad_break.begin",
                 ("A midroll commercial break has started running", "1", ["broadcaster_user_id", "user_id"])
@@ -141,7 +141,7 @@ public class TwitchEventSubService : IEventSubService
             { "channel.cheer", ("A user cheers on the specified channel", "1", ["broadcaster_user_id"]) },
 
             // Channel moderation events
-            { "channel.raid", ("A broadcaster raids another broadcaster's channel", "1", ["broadcaster_user_id"]) },
+            { "channel.raid", ("A broadcaster raids another broadcaster's channel", "1", ["to_broadcaster_user_id"]) },
             { "channel.ban", ("A viewer is banned from the specified channel", "1", ["broadcaster_user_id"]) },
             { "channel.unban", ("A viewer is unbanned from the specified channel", "1", ["broadcaster_user_id"]) },
             { "channel.unban_request.create", ("A user creates an unban request", "1", ["broadcaster_user_id"]) },
@@ -316,7 +316,6 @@ public class TwitchEventSubService : IEventSubService
                     "broadcaster_user_id"
                 ])
             },
-            { "stream.update", ("The specified broadcaster's stream is updated", "1", ["broadcaster_user_id"]) },
 
             // User events
             {

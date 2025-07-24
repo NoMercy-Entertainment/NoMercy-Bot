@@ -74,7 +74,7 @@ public class WidgetScaffoldService : IWidgetScaffoldService
             }
 
             // Create template replacement values
-            Dictionary<string, string> replacements = new Dictionary<string, string>
+            Dictionary<string, string> replacements = new()
             {
                 { "{{WIDGET_ID}}", widgetId.ToString() },
                 { "{{WIDGET_NAME}}", widgetName },

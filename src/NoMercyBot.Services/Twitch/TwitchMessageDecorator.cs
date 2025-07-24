@@ -52,7 +52,7 @@ public class TwitchMessageDecorator: IService
         DecorateBadges();
         DecorateTwitchEmotes();
         
-        DecrateHtml();
+        if(chatMessage.UserType is "Vip" or "Moderator" or "Broadcaster") DecrateHtml();
         
         // Split up all text fragments into individual word fragments so that we can decorate them with emotes
         ExplodeTextFragments();
@@ -377,7 +377,7 @@ public class TwitchMessageDecorator: IService
             {
                 Type = "url",
                 Text = fragment.Text,
-                HtmlContent = await _htmlMetadataService.MakeComponent(uri),
+                HtmlContent = await _htmlMetadataService.MakeComponent(uri, ChatMessage.UserType is "Vip" or "Moderator" or "Broadcaster"),
             };
         }
     }

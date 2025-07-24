@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NoMercyBot.Database;
 
@@ -10,9 +11,11 @@ using NoMercyBot.Database;
 namespace NoMercyBot.Database.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250724124629_Init32")]
+    partial class Init32
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.6");
@@ -96,51 +99,6 @@ namespace NoMercyBot.Database.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Channels");
-                });
-
-            modelBuilder.Entity("NoMercyBot.Database.Models.ChannelEvent", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ChannelId")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("TEXT")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("Data")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("TEXT")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ChannelId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("ChannelEvents");
                 });
 
             modelBuilder.Entity("NoMercyBot.Database.Models.ChannelInfo", b =>
@@ -886,25 +844,6 @@ namespace NoMercyBot.Database.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("NoMercyBot.Database.Models.ChannelEvent", b =>
-                {
-                    b.HasOne("NoMercyBot.Database.Models.Channel", "Channel")
-                        .WithMany("Events")
-                        .HasForeignKey("ChannelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("NoMercyBot.Database.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Channel");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("NoMercyBot.Database.Models.ChannelModerator", b =>
                 {
                     b.HasOne("NoMercyBot.Database.Models.Channel", "Channel")
@@ -1015,8 +954,6 @@ namespace NoMercyBot.Database.Migrations
             modelBuilder.Entity("NoMercyBot.Database.Models.Channel", b =>
                 {
                     b.Navigation("ChannelModerators");
-
-                    b.Navigation("Events");
 
                     b.Navigation("Shoutouts");
 

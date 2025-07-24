@@ -10,6 +10,7 @@ public static class SpotifyServiceExtensions
         services.AddSingleton<SpotifyApiService>();
         services.AddSingleton<SpotifyAuthService>();
         services.AddSingleton<IAuthService>(sp => sp.GetRequiredService<SpotifyAuthService>());
+        services.AddSingleton<SpotifyWebsocketService>();
         
         return services;
     }

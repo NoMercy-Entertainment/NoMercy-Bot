@@ -36,7 +36,7 @@ public static class Shell
             Arguments = arguments,
             WorkingDirectory = options.WorkingDirectory ?? string.Empty,
             RedirectStandardOutput = options.CaptureStdOut,
-            RedirectStandardError = options.CaptureStdErr && !options.MergeStdErrToOut,
+            RedirectStandardError = options is { CaptureStdErr: true, MergeStdErrToOut: false },
             RedirectStandardInput = options.RedirectInput,
             UseShellExecute = options.UseShellExecute,
             CreateNoWindow = options.CreateNoWindow
@@ -58,7 +58,7 @@ public static class Shell
             if (e.Data != null) outputBuilder.AppendLine(e.Data);
         };
 
-        if (options.CaptureStdErr && !options.MergeStdErrToOut)
+        if (options is { CaptureStdErr: true, MergeStdErrToOut: false })
             process.ErrorDataReceived += (_, e) =>
             {
                 if (e.Data != null) errorBuilder.AppendLine(e.Data);
@@ -70,7 +70,7 @@ public static class Shell
 
             if (options.CaptureStdOut)
                 process.BeginOutputReadLine();
-            if (options.CaptureStdErr && !options.MergeStdErrToOut)
+            if (options is { CaptureStdErr: true, MergeStdErrToOut: false })
                 process.BeginErrorReadLine();
 
             await process.WaitForExitAsync();

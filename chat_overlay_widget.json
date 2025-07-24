@@ -1,4 +1,5 @@
 {
+  "id": "01K0QVBQYEGAQKAX1CYTK1S61M",
   "name": "Twitch Chat Overlay",
   "description": "Real-time Twitch chat overlay with animated messages, user badges, pronouns, and customizable styling. Features smooth enter/exit animations, message queuing, and OG link previews.",
   "version": "1.0.0",
@@ -17,51 +18,13 @@
     "chatAnimationDuration": 0.75,
     "chatShowDuration": 30,
     "defaultColor": "#f72264",
-    "dimensions": {
-      "width": "25%",
-      "position": "top-right",
-      "padding": "24px",
-      "gap": "12px"
-    },
-    "styling": {
-      "chatBox": {
-        "backgroundColor": "transparent",
-        "overflow": "hidden",
-        "scrollbar": "none"
-      },
-      "messageContainer": {
-        "backgroundColor": "rgba(23, 23, 23, 0.9)",
-        "borderRadius": "8px",
-        "padding": "12px 16px",
-        "marginTop": "12px"
-      },
-      "banner": {
-        "height": "32px",
-        "borderRadius": "8px",
-        "padding": "0 8px",
-        "fontSize": "1.125rem",
-        "fontWeight": "bold"
-      },
-      "avatar": {
-        "size": "56px",
-        "borderRadius": "50%",
-        "border": "2px solid"
-      },
-      "messageBubble": {
-        "backgroundColor": "#171717",
-        "borderRadius": "8px",
-        "padding": "12px",
-        "fontSize": "1.1rem",
-        "lineHeight": "1.75",
-        "fontWeight": "500",
-        "maxHeight": "384px"
-      }
-    },
+    "width": 520,
+    "height": 600,
     "animations": {
       "enterDirection": "right",
-      "exitDirection": "left",
+      "exitDirection": "right",
       "sequenceTiming": {
-        "bannerDelay": 0.0,
+        "bannerDelay": 0,
         "avatarDelay": 0.3,
         "bubbleDelay": 0.6,
         "contentDelay": 0.9
@@ -89,39 +52,8 @@
       "ogPreviews": true,
       "emoteSupport": true,
       "whitelistedUsers": true
-    },
-    "content": {
-      "supportedNodes": [
-        "rootNode",
-        "span",
-        "p",
-        "a",
-        "b",
-        "u",
-        "i",
-        "strong",
-        "small",
-        "div",
-        "emote",
-        "img",
-        "marquee",
-        "og-preview"
-      ],
-      "emoteSize": "28px",
-      "linkBreaking": "break-all",
-      "maxImageHeight": "384px"
-    },
-    "positioning": {
-      "containerClass": "absolute top-0 right-0 flex flex-col w-1/4 h-available mb-16 mr-6 mt-6",
-      "zIndexBase": 1,
-      "zIndexActive": 2,
-      "zIndexAvatar": 20,
-      "zIndexBanner": 10
-    },
-    "performance": {
-      "willChange": "auto",
-      "transitionOptimization": true,
-      "useTransformGPU": true
     }
-  }
+  },
+  "createdAt": "2025-07-22T01:18:25Z",
+  "updatedAt": "2025-07-22T01:18:25Z"
 }

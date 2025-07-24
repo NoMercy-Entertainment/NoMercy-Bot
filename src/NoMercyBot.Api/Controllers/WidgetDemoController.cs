@@ -143,7 +143,7 @@ public class WidgetDemoController : ControllerBase
     [Obsolete("Use POST /events/test/message instead")]
     public async Task<IActionResult> SendChatEvent([FromBody] ChatEventRequest request)
     {
-        TestEventRequest testRequest = new TestEventRequest
+        TestEventRequest testRequest = new()
         {
             Username = request.Username,
             Message = request.Message

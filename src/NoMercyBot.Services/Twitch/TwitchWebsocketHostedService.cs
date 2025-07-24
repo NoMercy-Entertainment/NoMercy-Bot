@@ -30,11 +30,10 @@ public class TwitchWebsocketHostedService : IHostedService
     private readonly TwitchAPI _twitchApi = new();
     private readonly TwitchApiService _twitchApiService;
     private readonly TwitchEventSubService _twitchEventSubService;
-    private readonly TwitchEventBus _eventBus;
     private readonly TwitchMessageDecorator _twitchMessageDecorator;
     private readonly IWidgetEventService _widgetEventService;
-    private bool _isConnected = false;
-    private ChannelInfo? _channelInfo;
+    private bool _isConnected;
+    // private ChannelInfo? _channelInfo;
     private Stream? _currentStream;
 
     public TwitchWebsocketHostedService(
@@ -44,7 +43,6 @@ public class TwitchWebsocketHostedService : IHostedService
         TwitchApiService twitchApiService,
         TwitchEventSubService twitchEventSubService, 
         TwitchMessageDecorator twitchMessageDecorator,
-        TwitchEventBus eventBus,
         IWidgetEventService widgetEventService)
     {
         _scope = serviceScopeFactory.CreateScope();
@@ -53,14 +51,13 @@ public class TwitchWebsocketHostedService : IHostedService
         _eventSubWebsocketClient = eventSubWebsocketClient;
         _twitchApiService = twitchApiService;
         _twitchEventSubService = twitchEventSubService;
-        _eventBus = eventBus;
         _twitchMessageDecorator = twitchMessageDecorator;
         _widgetEventService = widgetEventService;
         // Subscribe to the event
         twitchEventSubService.OnEventSubscriptionChanged += HandleEventSubscriptionChange;
         
-        _channelInfo = _dbContext.ChannelInfo
-            .FirstOrDefault(channelInfo => channelInfo.Id == TwitchConfig.Service().UserId);
+        // _channelInfo = _dbContext.ChannelInfo
+        //     .FirstOrDefault(channelInfo => channelInfo.Id == TwitchConfig.Service().UserId);
 
         _currentStream = _dbContext.Streams
             .FirstOrDefault(stream => stream.UpdatedAt == stream.CreatedAt);
@@ -279,6 +276,16 @@ public class TwitchWebsocketHostedService : IHostedService
     private async Task OnError(object sender, ErrorOccuredArgs args)
     {
         _logger.LogError($"Websocket {_eventSubWebsocketClient.SessionId} - Error occurred!");
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = Guid.NewGuid().ToString(),
+        //     Type = "websocket.error",
+        //     Data = args.Exception.ToJson(),
+        //     ChannelId = TwitchConfig.Service().UserId,
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
+        
         await Task.CompletedTask;
     }
 
@@ -286,19 +293,30 @@ public class TwitchWebsocketHostedService : IHostedService
 
     private async Task OnUserUpdate(object sender, UserUpdateArgs args)
     {
-        _logger.LogInformation("User updated: {User}", args.Notification.Payload.Event.ToJson());
+        _logger.LogInformation("User updated: {User}", args.Notification.Payload.Event);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "user.update",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.UserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
+        
         await Task.CompletedTask;
     }
 
     private async Task OnUserAuthorizationGrant(object sender, UserAuthorizationGrantArgs args)
     {
-        _logger.LogInformation("User authorization granted: {User}", args.Notification.Event.ToJson());
+        _logger.LogInformation("User authorization granted: {User}", args.Notification.Event);
+        
         await Task.CompletedTask;
     }
 
     private async Task OnUserAuthorizationRevoke(object sender, UserAuthorizationRevokeArgs args)
     {
-        _logger.LogInformation("User authorization revoked: {User}", args.Notification.Event.ToJson());
+        _logger.LogInformation("User authorization revoked: {User}", args.Notification.Event);
         await Task.CompletedTask;
     }
 
@@ -308,7 +326,16 @@ public class TwitchWebsocketHostedService : IHostedService
 
     private async Task OnChannelUpdate(object sender, ChannelUpdateArgs args)
     {
-        _logger.LogInformation("Channel updated: {Channel}", args.Notification.Payload.Event.ToJson());
+        _logger.LogInformation("Channel updated: {Channel}", args.Notification.Payload.Event);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.update",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
 
         string broadcasterId = args.Notification.Payload.Event.BroadcasterUserId;
 
@@ -333,6 +360,21 @@ public class TwitchWebsocketHostedService : IHostedService
         _logger.LogInformation("Follow: {User} followed {Channel}",
             args.Notification.Payload.Event.UserLogin,
             args.Notification.Payload.Event.BroadcasterUserLogin);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.follow",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId,
+        //     UserId = args.Notification.Payload.Event.UserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
+        
+        await _widgetEventService.PublishEventAsync("channel.follow", new Dictionary<string, string?>
+        {
+            { "user", args.Notification.Payload.Event.UserName },
+        });
 
         await Task.CompletedTask;
     }
@@ -343,6 +385,23 @@ public class TwitchWebsocketHostedService : IHostedService
             args.Notification.Payload.Event.UserLogin,
             args.Notification.Payload.Event.BroadcasterUserLogin,
             args.Notification.Payload.Event.Tier);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.subscribe",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId,
+        //     UserId = args.Notification.Payload.Event.UserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
+        
+        await _widgetEventService.PublishEventAsync("channel.subscribe", new Dictionary<string, string?>
+        {
+            { "user", args.Notification.Payload.Event.UserName },
+            { "tier", args.Notification.Payload.Event.Tier },
+            { "isGift", args.Notification.Payload.Event.IsGift.ToString() },
+        });
 
         await Task.CompletedTask;
     }
@@ -353,7 +412,26 @@ public class TwitchWebsocketHostedService : IHostedService
             args.Notification.Payload.Event.UserLogin,
             args.Notification.Payload.Event.Total,
             args.Notification.Payload.Event.BroadcasterUserLogin);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.subscription.gift",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId,
+        //     UserId = args.Notification.Payload.Event.UserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
 
+        await _widgetEventService.PublishEventAsync("channel.subscription.gift", new Dictionary<string, string?>
+        {
+            { "user", args.Notification.Payload.Event.UserName },
+            { "count", args.Notification.Payload.Event.Total.ToString() },
+            { "tier", args.Notification.Payload.Event.Tier },
+            { "cumulativeTotal", args.Notification.Payload.Event.CumulativeTotal?.ToString() },
+            { "isAnonymous", args.Notification.Payload.Event.IsAnonymous.ToString() }
+        });
+        
         await Task.CompletedTask;
     }
 
@@ -363,6 +441,27 @@ public class TwitchWebsocketHostedService : IHostedService
             args.Notification.Payload.Event.UserLogin,
             args.Notification.Payload.Event.BroadcasterUserLogin,
             args.Notification.Payload.Event.CumulativeMonths);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.subscription.message",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId,
+        //     UserId = args.Notification.Payload.Event.UserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
+        
+        string message = args.Notification.Payload.Event.Message.Text;
+        
+        await _widgetEventService.PublishEventAsync("channel.subscription.message", new Dictionary<string, string?>
+        {
+            { "user", args.Notification.Payload.Event.UserName },
+            { "months", args.Notification.Payload.Event.CumulativeMonths.ToString() },
+            { "tier", args.Notification.Payload.Event.Tier },
+            { "streak" , args.Notification.Payload.Event.StreakMonths?.ToString() },
+            { "message", message }
+        });
 
         await Task.CompletedTask;
     }
@@ -373,6 +472,24 @@ public class TwitchWebsocketHostedService : IHostedService
             args.Notification.Payload.Event.IsAnonymous ? "Anonymous" : args.Notification.Payload.Event.UserLogin,
             args.Notification.Payload.Event.Bits,
             args.Notification.Payload.Event.BroadcasterUserLogin);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.cheer",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId,
+        //     UserId = args.Notification.Payload.Event.UserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
+        
+        await _widgetEventService.PublishEventAsync("channel.cheer", new Dictionary<string, string?>
+        {
+            { "user", args.Notification.Payload.Event.UserName },
+            { "bits", args.Notification.Payload.Event.Bits.ToString() },
+            { "isAnonymous", args.Notification.Payload.Event.IsAnonymous.ToString() },
+            { "message", args.Notification.Payload.Event.Message }
+        });
 
         await Task.CompletedTask;
     }
@@ -383,6 +500,22 @@ public class TwitchWebsocketHostedService : IHostedService
             args.Notification.Payload.Event.FromBroadcasterUserLogin,
             args.Notification.Payload.Event.ToBroadcasterUserLogin,
             args.Notification.Payload.Event.Viewers);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.raid",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.ToBroadcasterUserId,
+        //     UserId = args.Notification.Payload.Event.FromBroadcasterUserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
+        
+        await _widgetEventService.PublishEventAsync("channel.raid", new Dictionary<string, string?>
+        {
+            { "user", args.Notification.Payload.Event.FromBroadcasterUserName },
+            { "viewers", args.Notification.Payload.Event.Viewers.ToString() }
+        });
 
         await Task.CompletedTask;
     }
@@ -394,7 +527,17 @@ public class TwitchWebsocketHostedService : IHostedService
             args.Notification.Payload.Event.BroadcasterUserLogin,
             args.Notification.Payload.Event.ModeratorUserLogin,
             args.Notification.Payload.Event.Reason);
-
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.ban",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId,
+        //     UserId = args.Notification.Payload.Event.UserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
+        
         await Task.CompletedTask;
     }
 
@@ -404,6 +547,16 @@ public class TwitchWebsocketHostedService : IHostedService
             args.Notification.Payload.Event.UserLogin,
             args.Notification.Payload.Event.BroadcasterUserLogin,
             args.Notification.Payload.Event.ModeratorUserLogin);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.unban",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId,
+        //     UserId = args.Notification.Payload.Event.UserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
 
         await Task.CompletedTask;
     }
@@ -413,6 +566,16 @@ public class TwitchWebsocketHostedService : IHostedService
         _logger.LogInformation("Mod add: {User} was modded in {Channel}",
             args.Notification.Payload.Event.UserLogin,
             args.Notification.Payload.Event.BroadcasterUserLogin);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.moderator.add",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId,
+        //     UserId = args.Notification.Payload.Event.UserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
 
         await Task.CompletedTask;
     }
@@ -422,6 +585,16 @@ public class TwitchWebsocketHostedService : IHostedService
         _logger.LogInformation("Mod remove: {User} was unmodded in {Channel}",
             args.Notification.Payload.Event.UserLogin,
             args.Notification.Payload.Event.BroadcasterUserLogin);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.moderator.remove",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId,
+        //     UserId = args.Notification.Payload.Event.UserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
 
         await Task.CompletedTask;
     }
@@ -437,14 +610,21 @@ public class TwitchWebsocketHostedService : IHostedService
             args.Notification.Payload.Event.BroadcasterUserLogin,
             args.Notification.Payload.Event.Message.Text);
         
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "twitch.chat.message",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId,
+        //     UserId = args.Notification.Payload.Event.ChatterUserId
+        // }, _cts.Token);
+        // await _dbContext.SaveChangesAsync(_cts.Token);
+        
         User? user = _dbContext.Users.FirstOrDefault(u => u.Id == args.Notification.Payload.Event.ChatterUserId);
 
-        if (user is null)
-        {
-            user = await _twitchApiService.FetchUser(
-                new() { AccessToken = TwitchConfig.Service().AccessToken },
-                id: args.Notification.Payload.Event.ChatterUserId);
-        }
+        user ??= await _twitchApiService.FetchUser(
+            new() { AccessToken = TwitchConfig.Service().AccessToken! },
+            id: args.Notification.Payload.Event.ChatterUserId);
 
         try
         {
@@ -456,10 +636,6 @@ public class TwitchWebsocketHostedService : IHostedService
                 .Upsert(chatMessage)
                 .RunAsync();
 
-            // Send to existing event bus (keep for backward compatibility)
-            _eventBus.RaiseChatMessage(chatMessage);
-            
-            // Publish complete ChatMessage to widget system for maximum flexibility
             await _widgetEventService.PublishEventAsync("twitch.chat.message", chatMessage);
             
             _logger.LogDebug("Published twitch.chat.message event to widget system with complete ChatMessage from {User}", 
@@ -481,6 +657,15 @@ public class TwitchWebsocketHostedService : IHostedService
         _logger.LogInformation("Chat clear: Chat was cleared in {Channel}",
             args.Notification.Payload.Event.BroadcasterUserLogin);
         
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.chat.clear",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
+        
         List<ChatMessage> messages = await _dbContext.ChatMessages
             .Where(c => _currentStream != null && c.StreamId == _currentStream.Id)
             .ToListAsync(_cts.Token);
@@ -490,7 +675,10 @@ public class TwitchWebsocketHostedService : IHostedService
             message.DeletedAt = DateTime.UtcNow;
         }
         await _dbContext.SaveChangesAsync(_cts.Token);
-
+        
+        await _widgetEventService.PublishEventAsync("channel.chat.clear", new());
+        
+        
         await Task.CompletedTask;
     }
 
@@ -499,6 +687,15 @@ public class TwitchWebsocketHostedService : IHostedService
         _logger.LogInformation("User messages cleared: {User}'s messages were cleared in {Channel}",
             args.Notification.Payload.Event.TargetUserLogin,
             args.Notification.Payload.Event.BroadcasterUserLogin);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.chat.clear.user.messages",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId,
+        //     UserId = args.Notification.Payload.Event.TargetUserId
+        // });
         
         List<ChatMessage> messages = await _dbContext.ChatMessages
             .Where(c => _currentStream != null && c.StreamId == _currentStream.Id
@@ -520,6 +717,16 @@ public class TwitchWebsocketHostedService : IHostedService
             args.Notification.Payload.Event.TargetUserLogin,
             args.Notification.Payload.Event.BroadcasterUserLogin);
         
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.chat.message.delete",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId,
+        //     UserId = args.Notification.Payload.Event.TargetUserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
+        
         ChatMessage? message = await _dbContext.ChatMessages
             .FirstOrDefaultAsync(c => c.Id == args.Notification.Payload.Event.MessageId, _cts.Token);
 
@@ -530,7 +737,6 @@ public class TwitchWebsocketHostedService : IHostedService
             _logger.LogInformation("Marked message as deleted: {MessageId} in {Channel}",
                 message.Id, args.Notification.Payload.Event.BroadcasterUserLogin);
         }
-
         await Task.CompletedTask;
     }
 
@@ -539,6 +745,15 @@ public class TwitchWebsocketHostedService : IHostedService
         _logger.LogInformation("Chat notification in {Channel}: {Message}",
             args.Notification.Payload.Event.BroadcasterUserLogin,
             args.Notification.Payload.Event.Message.Text);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.chat.notification",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
 
         await Task.CompletedTask;
     }
@@ -550,17 +765,21 @@ public class TwitchWebsocketHostedService : IHostedService
     private async Task OnStreamOnline(object sender, StreamOnlineArgs args)
     {
         _logger.LogInformation("Stream online: {Channel}", args.Notification.Payload.Event.BroadcasterUserLogin);
+            
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "stream.online",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
 
         ChannelInfo? channelInfo = await _dbContext.ChannelInfo
             .FirstOrDefaultAsync(c => c.Id == args.Notification.Payload.Event.BroadcasterUserId, _cts.Token);
 
         if (channelInfo != null)
         {
-            channelInfo.IsLive = true;
-            await _dbContext.SaveChangesAsync(_cts.Token);
-            _logger.LogInformation("Updated stream status to online for {Channel}",
-                args.Notification.Payload.Event.BroadcasterUserLogin);
-
             Stream stream = new()
             {
                 Id = args.Notification.Payload.Event.Id,
@@ -577,16 +796,30 @@ public class TwitchWebsocketHostedService : IHostedService
 
             _currentStream = stream;
 
-           _dbContext.Streams.Add(stream);
+            _dbContext.Streams.Add(stream);
             await _dbContext.SaveChangesAsync(_cts.Token);
             _logger.LogInformation("Created new stream entry for {Channel} with ID {StreamId}",
                 args.Notification.Payload.Event.BroadcasterUserLogin, stream.Id);
+            
+            channelInfo.IsLive = true;
+            await _dbContext.SaveChangesAsync(_cts.Token);
+            _logger.LogInformation("Updated stream status to online for {Channel}",
+                args.Notification.Payload.Event.BroadcasterUserLogin);
         }
     }
 
     private async Task OnStreamOffline(object sender, StreamOfflineArgs args)
     {
         _logger.LogInformation("Stream offline: {Channel}", args.Notification.Payload.Event.BroadcasterUserLogin);
+            
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "stream.offline",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
 
         ChannelInfo? channelInfo = await _dbContext.ChannelInfo
             .FirstOrDefaultAsync(c => c.Id == args.Notification.Payload.Event.BroadcasterUserId, _cts.Token);
@@ -609,7 +842,7 @@ public class TwitchWebsocketHostedService : IHostedService
                 stream.UpdatedAt = DateTime.UtcNow;
                 await _dbContext.SaveChangesAsync(_cts.Token);
                 _logger.LogInformation("Updated last stream entry for {Channel} with ID {StreamId}",
-                    args.Notification.Payload.Event.BroadcasterUserLogin, stream?.Id);
+                    args.Notification.Payload.Event.BroadcasterUserLogin, stream.Id);
             }
         }
     }
@@ -623,6 +856,15 @@ public class TwitchWebsocketHostedService : IHostedService
         _logger.LogInformation("Custom reward added: {Title} in {Channel}",
             args.Notification.Payload.Event.Title,
             args.Notification.Payload.Event.BroadcasterUserLogin);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.points.custom.reward.add",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
 
         await Task.CompletedTask;
     }
@@ -632,6 +874,15 @@ public class TwitchWebsocketHostedService : IHostedService
         _logger.LogInformation("Custom reward updated: {Title} in {Channel}",
             args.Notification.Payload.Event.Title,
             args.Notification.Payload.Event.BroadcasterUserLogin);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.points.custom.reward.update",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
 
         await Task.CompletedTask;
     }
@@ -641,6 +892,15 @@ public class TwitchWebsocketHostedService : IHostedService
         _logger.LogInformation("Custom reward removed: {Title} in {Channel}",
             args.Notification.Payload.Event.Title,
             args.Notification.Payload.Event.BroadcasterUserLogin);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.points.custom.reward.remove",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
 
         await Task.CompletedTask;
     }
@@ -652,6 +912,16 @@ public class TwitchWebsocketHostedService : IHostedService
             args.Notification.Payload.Event.UserLogin,
             args.Notification.Payload.Event.Reward.Title,
             args.Notification.Payload.Event.BroadcasterUserLogin);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.points.custom.reward.redemption.add",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId,
+        //     UserId = args.Notification.Payload.Event.UserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
 
         await Task.CompletedTask;
     }
@@ -664,6 +934,16 @@ public class TwitchWebsocketHostedService : IHostedService
             args.Notification.Payload.Event.Reward.Title,
             args.Notification.Payload.Event.BroadcasterUserLogin,
             args.Notification.Payload.Event.Status);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.points.custom.reward.redemption.update",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId,
+        //     UserId = args.Notification.Payload.Event.UserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
 
         await Task.CompletedTask;
     }
@@ -677,6 +957,15 @@ public class TwitchWebsocketHostedService : IHostedService
         _logger.LogInformation("Poll started: \"{Title}\" in {Channel}",
             args.Notification.Payload.Event.Title,
             args.Notification.Payload.Event.BroadcasterUserLogin);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.poll.begin",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
 
         await Task.CompletedTask;
     }
@@ -686,6 +975,15 @@ public class TwitchWebsocketHostedService : IHostedService
         _logger.LogInformation("Poll progress: \"{Title}\" in {Channel}",
             args.Notification.Payload.Event.Title,
             args.Notification.Payload.Event.BroadcasterUserLogin);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.poll.progress",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
 
         await Task.CompletedTask;
     }
@@ -696,6 +994,15 @@ public class TwitchWebsocketHostedService : IHostedService
             args.Notification.Payload.Event.Title,
             args.Notification.Payload.Event.BroadcasterUserLogin,
             args.Notification.Payload.Event.Status);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.poll.end",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
 
         await Task.CompletedTask;
     }
@@ -709,6 +1016,15 @@ public class TwitchWebsocketHostedService : IHostedService
         _logger.LogInformation("Prediction started: \"{Title}\" in {Channel}",
             args.Notification.Payload.Event.Title,
             args.Notification.Payload.Event.BroadcasterUserLogin);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.prediction.begin",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
 
         await Task.CompletedTask;
     }
@@ -718,6 +1034,15 @@ public class TwitchWebsocketHostedService : IHostedService
         _logger.LogInformation("Prediction progress: \"{Title}\" in {Channel}",
             args.Notification.Payload.Event.Title,
             args.Notification.Payload.Event.BroadcasterUserLogin);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.prediction.progress",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
 
         await Task.CompletedTask;
     }
@@ -727,6 +1052,15 @@ public class TwitchWebsocketHostedService : IHostedService
         _logger.LogInformation("Prediction locked: \"{Title}\" in {Channel}",
             args.Notification.Payload.Event.Title,
             args.Notification.Payload.Event.BroadcasterUserLogin);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.prediction.lock",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
 
         await Task.CompletedTask;
     }
@@ -737,6 +1071,15 @@ public class TwitchWebsocketHostedService : IHostedService
             args.Notification.Payload.Event.Title,
             args.Notification.Payload.Event.BroadcasterUserLogin,
             args.Notification.Payload.Event.Status);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.prediction.end",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
 
         await Task.CompletedTask;
     }
@@ -749,6 +1092,15 @@ public class TwitchWebsocketHostedService : IHostedService
     {
         _logger.LogInformation("Hype Train started in {Channel}",
             args.Notification.Payload.Event.BroadcasterUserLogin);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.hype.train.begin",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
 
         await Task.CompletedTask;
     }
@@ -760,6 +1112,15 @@ public class TwitchWebsocketHostedService : IHostedService
             args.Notification.Payload.Event.Level,
             args.Notification.Payload.Event.Progress,
             args.Notification.Payload.Event.Goal);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.hype.train.progress",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
 
         await Task.CompletedTask;
     }
@@ -769,6 +1130,15 @@ public class TwitchWebsocketHostedService : IHostedService
         _logger.LogInformation("Hype Train ended in {Channel}. Reached Level {Level}",
             args.Notification.Payload.Event.BroadcasterUserLogin,
             args.Notification.Payload.Event.Level);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.hype.train.end",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
 
         await Task.CompletedTask;
     }
@@ -817,6 +1187,16 @@ public class TwitchWebsocketHostedService : IHostedService
         _logger.LogInformation("Shield mode activated in {Channel} by {Moderator}",
             args.Notification.Payload.Event.BroadcasterUserLogin,
             args.Notification.Payload.Event.ModeratorUserLogin);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.shield.mode.begin",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId,
+        //     UserId = args.Notification.Payload.Event.ModeratorUserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
 
         await Task.CompletedTask;
     }
@@ -826,6 +1206,16 @@ public class TwitchWebsocketHostedService : IHostedService
         _logger.LogInformation("Shield mode deactivated in {Channel} by {Moderator}",
             args.Notification.Payload.Event.BroadcasterUserLogin,
             args.Notification.Payload.Event.ModeratorUserLogin);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.shield.mode.end",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId,
+        //     UserId = args.Notification.Payload.Event.ModeratorUserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
 
         await Task.CompletedTask;
     }
@@ -835,6 +1225,16 @@ public class TwitchWebsocketHostedService : IHostedService
         _logger.LogInformation("Shoutout created: {FromChannel} shouted out {ToChannel}",
             args.Notification.Payload.Event.BroadcasterUserLogin,
             args.Notification.Payload.Event.ToBroadcasterUserLogin);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.shoutout.create",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId,
+        //     UserId = args.Notification.Payload.Event.ToBroadcasterUserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
 
         await Task.CompletedTask;
     }
@@ -846,6 +1246,16 @@ public class TwitchWebsocketHostedService : IHostedService
             args.Notification.Payload.Event.BroadcasterUserLogin,
             args.Notification.Payload.Event.FromBroadcasterUserLogin,
             args.Notification.Payload.Event.ViewerCount);
+        
+        // await _dbContext.ChannelEvents.AddAsync(new()
+        // {
+        //     Id = args.Notification.Metadata.MessageId,
+        //     Type = "channel.shoutout.receive",
+        //     Data = args.Notification.Payload.Event,
+        //     ChannelId = args.Notification.Payload.Event.BroadcasterUserId,
+        //     UserId = args.Notification.Payload.Event.FromBroadcasterUserId
+        // });
+        // await _dbContext.SaveChangesAsync(_cts.Token);
 
         await Task.CompletedTask;
     }
@@ -853,7 +1263,7 @@ public class TwitchWebsocketHostedService : IHostedService
     #endregion
 
     // Method to handle event toggling - dynamically subscribe/unsubscribe when events are enabled/disabled
-    public async Task HandleEventSubscriptionChange(string eventType, bool enabled)
+    private async Task HandleEventSubscriptionChange(string eventType, bool enabled)
     {
         _logger.LogInformation("Event subscription changed: {EventType} is now {Status}",
             eventType, enabled ? "enabled" : "disabled");
@@ -865,8 +1275,8 @@ public class TwitchWebsocketHostedService : IHostedService
             return;
         }
 
-        string? accessToken = TwitchConfig.Service().AccessToken;
-        string broadcasterId = _twitchApiService.GetUsers(accessToken).Result.First().Id;
+        string accessToken = TwitchConfig.Service().AccessToken!;
+        string? broadcasterId = _twitchApiService.GetUsers(accessToken).Result?.FirstOrDefault()?.Id;
 
         if (string.IsNullOrEmpty(broadcasterId) || string.IsNullOrEmpty(accessToken))
         {
@@ -978,13 +1388,17 @@ public class TwitchWebsocketHostedService : IHostedService
                         condition["broadcaster_user_id"] = broadcasterId;
                         break;
 
+                    case "to_broadcaster_user_id":
+                        condition["to_broadcaster_user_id"] = broadcasterId;
+                        break;
+
                     case "moderator_user_id":
                         // For simplicity, use the broadcaster as the moderator for automod events
                         condition["moderator_user_id"] = broadcasterId;
                         break;
 
                     case "client_id":
-                        condition["client_id"] = TwitchConfig.Service().ClientId;
+                        condition["client_id"] = TwitchConfig.Service().ClientId!;
                         break;
 
                     case "user_id":

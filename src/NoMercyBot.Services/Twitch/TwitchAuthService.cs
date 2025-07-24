@@ -236,6 +236,7 @@ public class TwitchAuthService : IAuthService
                 TokenExpiry = newUser.TokenExpiry,
                 UserId = newUser.UserId,
                 UserName = newUser.UserName,
+                UpdatedAt = DateTime.UtcNow,
             })
             .RunAsync();
     

@@ -87,7 +87,7 @@ public class ServiceController : BaseController
         service.ClientId = request.ClientId;
         service.ClientSecret = request.ClientSecret;
         
-        if (request.Scopes != null && request.Scopes.Length > 0)
+        if (request.Scopes is { Length: > 0 })
             service.Scopes = request.Scopes;
         
         await _dbContext.SaveChangesAsync();

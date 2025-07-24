@@ -100,7 +100,8 @@ public class ObsAuthService : IAuthService
             {
                 AccessToken = newUser.AccessToken,
                 RefreshToken = newUser.RefreshToken,
-                TokenExpiry = newUser.TokenExpiry
+                TokenExpiry = newUser.TokenExpiry,
+                UpdatedAt = DateTime.UtcNow,
             })
             .RunAsync();
     

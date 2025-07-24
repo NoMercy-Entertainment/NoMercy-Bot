@@ -1,4 +1,5 @@
-﻿using NoMercyBot.Database.Models;
+﻿using NoMercyBot.Database;
+using NoMercyBot.Database.Models;
 using NoMercyBot.Globals.Information;
 using NoMercyBot.Services.Interfaces;
 
@@ -14,7 +15,8 @@ public class DiscordConfig: IConfig
     }
     
     public bool IsEnabled => Service().Enabled;
-    
+    public static string? SessionToken { get; set; }
+
     public static string ApiUrl { get; } = "https://discord.com/api/v9";
     public static string AuthUrl { get; } = $"https://discord.com/api/v9/oauth2/token";
     

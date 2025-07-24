@@ -34,6 +34,8 @@ public class Channel: Timestamps
     
     [JsonProperty("shoutouts")] public ICollection<Shoutout> Shoutouts { get; set; } = [];
     
+    [JsonProperty("events")] public ICollection<ChannelEvent> Events { get; set; } = [];
+    
     [JsonProperty("moderated_for")] public ICollection<ChannelModerator> ChannelModerators { get; set; } = new List<ChannelModerator>();
 
 }

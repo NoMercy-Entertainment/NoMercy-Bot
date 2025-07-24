@@ -15,7 +15,9 @@ public static class UserSettings
         try
         {
             using AppDbContext context = new();
-            List<Configuration> configuration = context.Configurations.ToList();
+            List<Configuration> configuration = context.Configurations
+                .Where(configuration => string.IsNullOrWhiteSpace(configuration.SecureValue) && string.IsNullOrEmpty(configuration.Value))
+                .ToList();
 
             foreach (Configuration? config in configuration) settings[config.Key] = config.Value;
 

@@ -111,6 +111,7 @@ public class TwitchApiService
                 OfflineImageUrl = newUser.OfflineImageUrl,
                 Color = newUser.Color,
                 BroadcasterType = newUser.BroadcasterType,
+                UpdatedAt = DateTime.UtcNow,
             })
             .RunAsync();
         
@@ -128,7 +129,8 @@ public class TwitchApiService
                     Delay = newChannel.Delay,
                     Tags = newChannel.Tags,
                     ContentLabels = newChannel.ContentLabels,
-                    IsBrandedContent = newChannel.IsBrandedContent
+                    IsBrandedContent = newChannel.IsBrandedContent,
+                    UpdatedAt = DateTime.UtcNow,
                 })
                 .RunAsync();
         }

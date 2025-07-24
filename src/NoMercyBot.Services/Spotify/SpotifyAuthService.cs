@@ -10,6 +10,7 @@ using NoMercyBot.Database;
 using NoMercyBot.Database.Models;
 using NoMercyBot.Globals.NewtonSoftConverters;
 using NoMercyBot.Services.Interfaces;
+using NoMercyBot.Services.Spotify.Dto;
 using NoMercyBot.Services.Twitch.Dto;
 using RestSharp;
 
@@ -21,7 +22,7 @@ public class SpotifyAuthService : IAuthService
     private readonly ILogger<SpotifyAuthService> _logger;
     private readonly IServiceScope _scope;
     private readonly AppDbContext _dbContext;
-    private readonly SpotifyApiService _api;
+    private readonly SpotifyApiService _spotifyApiService;
 
     public Service Service => SpotifyConfig.Service();
     
@@ -32,13 +33,13 @@ public class SpotifyAuthService : IAuthService
     public string UserName => Service.UserName ?? throw new InvalidOperationException("Spotify UserName is not set.");
     public Dictionary<string, string> AvailableScopes => SpotifyConfig.AvailableScopes ?? throw new InvalidOperationException("Spotify Scopes are not set.");
     
-    public SpotifyAuthService(IServiceScopeFactory serviceScopeFactory, IConfiguration conf, ILogger<SpotifyAuthService> logger, SpotifyApiService api)
+    public SpotifyAuthService(IServiceScopeFactory serviceScopeFactory, IConfiguration conf, ILogger<SpotifyAuthService> logger, SpotifyApiService spotifyApiService)
     {
         _scope = serviceScopeFactory.CreateScope();
         _dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
         _conf = conf;
         _logger = logger;
-        _api = api;
+        _spotifyApiService = spotifyApiService;
     }
 
     public string GetRedirectUrl()
@@ -76,13 +77,16 @@ public class SpotifyAuthService : IAuthService
         if (tokenResponse == null) 
             throw new("Invalid response from Spotify.");
         
-        await StoreTokens(tokenResponse, new()
+        SpotifyMeResponse meResponse = await _spotifyApiService.GetSpotifyMe();
+        User user = new()
         {
-            Id = "",
-            Username = ""
-        });
+            Username = meResponse.DisplayName,
+            Id = meResponse.Id
+        };
+        
+        await StoreTokens(tokenResponse, user);
 
-        return (new(), tokenResponse);
+        return (user, tokenResponse);
     }
 
     public Task<(User, TokenResponse)> ValidateToken(HttpRequest request)
@@ -95,21 +99,17 @@ public class SpotifyAuthService : IAuthService
     
     public async Task<(User, TokenResponse)> ValidateToken(string accessToken)
     {
-        RestClient client = new(SpotifyConfig.ApiUrl);
+        SpotifyMeResponse meResponse = await _spotifyApiService.GetSpotifyMe();
         
-        RestRequest request = new("v1/me");
-        request.AddHeader("Authorization", $"Bearer {accessToken}");
-
-        RestResponse response = await client.ExecuteAsync(request);
-        
-        if (!response.IsSuccessful)
-            throw new("Invalid access token");
-        
-        return (new(), new()
+        return (new()
+        {
+            Username = meResponse.DisplayName,
+            Id = meResponse.Id
+        }, new()
         {
             AccessToken = accessToken,
-            RefreshToken = Service.RefreshToken,
-            ExpiresIn = (int)(Service.TokenExpiry - DateTime.UtcNow).Value.TotalSeconds
+            RefreshToken = Service.RefreshToken!,
+            ExpiresIn = (int)((Service.TokenExpiry - DateTime.UtcNow)!).Value.TotalSeconds
         });
     }
 
@@ -131,7 +131,6 @@ public class SpotifyAuthService : IAuthService
         if (tokenResponse == null) 
             throw new("Invalid response from Spotify.");
 
-        // Spotify might not return a refresh token if it's still valid, so we need to keep the old one
         if (string.IsNullOrEmpty(tokenResponse.RefreshToken))
             tokenResponse.RefreshToken = refreshToken;
 
@@ -172,6 +171,7 @@ public class SpotifyAuthService : IAuthService
                 TokenExpiry = newUser.TokenExpiry,
                 UserId = newUser.UserId,
                 UserName = newUser.UserName,
+                UpdatedAt = DateTime.UtcNow,
             })
             .RunAsync();
     

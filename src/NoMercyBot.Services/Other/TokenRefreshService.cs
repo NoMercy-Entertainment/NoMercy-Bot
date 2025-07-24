@@ -84,8 +84,14 @@ public class TokenRefreshService : BackgroundService
             authService.Service.AccessToken = response.AccessToken;
             authService.Service.RefreshToken = response.RefreshToken;
             authService.Service.TokenExpiry = DateTime.UtcNow.AddSeconds(response.ExpiresIn);
-            authService.Service.UserId = user.Id;
-            authService.Service.UserName = user.Username;
+            authService.Service.UserId = string.IsNullOrWhiteSpace(user.Id)
+                ? authService.Service.UserId
+                : user.Id;
+            authService.Service.UserName = string.IsNullOrWhiteSpace(user.Username)
+                ? authService.Service.UserName
+                : user.Username;
+
+            await _dbContext.SaveChangesAsync(cancellationToken);
             
             await _dbContext.Services.Upsert(authService.Service)
                 .On(u => u.Name)
@@ -94,12 +100,9 @@ public class TokenRefreshService : BackgroundService
                     AccessToken = newService.AccessToken,
                     RefreshToken = newService.RefreshToken,
                     TokenExpiry = newService.TokenExpiry,
-                    UserId = string.IsNullOrWhiteSpace(newService.UserId) 
-                        ? oldService.UserId 
-                        : newService.UserId,
-                    UserName = string.IsNullOrWhiteSpace(newService.UserName) 
-                        ? oldService.UserName 
-                        : newService.UserName
+                    UserId = newService.UserId,
+                    UserName = newService.UserName,
+                    UpdatedAt = DateTime.UtcNow,
                 })
                 .RunAsync(cancellationToken);
             

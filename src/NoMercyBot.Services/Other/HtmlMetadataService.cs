@@ -37,20 +37,22 @@ public class HtmlMetadataService: IService
             $"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.74 Safari/537.36 Edg/99.0.1150.46 {Config.UserAgent}");
     }
     
-    public async Task<HtmlPreviewCustomContent> MakeComponent(Uri uri)
+    public async Task<HtmlPreviewCustomContent> MakeComponent(Uri uri, bool permitted)
     {
         _uri = uri;
         SiteTitle = "No title";
         SiteDescription = null;
         SiteImageUrl = null;
         
-        await DecorateOgData();
+        await DecorateOgData(permitted);
         await DecorateYoutube();
         await DecorateTwitch();
         
-        return new(){
+        return new() {
             Host = _uri.Host,
-            ImageUrl = SiteImageUrl,
+            ImageUrl = permitted 
+                ? SiteImageUrl 
+                : null,
             Title = SiteTitle,
             Description = SiteDescription,
         };
@@ -61,7 +63,7 @@ public class HtmlMetadataService: IService
         _httpClient.Dispose();
     }
 
-    private async Task DecorateOgData()
+    private async Task DecorateOgData(bool permitted)
     {
         if (_uri == null) return;
 
@@ -78,7 +80,7 @@ public class HtmlMetadataService: IService
                 return;
             }
             
-            if (contentType?.StartsWith("image/") == true)
+            if (contentType?.StartsWith("image/") == true && permitted)
             {
                 await ProcessImageContent(response, _uri);
                 return;
@@ -97,7 +99,7 @@ public class HtmlMetadataService: IService
         if (Uri.IsWellFormedUriString(imageUrl, UriKind.Absolute))
         {
             byte[] bytes = await response.Content.ReadAsByteArrayAsync();
-            string base64 = $"data:{response.Content.Headers.ContentType.MediaType};base64," + Convert.ToBase64String(bytes);
+            string base64 = $"data:{response.Content.Headers.ContentType?.MediaType};base64," + Convert.ToBase64String(bytes);
             SiteImageUrl = base64;
         }
     }

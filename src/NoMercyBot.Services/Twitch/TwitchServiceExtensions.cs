@@ -8,7 +8,6 @@ public static class TwitchServiceExtensions
 {
     public static void AddTwitchServices(this IServiceCollection services)
     {
-        services.AddSingleton<TwitchEventBus>();
         services.AddSingleton<TwitchAuthService>();
         services.AddSingleton<BotAuthService>();
         services.AddSingleton<TwitchApiService>();

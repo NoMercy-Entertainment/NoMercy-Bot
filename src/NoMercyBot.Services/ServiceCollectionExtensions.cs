@@ -53,6 +53,7 @@ public static class ServiceCollectionExtensions
     private static void AddTokenRefreshService(this IServiceCollection services)
     {
         services.AddHostedService<TokenRefreshService>();
+        services.AddHostedService<SpotifyWebsocketService>();
     }
 
     // Extension method to add a service as both a singleton and a hosted service

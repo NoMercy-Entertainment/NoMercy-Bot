@@ -192,6 +192,18 @@ public class AppDbContext : DbContext
             .Property(e => e.TokenExpiry)
             .IsRequired(false);
         
+        modelBuilder.Entity<Configuration>()
+            .Property(e => e.SecureValue)
+            .HasConversion(
+                v => TokenStore.EncryptToken(v),
+                v =>  TokenStore.DecryptToken(v));
+        
+        modelBuilder.Entity<ChannelEvent>()
+            .Property(e => e.Data)
+            .HasConversion(
+                v => JsonConvert.SerializeObject(v),
+                v => JsonConvert.DeserializeObject(v));
+        
         base.OnModelCreating(modelBuilder);
     }
 
@@ -207,4 +219,5 @@ public class AppDbContext : DbContext
     public DbSet<BotAccount> BotAccounts { get; set; }
     public DbSet<Stream> Streams { get; set; }
     public DbSet<Widget> Widgets { get; set; }
+    public DbSet<ChannelEvent> ChannelEvents { get; set; }
 }
