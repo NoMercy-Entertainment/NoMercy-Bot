@@ -147,6 +147,33 @@ public class ServiceController : BaseController
             tokenExpiry = botAccount.TokenExpiry
         });
     }
+
+    [HttpPost("discord-session-token")]
+    public async Task<IActionResult> SetDiscordSessionToken([FromBody] string? token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return BadRequest("Discord session token cannot be empty");
+        }
+        
+        await _dbContext.Configurations.Upsert(new()
+            {
+                Key = "discord_session_token",
+                SecureValue = token
+            })
+            .On(x => x.Key)
+            .WhenMatched((oldConfig, newConfig) => new()
+            {
+                Key = oldConfig.Key,
+                SecureValue = newConfig.SecureValue 
+            })
+            .RunAsync();
+        
+        return Ok(new
+        {
+            message = "Discord session token updated successfully"
+        });
+    }
 }
 
 public class ServiceUpdateRequest
