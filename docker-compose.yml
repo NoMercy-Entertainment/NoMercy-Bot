@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  nomercybot:
+    image: nomercybot
+    build:
+      context: .
+      dockerfile: NoMercyBot/Dockerfile
+      
+  tts-gpu:
+    image: ghcr.io/coqui-ai/tts:latest
+    container_name: tts-gpu
+    restart: unless-stopped
+    ports:
+      - "6040:5002"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+    entrypoint: /bin/bash -c "python3 TTS/server/server.py --model_name tts_models/en/vctk/vits --use_cuda true"
+    # volumes:
+    #   - ./tts-model-cache:/root/.cache/tts
+
+  tts-cpu:
+    image: ghcr.io/coqui-ai/tts-cpu:latest
+    container_name: tts-cpu
+    restart: unless-stopped
+    ports:
+      - "6040:5002"
+    entrypoint: /bin/bash -c "python3 TTS/server/server.py --model_name tts_models/en/vctk/vits"
+    # volumes:
+    #   - ./tts-model-cache:/root/.cache/tts
+
+# Usage:
+# - For GPU: docker compose up tts-gpu
+# - For CPU: docker compose up tts-cpu
+#
+# The TTS API will be available at http://localhost:6039/api/tts

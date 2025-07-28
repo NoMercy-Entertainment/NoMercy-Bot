@@ -15,7 +15,7 @@ public static class ClaimsPrincipleExtensions
 
         return int.TryParse(userId, out int parsedUserId)
             ? parsedUserId
-            : throw new AuthenticationException("Moderator ID not found");
+            : throw new AuthenticationException("User not found");
     }
 
     public static string Role(this ClaimsPrincipal? principal)

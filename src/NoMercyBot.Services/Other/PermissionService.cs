@@ -22,4 +22,16 @@ public class PermissionService: IService
     {
         return true;
     }
+
+    public bool HasMinLevel(string userType, string level)
+    {
+        return level switch
+        {
+            "broadcaster" => userType is "Broadcaster",
+            "moderator" => userType is "Moderator" or "Broadcaster",
+            "vip" => userType is "Vip" or "Moderator" or "Broadcaster",
+            "everyone" => true,
+            _ => false
+        };
+    }
 }

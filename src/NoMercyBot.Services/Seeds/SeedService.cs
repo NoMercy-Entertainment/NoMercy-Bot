@@ -42,6 +42,8 @@ public class SeedService : IHostedService
             PronounService pronounService = _scope.ServiceProvider.GetRequiredService<PronounService>();
             await pronounService.LoadPronouns();
             
+            await TtsVoiceSeed.Init(_dbContext);
+            
             _logger.LogInformation("Successfully completed database seeding");
         }
         catch (Exception ex)

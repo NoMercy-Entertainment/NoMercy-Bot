@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NoMercyBot.Database;
 
@@ -10,9 +11,11 @@ using NoMercyBot.Database;
 namespace NoMercyBot.Database.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250727161942_Init35")]
+    partial class Init35
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.6");
@@ -739,17 +742,19 @@ namespace NoMercyBot.Database.Migrations
 
             modelBuilder.Entity("NoMercyBot.Database.Models.TtsVoice", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Accent")
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Age")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Gender")
                         .IsRequired()
@@ -761,11 +766,6 @@ namespace NoMercyBot.Database.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Region")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("SpeakerId")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -773,7 +773,7 @@ namespace NoMercyBot.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("TtsVoices");
+                    b.ToTable("TTSVoices");
                 });
 
             modelBuilder.Entity("NoMercyBot.Database.Models.User", b =>
@@ -853,16 +853,13 @@ namespace NoMercyBot.Database.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasMaxLength(50)
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("SetAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("TtsVoiceId")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
+                    b.Property<int>("TtsVoiceId")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("UserId")
                         .IsRequired()
@@ -873,10 +870,9 @@ namespace NoMercyBot.Database.Migrations
 
                     b.HasIndex("TtsVoiceId");
 
-                    b.HasIndex("UserId")
-                        .IsUnique();
+                    b.HasIndex("UserId");
 
-                    b.ToTable("UserTtsVoices");
+                    b.ToTable("UserTTSVoices");
                 });
 
             modelBuilder.Entity("NoMercyBot.Database.Models.Widget", b =>

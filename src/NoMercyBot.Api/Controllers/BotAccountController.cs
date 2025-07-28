@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NoMercyBot.Database;
@@ -7,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace NoMercyBot.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Tags("Auth")]
 [Route("api/bot-account")]
 public class BotAccountController : ControllerBase

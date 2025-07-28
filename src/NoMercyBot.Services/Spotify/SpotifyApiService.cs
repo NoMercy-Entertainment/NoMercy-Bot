@@ -238,7 +238,7 @@ public class SpotifyApiService
     {
         RestClient client = new(SpotifyConfig.ApiUrl);
         
-        RestRequest request = new("v1/me");
+        RestRequest request = new("me");
         request.AddHeader("Authorization", $"Bearer {Service.AccessToken}");
 
         RestResponse response = await client.ExecuteAsync(request);

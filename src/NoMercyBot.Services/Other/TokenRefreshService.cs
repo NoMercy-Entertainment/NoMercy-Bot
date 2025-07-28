@@ -4,12 +4,14 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NoMercyBot.Database;
 using NoMercyBot.Database.Models;
+using NoMercyBot.Globals.SystemCalls;
 using NoMercyBot.Services.Discord;
 using NoMercyBot.Services.Interfaces;
 using NoMercyBot.Services.Obs;
 using NoMercyBot.Services.Spotify;
 using NoMercyBot.Services.Twitch;
 using NoMercyBot.Services.Twitch.Dto;
+using Serilog.Events;
 
 namespace NoMercyBot.Services.Other;
 
@@ -51,20 +53,22 @@ public class TokenRefreshService : BackgroundService
     {
         List<Service> services = await _dbContext.Services.ToListAsync(cancellationToken);
         
-        foreach (Service service in services)
+        foreach (Service authService in services)
         {
-            if (string.IsNullOrEmpty(service.RefreshToken))
+            if (string.IsNullOrEmpty(authService.RefreshToken))
                 continue;
                 
-            if (service.TokenExpiry == null)
+            if (authService.TokenExpiry == null)
                 continue;
                 
-            DateTime expiryTime = service.TokenExpiry.Value;
+            DateTime expiryTime = authService.TokenExpiry.Value;
             DateTime refreshTime = expiryTime.AddMinutes(-_refreshThreshold.TotalMinutes);
             
             if (DateTime.UtcNow >= refreshTime)
             {
-                await RefreshServiceToken(service, _scope, cancellationToken);
+                Logger.System(DateTime.UtcNow.ToLongTimeString(), LogEventLevel.Verbose);
+                Logger.System(refreshTime.ToLongTimeString(), LogEventLevel.Verbose);
+                await RefreshServiceToken(authService, _scope, cancellationToken);
             }
         }
     }
@@ -74,13 +78,13 @@ public class TokenRefreshService : BackgroundService
         try
         {
             IAuthService? authService = GetAuthServiceForProvider(service.Name, scope);
-            
+
             if (authService == null) return;
-            
+
             _logger.LogDebug("Refreshing token for service {ServiceName}", service.Name);
-            
+
             (User user, TokenResponse response) = await authService.RefreshToken(service.RefreshToken!);
-            
+
             authService.Service.AccessToken = response.AccessToken;
             authService.Service.RefreshToken = response.RefreshToken;
             authService.Service.TokenExpiry = DateTime.UtcNow.AddSeconds(response.ExpiresIn);
@@ -90,9 +94,9 @@ public class TokenRefreshService : BackgroundService
             authService.Service.UserName = string.IsNullOrWhiteSpace(user.Username)
                 ? authService.Service.UserName
                 : user.Username;
-
-            await _dbContext.SaveChangesAsync(cancellationToken);
             
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
             await _dbContext.Services.Upsert(authService.Service)
                 .On(u => u.Name)
                 .WhenMatched((oldService, newService) => new()
@@ -106,6 +110,13 @@ public class TokenRefreshService : BackgroundService
                 })
                 .RunAsync(cancellationToken);
             
+            service.AccessToken = authService.Service.AccessToken;
+            service.RefreshToken = authService.Service.RefreshToken;
+            service.TokenExpiry = authService.Service.TokenExpiry;
+            service.UserId = authService.Service.UserId;
+            service.UserName = authService.Service.UserName;
+            service.UpdatedAt = authService.Service.UpdatedAt;
+                
             _logger.LogDebug("Successfully refreshed token for {ServiceName}", service.Name);
         }
         catch (Exception ex)

@@ -19,6 +19,47 @@ public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
         foreach (ApiVersionDescription description in _provider.ApiVersionDescriptions)
         {
             options.SwaggerDoc(description.GroupName, CreateInfoForApiVersion(description));
+            
+            options.AddSecurityDefinition("twitch_auth", new()
+            {
+                Type = SecuritySchemeType.OAuth2,
+                Flows = new()
+                {
+                    Implicit = new()
+                    {
+                        AuthorizationUrl = new("https://id.twitch.tv/oauth2/authorize"),
+                        TokenUrl = new("https://id.twitch.tv/oauth2/token"),
+                        Scopes = new Dictionary<string, string>
+                        {
+                            { "user:read:email", "Read your email address" },
+                            { "user:read:follows", "Read your follows" }
+                        }
+                    }
+                }
+            });
+
+            OpenApiSecurityScheme twitchSecurityScheme = new()
+            {
+                Reference = new()
+                {
+                    Id = "twitch_auth",
+                    Type = ReferenceType.SecurityScheme
+                },
+                In = ParameterLocation.Header,
+                Name = "Authorization",
+                Type = SecuritySchemeType.OAuth2,
+                Description = "Twitch OAuth2 Bearer Token",
+                Scheme = "Bearer",
+            };
+            
+            options.AddSecurityRequirement(new()
+            {
+                { twitchSecurityScheme, [] },
+                {
+                    new() { Reference = new() { Type = ReferenceType.SecurityScheme, Id = "Bearer" } },
+                    []
+                }
+            });
         }
     }
 

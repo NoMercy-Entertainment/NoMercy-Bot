@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NoMercyBot.Database;
 using NoMercyBot.Database.Models;
-using NoMercyBot.Services;
 using NoMercyBot.Services.Twitch.Dto;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;

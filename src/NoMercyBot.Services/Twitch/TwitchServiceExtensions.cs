@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using NoMercyBot.Services.Emotes;
 using NoMercyBot.Services.Interfaces;
 using NoMercyBot.Services.Other;
 
@@ -11,8 +12,11 @@ public static class TwitchServiceExtensions
         services.AddSingleton<TwitchAuthService>();
         services.AddSingleton<BotAuthService>();
         services.AddSingleton<TwitchApiService>();
+        // services.AddSingleton<TwitchChatService>();
         services.AddSingleton<IAuthService>(sp => sp.GetRequiredService<TwitchAuthService>());
         services.AddTransient<HtmlMetadataService>();
         services.AddTransient<TwitchMessageDecorator>();
+        
+        services.AddSingletonHostedService<TwitchBadgeService>();
     }
 }

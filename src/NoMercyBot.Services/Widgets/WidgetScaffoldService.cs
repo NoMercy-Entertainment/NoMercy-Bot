@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging;
 using NoMercyBot.Globals.Information;
 using System.Reflection;
+using NoMercyBot.Database.Models;
+using NoMercyBot.Globals.NewtonSoftConverters;
 
 namespace NoMercyBot.Services.Widgets;
 
@@ -145,6 +147,24 @@ public class WidgetScaffoldService : IWidgetScaffoldService
 
             // Write processed content to target file
             await File.WriteAllTextAsync(targetFilePath, content);
+        }
+    }
+
+    public Task SaveConfigurationFileAsync(Widget widget)
+    {
+        // this method stores a widget.json file with its configuration
+        string configPath = WidgetFiles.GetWidgetConfigFile(widget.Id);
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(configPath) ?? string.Empty);
+            File.WriteAllText(configPath, widget.ToJson());
+            _logger.LogInformation("Saved configuration for widget {WidgetId} to {ConfigPath}", widget.Id, configPath);
+            return Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to save configuration for widget {WidgetId}: {Message}", widget.Id, ex.Message);
+            throw;
         }
     }
 }

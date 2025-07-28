@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 using NoMercyBot.Database;
 using NoMercyBot.Database.Models;
 using NoMercyBot.Database.Models.ChatMessage;
-using NoMercyBot.Globals.NewtonSoftConverters;
+using NoMercyBot.Services.Other;
 using NoMercyBot.Services.Widgets;
 using TwitchLib.Api;
 using TwitchLib.Api.Core.Enums;
@@ -32,8 +32,9 @@ public class TwitchWebsocketHostedService : IHostedService
     private readonly TwitchEventSubService _twitchEventSubService;
     private readonly TwitchMessageDecorator _twitchMessageDecorator;
     private readonly IWidgetEventService _widgetEventService;
+    // private readonly TwitchChatService _twitchChatService;
+    private readonly TtsService _ttsService;
     private bool _isConnected;
-    // private ChannelInfo? _channelInfo;
     private Stream? _currentStream;
 
     public TwitchWebsocketHostedService(
@@ -43,6 +44,8 @@ public class TwitchWebsocketHostedService : IHostedService
         TwitchApiService twitchApiService,
         TwitchEventSubService twitchEventSubService, 
         TwitchMessageDecorator twitchMessageDecorator,
+        TtsService ttsService,
+        // TwitchChatService twitchTwitchChatServiceService,
         IWidgetEventService widgetEventService)
     {
         _scope = serviceScopeFactory.CreateScope();
@@ -53,11 +56,13 @@ public class TwitchWebsocketHostedService : IHostedService
         _twitchEventSubService = twitchEventSubService;
         _twitchMessageDecorator = twitchMessageDecorator;
         _widgetEventService = widgetEventService;
+        // _twitchChatService = twitchTwitchChatServiceService;
+        _ttsService = ttsService;
         // Subscribe to the event
         twitchEventSubService.OnEventSubscriptionChanged += HandleEventSubscriptionChange;
         
         // _channelInfo = _dbContext.ChannelInfo
-        //     .FirstOrDefault(channelInfo => channelInfo.Id == TwitchConfig.Service().UserId);
+        //     .FirstOrDefault(channelInfo => channelInfo.Id == TwitchConfig._service().UserId);
 
         _currentStream = _dbContext.Streams
             .FirstOrDefault(stream => stream.UpdatedAt == stream.CreatedAt);
@@ -282,7 +287,7 @@ public class TwitchWebsocketHostedService : IHostedService
         //     Id = Guid.NewGuid().ToString(),
         //     Type = "websocket.error",
         //     Data = args.Exception.ToJson(),
-        //     ChannelId = TwitchConfig.Service().UserId,
+        //     ChannelId = TwitchConfig._service().UserId,
         // });
         // await _dbContext.SaveChangesAsync(_cts.Token);
         
@@ -370,6 +375,10 @@ public class TwitchWebsocketHostedService : IHostedService
         //     UserId = args.Notification.Payload.Event.UserId
         // });
         // await _dbContext.SaveChangesAsync(_cts.Token);
+        
+        // _twitchChatService.SendMessageAsBot(
+        //     args.Notification.Payload.Event.BroadcasterUserId,
+        //     $"Thanks for following, {args.Notification.Payload.Event.UserName}! Welcome to the channel!");
         
         await _widgetEventService.PublishEventAsync("channel.follow", new Dictionary<string, string?>
         {
@@ -638,8 +647,7 @@ public class TwitchWebsocketHostedService : IHostedService
 
             await _widgetEventService.PublishEventAsync("twitch.chat.message", chatMessage);
             
-            _logger.LogDebug("Published twitch.chat.message event to widget system with complete ChatMessage from {User}", 
-                args.Notification.Payload.Event.ChatterUserLogin);
+            await _ttsService.SendTts(chatMessage.Fragments, chatMessage.UserId, _cts.Token);
         }
         catch (Exception e)
         {
@@ -677,7 +685,6 @@ public class TwitchWebsocketHostedService : IHostedService
         await _dbContext.SaveChangesAsync(_cts.Token);
         
         await _widgetEventService.PublishEventAsync("channel.chat.clear", new());
-        
         
         await Task.CompletedTask;
     }

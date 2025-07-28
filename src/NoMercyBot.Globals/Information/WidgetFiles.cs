@@ -1,5 +1,3 @@
-using NoMercyBot.Globals.Information;
-
 namespace NoMercyBot.Globals.Information;
 
 public static class WidgetFiles

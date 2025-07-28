@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
+using NoMercyBot.Api.Dto;
 using NoMercyBot.Api.Middleware;
 using NoMercyBot.Database;
 using NoMercyBot.Globals.Constraints;
@@ -117,8 +118,8 @@ public static class ServiceConfiguration
                 // ReSharper disable once RedundantDelegateCreation
                 options.Events.OnMessageReceived = new(async message =>
                 {
-                    StringValues access_token = message.Request.Query["access_token"];
-                    string[] result = access_token.ToString().Split('&');
+                    StringValues accessToken = message.Request.Query["access_token"];
+                    string[] result = accessToken.ToString().Split('&');
 
                     if (result.Length > 0 && !string.IsNullOrEmpty(result[0]))
                     {
@@ -131,7 +132,7 @@ public static class ServiceConfiguration
                         await Task.CompletedTask;
                     }
 
-                    string? accessToken = authHeader.ToString().Split("Bearer ").LastOrDefault();
+                    accessToken = authHeader.ToString().Split("Bearer ").LastOrDefault();
                     if (string.IsNullOrEmpty(accessToken))
                     {
                         message.Fail("No token provided");

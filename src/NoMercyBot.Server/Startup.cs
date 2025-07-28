@@ -29,9 +29,6 @@ public class Startup
     public void Configure(IApplicationBuilder app)
     {
         TokenStore.Initialize(app.ApplicationServices);
-    
-        using IServiceScope? serviceScope = app.ApplicationServices.GetService<IServiceScopeFactory>()?.CreateScope();
-        AppDbContext? context = serviceScope?.ServiceProvider.GetRequiredService<AppDbContext>();
         
         SeedService seedService = app.ApplicationServices.GetRequiredService<SeedService>();
         

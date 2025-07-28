@@ -94,7 +94,7 @@ public class TwitchAuthService : IAuthService
         Service service = await _dbContext.Services
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.Name == Service.Name)
-            ?? throw new InvalidOperationException($"Service {Service.Name} not found in database.");
+            ?? throw new InvalidOperationException($"_service {Service.Name} not found in database.");
 
         return (new(), new()
         {
@@ -216,6 +216,14 @@ public class TwitchAuthService : IAuthService
     
     public async Task StoreTokens(TokenResponse tokenResponse, User user)
     {
+        // Always check the database for the current user before overwriting tokens
+        Service? existingService = await _dbContext.Services.AsNoTracking().FirstOrDefaultAsync(s => s.Name == Service.Name);
+        if (existingService != null && !string.IsNullOrEmpty(existingService.UserId) && existingService.UserId != user.Id)
+        {
+            _logger.LogWarning("Attempt to overwrite Twitch provider tokens for {Provider} with a different user. Existing: {ExistingUserId}, Incoming: {IncomingUserId}", Service.Name, existingService.UserName, user.Username);
+            throw new InvalidOperationException("This provider is already linked to a different user.");
+        }
+
         Service updateService = new()
         {
             Name = Service.Name,
@@ -226,8 +234,7 @@ public class TwitchAuthService : IAuthService
             UserName = user.Username
         };
 
-        AppDbContext dbContext = new();
-        await dbContext.Services.Upsert(updateService)
+        await _dbContext.Services.Upsert(updateService)
             .On(u => u.Name)
             .WhenMatched((oldUser, newUser) => new()
             {

@@ -70,10 +70,6 @@
     </ItemGroup>
     
     <ItemGroup>
-        <Content Include="Assets\*.*" CopyToOutputDirectory="Always" />
-    </ItemGroup>
-    
-    <ItemGroup>
         <None Update="Assets\icon.png">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
@@ -84,6 +80,7 @@
     
     <ItemGroup>
         <EmbeddedResource Include="Assets\icon.ico"/>
+        <EmbeddedResource Include="Assets\speaker-info.json"/>
     </ItemGroup>
 
     <ItemGroup>

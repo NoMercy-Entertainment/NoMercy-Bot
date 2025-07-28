@@ -1,5 +1,4 @@
-﻿using NoMercyBot.Database;
-using NoMercyBot.Database.Models;
+﻿using NoMercyBot.Database.Models;
 using NoMercyBot.Globals.Information;
 using NoMercyBot.Services.Interfaces;
 
@@ -9,7 +8,7 @@ public class DiscordConfig: IConfig
 {
     internal static Service? _service;
 
-    protected internal static Service Service()
+    public static Service Service()
     {
         return _service ??= new();
     }

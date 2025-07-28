@@ -1,7 +1,0 @@
-﻿services:
-  nomercybot:
-    image: nomercybot
-    build:
-      context: .
-      dockerfile: NoMercyBot/Dockerfile
-

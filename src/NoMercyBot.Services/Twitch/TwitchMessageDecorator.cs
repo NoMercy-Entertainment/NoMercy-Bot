@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using HtmlAgilityPack;
 using NoMercyBot.Database.Models.ChatMessage;
+using NoMercyBot.Globals.Information;
 using NoMercyBot.Services.Emotes;
 using NoMercyBot.Services.Emotes.Dto;
 using NoMercyBot.Services.Interfaces;
@@ -16,9 +17,17 @@ public class TwitchMessageDecorator: IService
     private readonly HtmlMetadataService _htmlMetadataService;
     private readonly ParallelOptions _parallelOptions;
     private readonly TwitchBadgeService _twitchBadgeService;
+    private readonly PermissionService _permissionService;
     
     private ChatMessage ChatMessage { get; set; }
     private List<ChatMessageFragment> _fragments = [];
+    
+    private bool HasDecoratorServices => 
+        Config.UseBttvEmotes 
+        || Config.UseFrankerfacezEmotes 
+        || Config.UseSevenTvEmotes 
+        || Config.UseChatHtmlParser 
+        || Config.UseChatOgParser;
 
     public TwitchMessageDecorator(
         FrankerFacezService frankerFacezService,
@@ -26,6 +35,7 @@ public class TwitchMessageDecorator: IService
         SevenTvService sevenTvService, 
         TwitchBadgeService twitchBadgeService,
         HtmlMetadataService htmlMetadataService, 
+        PermissionService permissionService,
         CancellationToken cancellationToken = default)
     {
         _frankerFacezService = frankerFacezService;
@@ -33,6 +43,7 @@ public class TwitchMessageDecorator: IService
         _sevenTvService = sevenTvService;
         _twitchBadgeService = twitchBadgeService;
         _htmlMetadataService = htmlMetadataService;
+        _permissionService = permissionService;
         
         ChatMessage = new();
         
@@ -52,13 +63,13 @@ public class TwitchMessageDecorator: IService
         DecorateBadges();
         DecorateTwitchEmotes();
         
-        if(chatMessage.UserType is "Vip" or "Moderator" or "Broadcaster") DecrateHtml();
+        DecrateHtml();
         
         // Split up all text fragments into individual word fragments so that we can decorate them with emotes
         ExplodeTextFragments();
         
-        DecorateFrankerFaceEmotes();
         DecorateBttvEmotes();
+        DecorateFrankerFaceEmotes();
         DecorateSevenTvEmotes();
         
         await DecorateUrlFragments();
@@ -75,6 +86,7 @@ public class TwitchMessageDecorator: IService
     private void ExplodeTextFragments()
     {
         if(DecorateCommand()) return;
+        if (!HasDecoratorServices) return;
         
         List<ChatMessageFragment> newFragments = [];
 
@@ -146,6 +158,8 @@ public class TwitchMessageDecorator: IService
     
     private void ImplodeTextFragments()
     {
+        if (!HasDecoratorServices) return;
+        
         List<ChatMessageFragment> newFragments = [];
         StringBuilder currentText = new();
 
@@ -250,9 +264,33 @@ public class TwitchMessageDecorator: IService
             };
         });
     }
+
+    private void DecorateBadges()
+    {
+        if (ChatMessage.Badges.Count == 0)
+        {
+            ChatMessage.Badges = [];
+        }
+
+        List<ChatBadge> badges = [];
+        foreach (ChatBadge badge in ChatMessage.Badges)
+        {
+            ChatBadge? badgeResult = _twitchBadgeService.TwitchBadges
+                .LastOrDefault(b => b.SetId == badge.SetId && b.Id == badge.Id);
+            
+            if (badgeResult != null)
+            {
+                badges.Add(badgeResult);
+            }
+        }
+        
+        ChatMessage.Badges = badges;
+    }
     
     private void DecorateFrankerFaceEmotes()
     {
+        if (!Config.UseFrankerfacezEmotes) return;
+        
         Parallel.ForEach(_fragments.ToList(), _parallelOptions, fragment =>
         {
             if (fragment.Type != "text" || string.IsNullOrWhiteSpace(fragment.Text)) return;
@@ -278,6 +316,8 @@ public class TwitchMessageDecorator: IService
 
     private void DecorateBttvEmotes()
     {
+        if (!Config.UseBttvEmotes) return;
+        
         Parallel.ForEach(_fragments.ToList(), _parallelOptions, fragment =>
         {
             if (fragment.Type != "text" || string.IsNullOrWhiteSpace(fragment.Text)) return;
@@ -308,6 +348,8 @@ public class TwitchMessageDecorator: IService
 
     private void DecorateSevenTvEmotes()
     {
+        if (!Config.UseSevenTvEmotes) return;
+        
         Parallel.ForEach(_fragments.ToList(), _parallelOptions, fragment =>
         {
             if (fragment.Type != "text" || string.IsNullOrWhiteSpace(fragment.Text)) return;
@@ -339,11 +381,15 @@ public class TwitchMessageDecorator: IService
     
     private void DecorateCodeSnippet()
     {
+        if (!Config.UseChatCodeSnippets) return;
         // throw new NotImplementedException();
     }
     
     private void DecrateHtml()
     {
+        if (!Config.UseChatHtmlParser) return;
+        if (!_permissionService.HasMinLevel(ChatMessage.UserType, "vip")) return;
+        
         // turn all text fragments containing valid html into html fragments
         Parallel.ForEach(_fragments.ToList(), _parallelOptions, fragment =>
         {
@@ -377,30 +423,10 @@ public class TwitchMessageDecorator: IService
             {
                 Type = "url",
                 Text = fragment.Text,
-                HtmlContent = await _htmlMetadataService.MakeComponent(uri, ChatMessage.UserType is "Vip" or "Moderator" or "Broadcaster"),
+                HtmlContent = Config.UseChatOgParser && _permissionService.HasMinLevel(ChatMessage.UserType, "vip")
+                    ? await _htmlMetadataService.MakeComponent(uri, ChatMessage.UserType is "Vip" or "Moderator" or "Broadcaster") 
+                    : null,
             };
         }
-    }
-
-    private void DecorateBadges()
-    {
-        if (ChatMessage.Badges.Count == 0)
-        {
-            ChatMessage.Badges = [];
-        }
-
-        List<ChatBadge> badges = [];
-        foreach (ChatBadge badge in ChatMessage.Badges)
-        {
-            ChatBadge? badgeResult = _twitchBadgeService.TwitchBadges
-                .LastOrDefault(b => b.SetId == badge.SetId && b.Id == badge.Id);
-            
-            if (badgeResult != null)
-            {
-                badges.Add(badgeResult);
-            }
-        }
-        
-        ChatMessage.Badges = badges;
     }
 }

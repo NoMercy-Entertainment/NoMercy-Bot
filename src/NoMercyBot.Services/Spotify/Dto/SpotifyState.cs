@@ -55,7 +55,7 @@ public class SpotifyItem {
 	[JsonProperty("disc_number")] public int DiscNumber { get; set; }
 	[JsonProperty("duration_ms")] public int DurationMs { get; set; }
 	[JsonProperty("explicit")] public bool Explicit { get; set; }
-	[JsonProperty("external_ids")] public SpotifyExternalIDS? ExternalIds { get; set; }
+	[JsonProperty("external_ids")] public SpotifyExternalIds? ExternalIds { get; set; }
 	[JsonProperty("external_urls")] public SpotifyExternalUrls? ExternalUrls { get; set; }
 	[JsonProperty("href")] public string? Href { get; set; }
 	[JsonProperty("id")] public string? Id { get; set; }
@@ -100,7 +100,7 @@ public class SpotifyImage {
 	[JsonProperty("width")] public int Width { get; set; }
 }
 
-public class SpotifyExternalIDS {
+public class SpotifyExternalIds {
 	[JsonProperty("isrc")] public string? Isrc { get; set; }
 }
 

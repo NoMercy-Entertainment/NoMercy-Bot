@@ -141,7 +141,7 @@ public class SpotifyWebsocketService : IHostedService, IDisposable
 						if (payload.Events == null) continue;
 						foreach (SpotifyEventElement evt in payload.Events)
 						{
-							if (evt is not { Type: SpotifyEventType.PLAYER_STATE_CHANGED, Event.State: not null })
+							if (evt is not { Type: SpotifyEventType.PlayerStateChanged, Event.State: not null })
 								continue;
 							
 							_spotifyApiService.SpotifyState = evt.Event.State;

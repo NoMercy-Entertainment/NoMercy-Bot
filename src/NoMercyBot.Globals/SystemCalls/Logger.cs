@@ -240,5 +240,5 @@ public static class Logger
     public static void Twitch<T>(T message, LogEventLevel level = LogEventLevel.Information) where T : class => Log("twitch", message, level);    
     public static void Twitter<T>(T message, LogEventLevel level = LogEventLevel.Information) where T : class => Log("twitter", message, level);
     public static void Webhook<T>(T message, LogEventLevel level = LogEventLevel.Information) where T : class => Log("webhook", message, level);
-    public static void Youtube<T>(T message, LogEventLevel level = LogEventLevel.Information) where T : class => Log("youtube", message, level);    
+    public static void Youtube<T>(T message, LogEventLevel level = LogEventLevel.Information) where T : class => Log("youtube", message, level);
 }

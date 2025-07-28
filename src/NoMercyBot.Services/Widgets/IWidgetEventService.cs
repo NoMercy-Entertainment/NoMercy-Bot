@@ -1,5 +1,3 @@
-using NoMercyBot.Database.Models;
-
 namespace NoMercyBot.Services.Widgets;
 
 public interface IWidgetEventService

@@ -1,7 +1,7 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using NoMercyBot.Database;
 using NoMercyBot.Database.Models;
 using NoMercyBot.Services;
@@ -14,6 +14,7 @@ using NoMercyBot.Services.Twitch;
 namespace NoMercyBot.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Tags("Providers")]
 [Route("api/settings/providers")]
 public class ServiceController : BaseController

@@ -1,4 +1,3 @@
-using System.Drawing;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercyBot.Database.Models;
@@ -220,4 +219,6 @@ public class AppDbContext : DbContext
     public DbSet<Stream> Streams { get; set; }
     public DbSet<Widget> Widgets { get; set; }
     public DbSet<ChannelEvent> ChannelEvents { get; set; }
+    public DbSet<TtsVoice> TtsVoices { get; set; }
+    public DbSet<UserTtsVoice> UserTtsVoices { get; set; }
 }

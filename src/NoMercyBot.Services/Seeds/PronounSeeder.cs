@@ -9,7 +9,6 @@ namespace NoMercyBot.Services.Seeds;
 public class PronounSeeder : IHostedService
 {
     private readonly IServiceScope _scope;
-    private readonly AppDbContext _dbContext;
     private readonly ILogger<PronounSeeder> _logger;
 
     public PronounSeeder(IServiceScopeFactory serviceScopeFactory, ILogger<PronounSeeder> logger)

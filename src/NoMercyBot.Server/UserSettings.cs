@@ -41,12 +41,50 @@ public static class UserSettings
                     break;
                 case "queueRunners":
                     Config.QueueWorkers = new(Config.QueueWorkers.Key, setting.Value.ToInt());
+                    // await QueueRunner.SetWorkerCount(Config.QueueWorkers.Key, setting.Value.ToInt());
                     break;
                 case "cronRunners":
                     Config.CronWorkers = new(Config.CronWorkers.Key, setting.Value.ToInt());
+                    // await QueueRunner.SetWorkerCount(Config.CronWorkers.Key, setting.Value.ToInt());
                     break;
                 case "swagger":
                     Config.Swagger = setting.Value.ToBoolean();
+                    break;
+                case "DnsServer":
+                    // Config.DnsServer is readonly, cannot set
+                    break;
+                case "InternalClientPort":
+                    Config.InternalClientPort = int.Parse(setting.Value);
+                    break;
+                case "QueueWorkers":
+                    Config.QueueWorkers = new(Config.QueueWorkers.Key, setting.Value.ToInt());
+                    break;
+                case "CronWorkers":
+                    Config.CronWorkers = new(Config.CronWorkers.Key, setting.Value.ToInt());
+                    break;
+                case "UseTts":
+                    Config.UseTts = setting.Value.ToBoolean();
+                    break;
+                case "SaveTtsToDisk":
+                    Config.SaveTtsToDisk = setting.Value.ToBoolean();
+                    break;
+                case "UseFrankerfacezEmotes":
+                    Config.UseFrankerfacezEmotes = setting.Value.ToBoolean();
+                    break;
+                case "UseBttvEmotes":
+                    Config.UseBttvEmotes = setting.Value.ToBoolean();
+                    break;
+                case "UseSevenTvEmotes":
+                    Config.UseSevenTvEmotes = setting.Value.ToBoolean();
+                    break;
+                case "UseChatCodeSnippets":
+                    Config.UseChatCodeSnippets = setting.Value.ToBoolean();
+                    break;
+                case "UseChatHtmlParser":
+                    Config.UseChatHtmlParser = setting.Value.ToBoolean();
+                    break;
+                case "UseChatOgParser":
+                    Config.UseChatOgParser = setting.Value.ToBoolean();
                     break;
             }
         }

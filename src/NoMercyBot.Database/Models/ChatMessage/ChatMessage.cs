@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Drawing;
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;

@@ -9,7 +9,7 @@ public class MessageNode
 {
     [JsonProperty("type", NullValueHandling = NullValueHandling.Ignore)] public string Type { get; set; } = null!;
 
-    private string index { get; set; } = string.Empty;
+    private string Index { get; set; } = string.Empty;
 
     [Column("Id")]
     [StringLength(1024)]
@@ -22,7 +22,7 @@ public class MessageNode
     public string Id
     {
         get => _id;
-        set => _id = $"{value}_{Type}_{index}";
+        set => _id = $"{value}_{Type}_{Index}";
     }
 
     [JsonProperty("classes", NullValueHandling = NullValueHandling.Ignore)] public List<string>? Classes { get; set; }

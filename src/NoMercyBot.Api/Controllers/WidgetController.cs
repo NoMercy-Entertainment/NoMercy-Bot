@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +11,7 @@ using NoMercyBot.Services.Widgets;
 namespace NoMercyBot.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Tags("Widgets")]
 [Route("api/widgets")]
 public class WidgetController : BaseController
@@ -123,6 +125,8 @@ public class WidgetController : BaseController
             {
                 throw new InvalidOperationException($"Failed to create {request.Framework} scaffold for widget");
             }
+            
+            await _scaffoldService.SaveConfigurationFileAsync(widget);
 
             // Add to database
             _dbContext.Widgets.Add(widget);
@@ -186,6 +190,8 @@ public class WidgetController : BaseController
         try
         {
             await _dbContext.SaveChangesAsync();
+            
+            await _scaffoldService.SaveConfigurationFileAsync(widget);
             
             await _widgetEventService.NotifyWidgetReloadAsync(widget.Id);
             return Ok(new WidgetDto

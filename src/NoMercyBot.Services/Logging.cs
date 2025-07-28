@@ -47,7 +47,7 @@ public class CustomLogger<T> : ILogger<T>
             Logger.Spotify($"{message}", level);
         else if (_categoryName.Contains("Http"))
             Logger.Http($"{message}", level);
-        else if (_categoryName.Contains("Service"))
+        else if (_categoryName.Contains("_service"))
             Logger.Service($"{message}", level);
         else
             Logger.System($"{message}", level);

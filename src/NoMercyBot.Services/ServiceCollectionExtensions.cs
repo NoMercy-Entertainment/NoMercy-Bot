@@ -33,6 +33,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<PronounService>();
         services.AddSingleton<PermissionService>();
         services.AddHostedService<GracefulShutdownService>();
+
+        services.AddSingleton<TtsService>();
     }
     
     private static void AddEmoteServices(this IServiceCollection services)
@@ -40,7 +42,6 @@ public static class ServiceCollectionExtensions
         services.AddSingletonHostedService<BttvService>();
         services.AddSingletonHostedService<FrankerFacezService>();
         services.AddSingletonHostedService<SevenTvService>();
-        services.AddSingletonHostedService<TwitchBadgeService>();
     }
 
     private static void AddWidgetServices(this IServiceCollection services)
@@ -55,9 +56,9 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<TokenRefreshService>();
         services.AddHostedService<SpotifyWebsocketService>();
     }
-
+    
     // Extension method to add a service as both a singleton and a hosted service
-    private static IServiceCollection AddSingletonHostedService<TService>(this IServiceCollection services)
+    internal static IServiceCollection AddSingletonHostedService<TService>(this IServiceCollection services)
         where TService : class, IHostedService
     {
         services.AddSingleton<TService>();

@@ -8,7 +8,7 @@ public class ObsConfig: IConfig
 {
     internal static Service? _service;
 
-    protected internal static Service Service()
+    public static Service Service()
     {
         return _service ??= new();
     }

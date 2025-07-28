@@ -8,7 +8,6 @@ using Microsoft.Extensions.Logging;
 using NoMercyBot.Database;
 using NoMercyBot.Database.Models;
 using NoMercyBot.Services.Interfaces;
-using TwitchLib.EventSub.Websockets;
 
 namespace NoMercyBot.Services.Twitch;
 

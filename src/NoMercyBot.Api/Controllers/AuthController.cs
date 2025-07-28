@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Mvc;
 using NoMercyBot.Api.Helpers;
 using NoMercyBot.Database.Models;
-using NoMercyBot.Services;
 using NoMercyBot.Services.Discord;
 using NoMercyBot.Services.Interfaces;
 using NoMercyBot.Services.Obs;
@@ -128,13 +127,17 @@ public class AuthController : BaseController
             IActionResult serviceResult = GetAuthService(provider, out IAuthService? authService);
             if (serviceResult is not OkResult) return serviceResult;
 
-            (User, TokenResponse) tokenResponse = await authService!.Callback(code);
-            
+            (User user, TokenResponse tokenResponse) = await authService!.Callback(code);
+
             return Ok(new
             {
-                Message = "Moderator logged in successfully",
-                User = new UserWithTokenDto(tokenResponse.Item1, tokenResponse.Item2),
+                Message = "Logged in successfully",
+                User = new UserWithTokenDto(user, tokenResponse),
             });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Forbid(ex.Message);
         }
         catch (NotImplementedException)
         {
