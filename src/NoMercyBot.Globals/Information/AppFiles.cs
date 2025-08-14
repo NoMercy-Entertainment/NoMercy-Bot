@@ -17,6 +17,8 @@ public static class AppFiles
 
     public static string DataPath => Path.Combine(AppPath, "data");
     public static string LogPath => Path.Combine(AppPath, "log");
+    public static string CommandsPath => Path.Combine(AppPath, "commands");
+    public static string WidgetsPath => Path.Combine(AppPath, "widgets");
 
     public static string CachePath => Path.Combine(AppPath, "cache");
     public static string ServerExePath => Path.Combine(AppPath, "NoMercyBot" + Info.ExecSuffix);
@@ -35,6 +37,8 @@ public static class AppFiles
             ConfigPath,
             DataPath,
             LogPath,
+            CommandsPath,
+            WidgetsPath,
         ];
     }
 

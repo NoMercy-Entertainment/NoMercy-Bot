@@ -15,6 +15,7 @@ public class ChatMessage: Timestamps
     [JsonProperty("id")] [MaxLength(255)] public string Id { get; set; } = null!;
     
     [JsonProperty("is_command")] public bool IsCommand { get; set; }
+    
     [JsonProperty("is_cheer")] public bool IsCheer { get; set; }
     [JsonProperty("bits_amount", NullValueHandling = NullValueHandling.Ignore)] public int? BitsAmount { get; set; }
     [JsonProperty("is_highlighted")] public bool IsHighlighted { get; set; }
@@ -30,9 +31,8 @@ public class ChatMessage: Timestamps
     [JsonProperty("user_type")] public string UserType { get; set; } = null!;
     [JsonProperty("user")] public User User { get; set; } = null!;
     
-    [JsonProperty("channel_id")] public string ChannelId { get; set; } = null!;
-    [ForeignKey(nameof(ChannelId))]
-    [JsonProperty("broadcaster")] public virtual User Broadcaster { get; set; } = null!;
+    [JsonProperty("channel_id")] public string? BroadcasterId { get; set; }
+    [JsonProperty("broadcaster")] public User Broadcaster { get; set; } = new();
     
     [JsonProperty("message")] public string Message { get; set; } = null!;
     [JsonProperty("fragments")] public List<ChatMessageFragment> Fragments { get; set; } = [];
@@ -49,18 +49,22 @@ public class ChatMessage: Timestamps
     [JsonProperty("deleted_at", NullValueHandling = NullValueHandling.Ignore)] public DateTime? DeletedAt { get; set; }
     
     [JsonProperty("stream_id")] public string? StreamId { get; set; }
-    [JsonProperty("stream")] public virtual Stream? Stream { get; set; }
+    [JsonProperty("stream")] public Stream? Stream { get; set; }
 
     public ChatMessage()
     {
         
     }
     
-    public ChatMessage(EventSubNotification<ChannelChatMessage> payloadEvent, Stream? currentStream, User user)
+    public ChatMessage(EventSubNotification<ChannelChatMessage> payloadEvent, Stream? currentStream, User user, User broadcaster)
     {
-        Id = payloadEvent.Payload.Event.MessageId;
-        ChannelId = payloadEvent.Payload.Event.BroadcasterUserId;
+        User = user;
         UserId = payloadEvent.Payload.Event.ChatterUserId;
+        Broadcaster = broadcaster;
+        BroadcasterId = payloadEvent.Payload.Event.BroadcasterUserId;
+        StreamId = currentStream?.Id;
+        
+        Id = payloadEvent.Payload.Event.MessageId;
         Username = payloadEvent.Payload.Event.ChatterUserLogin;
         DisplayName = payloadEvent.Payload.Event.ChatterUserName;
         Message = payloadEvent.Payload.Event.Message.Text;
@@ -71,14 +75,11 @@ public class ChatMessage: Timestamps
         ColorHex = payloadEvent.Payload.Event.Color;
         Badges = GetBadges(payloadEvent);
         Fragments = MakeFragments(payloadEvent);
-        Message = payloadEvent.Payload.Event.Message.Text;
         ReplyToMessageId = payloadEvent.Payload.Event.Reply?.ParentMessageId;
         TmiSentTs = payloadEvent.Metadata.MessageTimestamp.Date.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
         UserType = GetUserType(payloadEvent);
-        User = user;
-        
-        StreamId = currentStream?.Id;
     }
+
 
     private static List<ChatBadge> GetBadges(EventSubNotification<ChannelChatMessage> payloadEvent)
     {

@@ -1,19 +1,21 @@
-using System.Web.Http;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NoMercyBot.Services.Spotify;
 using NoMercyBot.Services.Spotify.Dto;
 using SpotifyAPI.Web;
+using CurrentlyPlaying = NoMercyBot.Services.Spotify.Dto.CurrentlyPlaying;
+
 
 namespace NoMercyBot.Api.Controllers;
 
 [ApiController]
 [Authorize]
-[Microsoft.AspNetCore.Mvc.Route("api/spotify")]
+[Route("api/spotify")]
 public class SpotifyController : ControllerBase
 {
     private readonly SpotifyApiService _spotifyApiService;
-    private readonly ILogger<SpotifyController> _logger;
+    private readonly ILogger _logger;
 
     public SpotifyController(SpotifyApiService spotifyApiService, ILogger<SpotifyController> logger)
     {
@@ -21,7 +23,7 @@ public class SpotifyController : ControllerBase
         _logger = logger;
     }
 
-    [Microsoft.AspNetCore.Mvc.HttpPost("set-volume")]
+    [HttpPost("set-volume")]
     public async Task<IActionResult> SetVolume([FromQuery] int volume)
     {
         try
@@ -36,7 +38,7 @@ public class SpotifyController : ControllerBase
         }
     }
 
-    [Microsoft.AspNetCore.Mvc.HttpPost("resume")]
+    [HttpPost("resume")]
     public async Task<IActionResult> ResumePlayback()
     {
         try
@@ -51,7 +53,7 @@ public class SpotifyController : ControllerBase
         }
     }
 
-    [Microsoft.AspNetCore.Mvc.HttpPost("pause")]
+    [HttpPost("pause")]
     public async Task<IActionResult> Pause()
     {
         try
@@ -66,7 +68,7 @@ public class SpotifyController : ControllerBase
         }
     }
 
-    [Microsoft.AspNetCore.Mvc.HttpPost("previous")]
+    [HttpPost("previous")]
     public async Task<IActionResult> PreviousTrack()
     {
         try
@@ -81,7 +83,7 @@ public class SpotifyController : ControllerBase
         }
     }
 
-    [Microsoft.AspNetCore.Mvc.HttpPost("next")]
+    [HttpPost("next")]
     public async Task<IActionResult> NextTrack()
     {
         try
@@ -96,8 +98,8 @@ public class SpotifyController : ControllerBase
         }
     }
 
-    [Microsoft.AspNetCore.Mvc.HttpPost("add-to-playlist/{playlistId}")]
-    public async Task<IActionResult> AddToPlaylist(string playlistId, [Microsoft.AspNetCore.Mvc.FromBody] PlaylistAddItemsRequest request)
+    [HttpPost("add-to-playlist/{playlistId}")]
+    public async Task<IActionResult> AddToPlaylist(string playlistId, [FromBody] PlaylistAddItemsRequest request)
     {
         try
         {
@@ -111,13 +113,12 @@ public class SpotifyController : ControllerBase
         }
     }
 
-    [Microsoft.AspNetCore.Mvc.HttpGet("currently-playing")]
-    public async Task<IActionResult> GetCurrentlyPlaying([FromQuery] string market)
+    [HttpGet("currently-playing")]
+    public async Task<IActionResult> GetCurrentlyPlaying()
     {
         try
         {
-            PlayerCurrentlyPlayingRequest request = new() { Market = market };
-            CurrentlyPlaying result = await _spotifyApiService.GetCurrentlyPlaying(request);
+            CurrentlyPlaying? result = await _spotifyApiService.GetCurrentlyPlaying();
             return Ok(result);
         }
         catch (Exception ex)
@@ -127,7 +128,7 @@ public class SpotifyController : ControllerBase
         }
     }
 
-    [Microsoft.AspNetCore.Mvc.HttpGet("player-state")]
+    [HttpGet("player-state")]
     public async Task<IActionResult> GetPlayerState()
     {
         try
@@ -144,8 +145,8 @@ public class SpotifyController : ControllerBase
         }
     }
 
-    [Microsoft.AspNetCore.Mvc.HttpPost("add-to-queue")]
-    public async Task<IActionResult> AddToQueue([Microsoft.AspNetCore.Mvc.FromBody] PlayerAddToQueueRequest request)
+    [HttpPost("add-to-queue")]
+    public async Task<IActionResult> AddToQueue([FromBody] PlayerAddToQueueRequest request)
     {
         try
         {
@@ -159,7 +160,7 @@ public class SpotifyController : ControllerBase
         }
     }
 
-    [Microsoft.AspNetCore.Mvc.HttpGet("queue")]
+    [HttpGet("queue")]
     public async Task<IActionResult> GetQueue()
     {
         try
@@ -174,7 +175,7 @@ public class SpotifyController : ControllerBase
         }
     }
 
-    [Microsoft.AspNetCore.Mvc.HttpGet("devices")]
+    [HttpGet("devices")]
     public async Task<IActionResult> GetDevices()
     {
         try
@@ -189,8 +190,8 @@ public class SpotifyController : ControllerBase
         }
     }
 
-    [Microsoft.AspNetCore.Mvc.HttpPost("transfer-playback")]
-    public async Task<IActionResult> TransferPlayback([Microsoft.AspNetCore.Mvc.FromBody] string deviceId)
+    [HttpPost("transfer-playback")]
+    public async Task<IActionResult> TransferPlayback([FromBody] string deviceId)
     {
         try
         {

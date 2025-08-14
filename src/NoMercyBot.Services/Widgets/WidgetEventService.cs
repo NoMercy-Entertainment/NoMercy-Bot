@@ -61,7 +61,7 @@ public class WidgetEventService : IWidgetEventService
             .Select(w => w.Id)
             .ToListAsync();
 
-        if (!subscribedWidgets.Any())
+        if (subscribedWidgets.Count == 0)
         {
             _logger.LogDebug("No widgets subscribed to event: {EventType}", eventType);
             return;
@@ -110,6 +110,6 @@ public class WidgetEventService : IWidgetEventService
     public async Task<List<string>> GetWidgetSubscriptionsAsync(Ulid widgetId)
     {
         Widget? widget = await _dbContext.Widgets.FirstOrDefaultAsync(w => w.Id == widgetId);
-        return widget?.EventSubscriptions ?? new List<string>();
+        return widget?.EventSubscriptions ?? [];
     }
 }

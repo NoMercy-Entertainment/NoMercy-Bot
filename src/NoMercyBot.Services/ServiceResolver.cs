@@ -7,6 +7,7 @@ using NoMercyBot.Services.Discord;
 using NoMercyBot.Services.Obs;
 using NoMercyBot.Services.Spotify;
 using NoMercyBot.Services.Twitch;
+using NoMercyBot.Services.Twitch.Dto;
 
 namespace NoMercyBot.Services;
 
@@ -15,12 +16,14 @@ public class ServiceResolver
     private readonly ILogger<ServiceResolver> _logger;
     private readonly IServiceScope _scope;
     private readonly AppDbContext _dbContext;
+    private readonly TwitchAuthService _twitchAuthService;
 
-    public ServiceResolver(IServiceScopeFactory serviceScopeFactory, ILogger<ServiceResolver> logger)
+    public ServiceResolver(IServiceScopeFactory serviceScopeFactory, ILogger<ServiceResolver> logger, TwitchAuthService twitchAuthService)
     {
         _scope = serviceScopeFactory.CreateScope();
         _dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
         _logger = logger;
+        _twitchAuthService = twitchAuthService;
     }
 
     private async Task InitializeTwitch()
@@ -97,7 +100,30 @@ public class ServiceResolver
             }
             else
             {
-                _logger.LogWarning("Bot provider's OAuth credentials are invalid.");
+                _logger.LogWarning("Bot provider OAuth credentials are invalid or expired. Attempting to refresh token...");
+                
+                (User user, TokenResponse response) = await _twitchAuthService.RefreshToken(botAccount.RefreshToken!);
+
+                botAccount.AccessToken = response.AccessToken;
+                botAccount.RefreshToken = response.RefreshToken;
+                botAccount.TokenExpiry = DateTime.UtcNow.AddSeconds(response.ExpiresIn);
+            
+                botAccount.Username = string.IsNullOrWhiteSpace(user.Username)
+                    ? botAccount.Username
+                    : user.Username;
+
+                await _dbContext.BotAccounts.Upsert(botAccount)
+                    .On(u => u.Username)
+                    .WhenMatched((oldBot, newBot) => new()
+                    {
+                        AccessToken = newBot.AccessToken,
+                        RefreshToken = newBot.RefreshToken,
+                        TokenExpiry = newBot.TokenExpiry,
+                        Username = newBot.Username,
+                    })
+                    .RunAsync();
+                
+                _logger.LogInformation("Bot provider OAuth credentials refreshed successfully. Username: {Username}", botAccount.Username);
             }
         }
         else

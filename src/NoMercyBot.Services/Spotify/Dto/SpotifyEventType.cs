@@ -4,7 +4,7 @@ namespace NoMercyBot.Services.Spotify.Dto;
 
 public enum SpotifyEventType
 {
-	PlayerStateChanged,
+	PLAYER_STATE_CHANGED,
 	BroadcastUnavailable,
 	Put
 }

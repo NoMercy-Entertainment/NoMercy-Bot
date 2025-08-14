@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NoMercyBot.Database;
 
@@ -10,12 +11,14 @@ using NoMercyBot.Database;
 namespace NoMercyBot.Database.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250729143457_Init40")]
+    partial class Init40
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "9.0.7");
+            modelBuilder.HasAnnotation("ProductVersion", "9.0.6");
 
             modelBuilder.Entity("NoMercyBot.Database.Models.BotAccount", b =>
                 {
@@ -52,9 +55,6 @@ namespace NoMercyBot.Database.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Username")
-                        .IsUnique();
 
                     b.ToTable("BotAccounts");
                 });
@@ -108,6 +108,7 @@ namespace NoMercyBot.Database.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ChannelId")
+                        .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
@@ -282,7 +283,8 @@ namespace NoMercyBot.Database.Migrations
                     b.Property<int?>("BitsAmount")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("BroadcasterId")
+                    b.Property<string>("ChannelId")
+                        .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
@@ -363,7 +365,7 @@ namespace NoMercyBot.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BroadcasterId");
+                    b.HasIndex("ChannelId");
 
                     b.HasIndex("ReplyToMessageId");
 
@@ -727,47 +729,6 @@ namespace NoMercyBot.Database.Migrations
                     b.ToTable("Shoutout");
                 });
 
-            modelBuilder.Entity("NoMercyBot.Database.Models.Storage", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("TEXT")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("Key")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("SecureValue")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("TEXT")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("Value")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Key")
-                        .IsUnique();
-
-                    b.ToTable("Storages");
-                });
-
             modelBuilder.Entity("NoMercyBot.Database.Models.Stream", b =>
                 {
                     b.Property<string>("Id")
@@ -1054,7 +1015,8 @@ namespace NoMercyBot.Database.Migrations
                     b.HasOne("NoMercyBot.Database.Models.Channel", "Channel")
                         .WithMany("Events")
                         .HasForeignKey("ChannelId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("NoMercyBot.Database.Models.User", "User")
                         .WithMany()
@@ -1089,8 +1051,9 @@ namespace NoMercyBot.Database.Migrations
                 {
                     b.HasOne("NoMercyBot.Database.Models.User", "Broadcaster")
                         .WithMany()
-                        .HasForeignKey("BroadcasterId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .HasForeignKey("ChannelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("NoMercyBot.Database.Models.ChatMessage.ChatMessage", "ReplyToMessage")
                         .WithMany("Replies")

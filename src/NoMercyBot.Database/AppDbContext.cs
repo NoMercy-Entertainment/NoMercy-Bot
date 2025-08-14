@@ -221,4 +221,6 @@ public class AppDbContext : DbContext
     public DbSet<ChannelEvent> ChannelEvents { get; set; }
     public DbSet<TtsVoice> TtsVoices { get; set; }
     public DbSet<UserTtsVoice> UserTtsVoices { get; set; }
+    public DbSet<Command> Commands { get; set; }
+    public DbSet<Storage> Storages { get; set; }
 }

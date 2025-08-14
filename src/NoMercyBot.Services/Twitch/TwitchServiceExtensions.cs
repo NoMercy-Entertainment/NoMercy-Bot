@@ -12,10 +12,11 @@ public static class TwitchServiceExtensions
         services.AddSingleton<TwitchAuthService>();
         services.AddSingleton<BotAuthService>();
         services.AddSingleton<TwitchApiService>();
-        // services.AddSingleton<TwitchChatService>();
+        services.AddSingleton<TwitchChatService>();
         services.AddSingleton<IAuthService>(sp => sp.GetRequiredService<TwitchAuthService>());
         services.AddTransient<HtmlMetadataService>();
         services.AddTransient<TwitchMessageDecorator>();
+        services.AddTransient<TwitchCommandService>();
         
         services.AddSingletonHostedService<TwitchBadgeService>();
     }

@@ -103,7 +103,7 @@ public class BotAuthService
         try
         {
             TwitchApiService twitchApiService = _scope.ServiceProvider.GetRequiredService<TwitchApiService>();
-            List<UserInfo>? user = await twitchApiService.GetUsers(tokenResponse.AccessToken);
+            List<UserInfo>? user = await twitchApiService.GetUsers();
             
             if (user != null && user.Any())
             {

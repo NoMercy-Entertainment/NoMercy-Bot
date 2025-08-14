@@ -17,6 +17,8 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton<SeedService>();
         
+        services.AddTokenRefreshService();
+        
         services.AddTwitchServices();
         services.AddSpotifyServices();
         services.AddDiscordServices();
@@ -24,8 +26,6 @@ public static class ServiceCollectionExtensions
         services.AddOtherServices();
         services.AddEmoteServices();
         services.AddWidgetServices();
-        
-        services.AddTokenRefreshService();
     }
 
     private static void AddOtherServices(this IServiceCollection services)

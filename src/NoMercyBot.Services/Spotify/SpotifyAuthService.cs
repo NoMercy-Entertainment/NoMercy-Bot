@@ -77,6 +77,10 @@ public class SpotifyAuthService : IAuthService
         if (tokenResponse == null) 
             throw new("Invalid response from Spotify.");
         
+        Service.AccessToken = tokenResponse.AccessToken;
+        Service.RefreshToken = tokenResponse.RefreshToken;
+        Service.TokenExpiry = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn);
+        
         SpotifyMeResponse meResponse = await _spotifyApiService.GetSpotifyMe();
         User user = new()
         {

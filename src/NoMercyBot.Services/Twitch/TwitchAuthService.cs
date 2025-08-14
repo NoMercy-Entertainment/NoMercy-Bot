@@ -63,7 +63,7 @@ public class TwitchAuthService : IAuthService
         TokenResponse? tokenResponse = response.Content.FromJson<TokenResponse>();
         if (tokenResponse == null) throw new("Invalid response from Twitch.");
         
-        User user = await _twitchApiService.FetchUser(tokenResponse);
+        User user = await _twitchApiService.FetchUser();
         
         await StoreTokens(tokenResponse, user);
 

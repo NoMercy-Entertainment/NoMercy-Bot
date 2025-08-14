@@ -116,3 +116,23 @@ public class TokenResponse
     [JsonProperty("refresh_token")] public string RefreshToken { get; set; } = string.Empty;
     [JsonProperty("expires_in")] public int ExpiresIn { get; set; }
 }
+
+public class ChannelFollowersResponse
+{
+    [JsonProperty("total")] public long Total { get; set; }
+    [JsonProperty("data")] public ChannelFollowersResponseData[] Data { get; set; }
+    [JsonProperty("pagination")] public Pagination Pagination { get; set; } = new();
+}
+
+public class ChannelFollowersResponseData
+{
+    [JsonProperty("user_id")] public string UserId { get; set; } = string.Empty;
+    [JsonProperty("user_name")] public string UserName { get; set; } = string.Empty;
+    [JsonProperty("user_login")] public string UserLogin { get; set; } = string.Empty;
+    [JsonProperty("followed_at")] public DateTimeOffset FollowedAt { get; set; }
+}
+
+public class Pagination
+{
+    [JsonProperty("cursor")] public string Cursor { get; set; } = string.Empty;
+}

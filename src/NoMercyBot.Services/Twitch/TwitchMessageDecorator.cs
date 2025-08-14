@@ -220,7 +220,7 @@ public class TwitchMessageDecorator: IService
         
         string commandName = parts[0].TrimStart('!').ToLowerInvariant();
         string[] args = parts.Skip(1).ToArray();
-
+        
         _fragments = [
             new()
             {

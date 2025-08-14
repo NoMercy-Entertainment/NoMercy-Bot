@@ -63,16 +63,38 @@ public class TokenRefreshService : BackgroundService
                 
             DateTime expiryTime = authService.TokenExpiry.Value;
             DateTime refreshTime = expiryTime.AddMinutes(-_refreshThreshold.TotalMinutes);
+
+            if (DateTime.UtcNow < refreshTime) continue;
             
-            if (DateTime.UtcNow >= refreshTime)
-            {
-                Logger.System(DateTime.UtcNow.ToLongTimeString(), LogEventLevel.Verbose);
-                Logger.System(refreshTime.ToLongTimeString(), LogEventLevel.Verbose);
-                await RefreshServiceToken(authService, _scope, cancellationToken);
-            }
+            Logger.System(DateTime.UtcNow.ToLongTimeString(), LogEventLevel.Verbose);
+            Logger.System(refreshTime.ToLongTimeString(), LogEventLevel.Verbose);
+            await RefreshServiceToken(authService, _scope, cancellationToken);
+        }
+        
+        List<BotAccount> botAccounts = await _dbContext.BotAccounts
+            .Where(b => b.TokenExpiry != null)
+            .ToListAsync(cancellationToken);
+
+        foreach (BotAccount botAccount in botAccounts)
+        {
+            if (string.IsNullOrEmpty(botAccount.RefreshToken))
+                continue;
+                
+            if (botAccount.TokenExpiry == null)
+                continue;
+            
+            DateTime expiryTime = botAccount.TokenExpiry!.Value;
+            DateTime refreshTime = expiryTime.AddMinutes(-_refreshThreshold.TotalMinutes);
+
+            if (DateTime.UtcNow < refreshTime) continue;
+            
+            Logger.System(DateTime.UtcNow.ToLongTimeString(), LogEventLevel.Verbose);
+            Logger.System(refreshTime.ToLongTimeString(), LogEventLevel.Verbose);
+
+            await RefreshBotToken(botAccount, _scope, cancellationToken);
         }
     }
-    
+
     private async Task RefreshServiceToken(Service service, IServiceScope scope, CancellationToken cancellationToken)
     {
         try
@@ -94,8 +116,6 @@ public class TokenRefreshService : BackgroundService
             authService.Service.UserName = string.IsNullOrWhiteSpace(user.Username)
                 ? authService.Service.UserName
                 : user.Username;
-            
-            await _dbContext.SaveChangesAsync(cancellationToken);
 
             await _dbContext.Services.Upsert(authService.Service)
                 .On(u => u.Name)
@@ -122,6 +142,45 @@ public class TokenRefreshService : BackgroundService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to refresh token for service {ServiceName}", service.Name);
+        }
+    }
+    
+    internal async Task RefreshBotToken(BotAccount botAccount, IServiceScope scope, CancellationToken cancellationToken = new())
+    {
+        try
+        {
+            IAuthService? authService = GetAuthServiceForProvider("Twitch", scope);
+
+            if (authService == null) return;
+
+            _logger.LogDebug("Refreshing token for bot account {BotName}", botAccount.Username);
+
+            (User user, TokenResponse response) = await authService.RefreshToken(botAccount.RefreshToken!);
+
+            botAccount.AccessToken = response.AccessToken;
+            botAccount.RefreshToken = response.RefreshToken;
+            botAccount.TokenExpiry = DateTime.UtcNow.AddSeconds(response.ExpiresIn);
+            
+            botAccount.Username = string.IsNullOrWhiteSpace(user.Username)
+                ? botAccount.Username
+                : user.Username;
+
+            await _dbContext.BotAccounts.Upsert(botAccount)
+                .On(u => u.Username)
+                .WhenMatched((oldBot, newBot) => new()
+                {
+                    AccessToken = newBot.AccessToken,
+                    RefreshToken = newBot.RefreshToken,
+                    TokenExpiry = newBot.TokenExpiry,
+                    Username = newBot.Username,
+                })
+                .RunAsync(cancellationToken);
+                
+            _logger.LogDebug("Successfully refreshed token for bot account {BotName}", botAccount.Username);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to refresh token for bot account {BotName}", botAccount.Username);
         }
     }
     

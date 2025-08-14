@@ -3,6 +3,7 @@
   <component name="UserContentModel">
     <attachedFolders>
       <Path>src/NoMercyBot.Client</Path>
+      <Path>%APPDATA%/../Local/NoMercyBot/commands</Path>
     </attachedFolders>
     <explicitIncludes />
     <explicitExcludes />

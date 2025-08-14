@@ -25,7 +25,48 @@ namespace NoMercyBot.Services.Other
 			_widgetEventService = widgetEventService;
 			_client = new("http://localhost:6040");
 		}
+		
+		public async Task SendTts(string chatMessage, string userId, CancellationToken ctsToken)
+		{
+			if (!Config.UseTts) return;
+			
+			try
+			{
+				if (string.IsNullOrWhiteSpace(chatMessage)) return;
+				
+				// Get the user's selected TTS voice (implement this as needed)
+				string speakerId = await GetSpeakerIdForUserAsync(userId, ctsToken);
+				if (string.IsNullOrWhiteSpace(speakerId)) return;
+			
+				byte[] audioBytes = await SynthesizeAsync(chatMessage, speakerId, ctsToken);
+				if (audioBytes == null || audioBytes.Length == 0) return;
 
+				string audioBase64 = $"data:audio/wav;base64,{Convert.ToBase64String(audioBytes)}";
+				
+				// save tts as wav file
+				if (Config.SaveTtsToDisk)
+				{
+					string filePath = Path.Combine(AppFiles.CachePath, "tts", $"{userId}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.wav");
+					Directory.CreateDirectory(Path.GetDirectoryName(filePath) ?? string.Empty);
+					await File.WriteAllBytesAsync(filePath, audioBytes, ctsToken);
+				}
+
+				var ttsEvent = new
+				{
+					text = chatMessage,
+					user = new { id = userId },
+					audioBase64 = audioBase64
+				};
+
+				await _widgetEventService.PublishEventAsync("channel.chat.message.tts", ttsEvent);
+			}
+			catch (Exception e)
+			{
+				Logger.Twitch(e.Message, LogEventLevel.Error);
+			}
+		}
+		
+		
 		public async Task SendTts(List<ChatMessageFragment> chatMessageFragments, string chatMessageUserId, CancellationToken ctsToken)
 		{
 			if (!Config.UseTts) return;
@@ -137,5 +178,6 @@ namespace NoMercyBot.Services.Other
 		{
 			_client.Dispose();
 		}
+
 	}
 }

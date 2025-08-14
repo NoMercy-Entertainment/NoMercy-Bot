@@ -170,9 +170,9 @@ public static class WidgetFiles
 
     public static IEnumerable<string> GetAllWidgetPaths()
     {
-        return new[]
-        {
+        return
+        [
             WidgetsPath
-        };
+        ];
     }
 }

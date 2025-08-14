@@ -26,7 +26,7 @@ public class SpotifyApiService
     
     public Service Service => SpotifyConfig.Service();
     
-    public SpotifyState SpotifyState { get; set; } = new();
+    public SpotifyState? SpotifyState { get; set; }
     
     public string ClientId => Service.ClientId ?? throw new InvalidOperationException("Spotify ClientId is not set.");
     
@@ -59,6 +59,31 @@ public class SpotifyApiService
         }
         
         throw new InvalidOperationException("Cannot set volume on Spotify.");
+    }
+
+    public async Task<int> GetVolume()
+    {
+        _logger.LogInformation("Fetching current volume from Spotify...");
+        
+        RestClient client = new(SpotifyConfig.ApiUrl);
+        RestRequest request = new("/me/player");
+        request.AddHeader("Authorization", $"Bearer {Service.AccessToken}");
+        request.AddHeader("Content-Type", "application/json");
+        
+        RestResponse response = await client.ExecuteAsync(request);
+        if (!response.IsSuccessful)
+        {
+            _logger.LogError("Failed to fetch player state: {StatusCode} - {Content}", response.StatusCode, response.Content);
+            throw new InvalidOperationException("Could not retrieve player state from Spotify.");
+        }
+        
+        SpotifyState? playerState = response.Content?.FromJson<SpotifyState>();
+        if (playerState?.Device?.VolumePercent is null)
+        {
+            throw new InvalidOperationException("Volume percent is not available in the player state.");
+        }
+        
+        return playerState.Device.VolumePercent;
     }
     
     public async Task<bool> ResumePlayback()
@@ -114,24 +139,27 @@ public class SpotifyApiService
         }
         
         _logger.LogInformation("Adding items to Spotify playlist: {PlaylistId}", playlistId);
-        return await SpotifyClient.Playlists.AddItems(playlistId, new(new List<string>()));
+        return await SpotifyClient.Playlists.AddItems(playlistId, request);
     }
     
-    public async Task<CurrentlyPlaying> GetCurrentlyPlaying(PlayerCurrentlyPlayingRequest request)
+    public async Task<Dto.CurrentlyPlaying?> GetCurrentlyPlaying()
     {
-        if (request?.Market ==null)
-        {
-            throw new ArgumentException("Request must contain a valid market to get currently playing track.", nameof(request));
-        }
-        
         _logger.LogInformation("Fetching currently playing track from Spotify...");
         
-        CurrentlyPlaying? currentlyPlaying = await SpotifyClient.Player.GetCurrentlyPlaying(request);
+        RestClient client = new(SpotifyConfig.ApiUrl);
         
-        if (currentlyPlaying?.Item is null)
+        RestRequest request = new("/me/player/currently-playing");
+        request.AddHeader("Authorization", $"Bearer {Service.AccessToken}");
+        request.AddHeader("Content-Type", "application/json");
+        
+        RestResponse response = await client.ExecuteAsync(request);
+        if (!response.IsSuccessful)
         {
-            throw new InvalidOperationException("No track is currently playing on Spotify.");
+            _logger.LogError("Failed to fetch currently playing track: {StatusCode} - {Content}", response.StatusCode, response.Content);
+            throw new InvalidOperationException("Could not retrieve currently playing track from Spotify.");
         }
+        
+        Dto.CurrentlyPlaying? currentlyPlaying = response.Content?.FromJson<Dto.CurrentlyPlaying>();
         
         return currentlyPlaying;
     }

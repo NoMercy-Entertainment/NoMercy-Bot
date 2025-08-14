@@ -7,7 +7,6 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
 using NoMercyBot.Api.Dto;
-using NoMercyBot.Api.Middleware;
 using NoMercyBot.Database;
 using NoMercyBot.Globals.Constraints;
 using NoMercyBot.Globals.Information;

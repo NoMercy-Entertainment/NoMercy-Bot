@@ -63,7 +63,7 @@ public static class Program
         await Setup.Start.Init(startupTasks);
         
         IWebHost app = CreateWebHostBuilder(options).Build();
-
+        
         try
         {
             await app.RunAsync(CancellationTokenSource.Token);

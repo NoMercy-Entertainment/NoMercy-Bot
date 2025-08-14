@@ -38,16 +38,16 @@ public class TwitchApiService
         _pronounService = pronounService;
     }
         
-    public async Task<List<UserInfo>?> GetUsers(string accessToken, string[]? userIds = null, string? userId = null)
+    public async Task<List<UserInfo>?> GetUsers(string[]? userIds = null, string? userId = null, string? login = null)
     {        
-        if (string.IsNullOrEmpty(accessToken)) throw new("No access token provided.");
-        if (userIds is not null && userIds.Length == 0) throw new($"userIds must contain at least 1 userId");
+        if (userIds is not null && userIds.Length == 0) throw new("userIds must contain at least 1 userId");
         if (userIds is not null && userIds.Length > 100) throw new("Too many user ids provided.");
         
         RestClient client = new(TwitchConfig.ApiUrl);
         RestRequest request = new("users");
-        request.AddHeader("Authorization", $"Bearer {accessToken}");
+        request.AddHeader("Authorization", $"Bearer {TwitchConfig.Service().AccessToken}");
         request.AddHeader("Client-Id", TwitchConfig.Service().ClientId!);
+        request.AddHeader("Content-Type", "application/json");
         
         foreach (string id in userIds ?? [])
         {
@@ -55,6 +55,7 @@ public class TwitchApiService
         }
         
         if(userId != null) request.AddQueryParameter("id", userId);
+        if (login != null) request.AddQueryParameter("login", login);
         
         RestResponse response = await client.ExecuteAsync(request);
         if (!response.IsSuccessful || response.Content is null)
@@ -66,9 +67,9 @@ public class TwitchApiService
         return userInfoResponse.Data;
     }
     
-    public async Task<User> FetchUser(TokenResponse tokenResponse, string? countryCode = null, string? id = null)
+    public async Task<User> FetchUser(string? countryCode = null, string? id = null, string? login = null)
     {        
-        List<UserInfo>? users = await GetUsers(accessToken: tokenResponse.AccessToken, userId: id);
+        List<UserInfo>? users = await GetUsers(userId: id, login: login);
         if (users is null || users.Count == 0) throw new("Failed to fetch user information.");
         
         UserInfo userInfo = users.First();
@@ -78,7 +79,7 @@ public class TwitchApiService
             .Select(x => x.ZoneId)
             .ToList();
         
-        GetUserChatColorResponse? colors = await GetUserChatColors(tokenResponse, [userInfo.Id]);
+        GetUserChatColorResponse? colors = await GetUserChatColors([userInfo.Id]);
         Pronoun? pronoun = await _pronounService.GetUserPronoun(userInfo.Login);
 
         User user = new()
@@ -115,7 +116,7 @@ public class TwitchApiService
             })
             .RunAsync();
         
-        ChannelInfo? channelInfo = await FetchChannelInfo(tokenResponse.AccessToken, userInfo.Id);
+        ChannelInfo? channelInfo = await GetChannelInfo(userInfo.Id);
         if (channelInfo is not null)
         {
             await dbContext.ChannelInfo.Upsert(channelInfo)
@@ -134,20 +135,36 @@ public class TwitchApiService
                 })
                 .RunAsync();
         }
+
+        Channel channel = new()
+        {
+            Id = user.Id,
+            Name = user.Username,
+        };
+        
+        await dbContext.Channels.Upsert(channel)
+            .On(c => c.Id)
+            .WhenMatched((oldChannel, newChannel) => new()
+            {
+                Name = newChannel.Name,
+                UpdatedAt = DateTime.UtcNow,
+            })
+            .RunAsync();
         
         return user;
     }
 
-    public async Task<GetUserChatColorResponse?> GetUserChatColors(TokenResponse tokenResponse, string[] userIds)
+    public async Task<GetUserChatColorResponse?> GetUserChatColors(string[] userIds)
     {        
         if (userIds.Any(string.IsNullOrEmpty)) throw new("Invalid user id provided.");
-        if (userIds.Length == 0) throw new($"userIds must contain at least 1 userId");
+        if (userIds.Length == 0) throw new("userIds must contain at least 1 userId");
         if (userIds.Length > 100) throw new("Too many user ids provided.");
         
         RestClient client = new(TwitchConfig.ApiUrl);
         RestRequest request = new($"chat/color");
-        request.AddHeader("Authorization", $"Bearer {tokenResponse.AccessToken}");
+        request.AddHeader("Authorization", $"Bearer {TwitchConfig.Service().AccessToken}");
         request.AddHeader("Client-Id", TwitchConfig.Service().ClientId!);
+        request.AddHeader("Content-Type", "application/json");
 
         foreach (string id in userIds)
         {
@@ -164,16 +181,17 @@ public class TwitchApiService
         return colors;
     }
     
-    public async Task<ChannelResponse> GetUserModeration(string accessToken, string userId)
+    public async Task<ChannelResponse> GetUserModeration(string userId)
     {        
-        if (string.IsNullOrEmpty(accessToken)) throw new("No access token provided.");
         if (string.IsNullOrEmpty(userId)) throw new("No user id provided.");
         
         RestClient client = new(TwitchConfig.ApiUrl);
         
         RestRequest request = new("moderation/channels");
-                    request.AddHeader("Authorization", $"Bearer {accessToken}");
+                    request.AddHeader("Authorization", $"Bearer {TwitchConfig.Service().AccessToken}");
                     request.AddHeader("client-id", TwitchConfig.Service().ClientId!);
+                    request.AddHeader("Content-Type", "application/json");
+                    
                     request.AddParameter("user_id", userId);
 
         RestResponse response = await client.ExecuteAsync(request);
@@ -186,13 +204,16 @@ public class TwitchApiService
         return channelResponse;
     }
     
-    private async Task<ChannelInfo?> FetchChannelInfo(string accessToken, string broadcasterId)
+    public async Task<ChannelInfo?> GetChannelInfo(string broadcasterId)
     {
         RestClient client = new(TwitchConfig.ApiUrl);
         
-        RestRequest request = new($"channels?broadcaster_id={broadcasterId}");
-            request.AddHeader("Authorization", $"Bearer {accessToken}");
+        RestRequest request = new($"channels");
+            request.AddHeader("Authorization", $"Bearer {TwitchConfig.Service().AccessToken}");
             request.AddHeader("Client-Id", TwitchConfig.Service().ClientId!);
+            request.AddHeader("Content-Type", "application/json");
+            
+            request.AddQueryParameter("broadcaster_id", broadcasterId);
             
         RestResponse response = await client.ExecuteAsync(request);
         if (!response.IsSuccessful || response.Content is null)
@@ -217,6 +238,34 @@ public class TwitchApiService
             ContentLabels = dto.ContentLabels,
             IsBrandedContent = dto.IsBrandedContent
         };
+    }
+
+    public async Task<StreamInfo?> GetStreamInfo(string? broadcasterId = null, string? broadcasterLogin = null)
+    {
+        if (string.IsNullOrEmpty(broadcasterId) && string.IsNullOrEmpty(broadcasterLogin))
+            throw new("Either broadcasterId or broadcasterLogin must be provided.");
+        
+        RestClient client = new(TwitchConfig.ApiUrl);
+        RestRequest request = new("streams");
+        request.AddHeader("Authorization", $"Bearer {TwitchConfig.Service().AccessToken}");
+        request.AddHeader("Client-Id", TwitchConfig.Service().ClientId!);
+        request.AddHeader("Content-Type", "application/json");
+        
+        if (!string.IsNullOrEmpty(broadcasterId))
+            request.AddQueryParameter("user_id", broadcasterId);
+        
+        if (!string.IsNullOrEmpty(broadcasterLogin))
+            request.AddQueryParameter("user_login", broadcasterLogin);
+        
+        RestResponse response = await client.ExecuteAsync(request);
+        if (!response.IsSuccessful || response.Content is null)
+            throw new(response.Content ?? "Failed to fetch stream information.");
+        
+        StreamInfoResponse? streamInfoResponse = response.Content.FromJson<StreamInfoResponse>();
+        if (streamInfoResponse?.Data is null || streamInfoResponse.Data.Count == 0)
+            return null;
+
+        return streamInfoResponse.Data.First();
     }
 
     public async Task<string?> CreateEventSubSubscription(string eventType, string version, Dictionary<string, string> conditions, string callbackUrl, string? accessToken)
@@ -292,6 +341,7 @@ public class TwitchApiService
             RestRequest request = new($"eventsub/subscriptions?id={subscriptionId}", Method.Delete);
             request.AddHeader("Authorization", $"Bearer {accessToken}");
             request.AddHeader("Client-Id", TwitchConfig.Service().ClientId!);
+            request.AddHeader("Content-Type", "application/json");
             
             RestResponse response = await client.ExecuteAsync(request);
             
@@ -316,6 +366,7 @@ public class TwitchApiService
             RestRequest request = new("eventsub/subscriptions", Method.Get);
             request.AddHeader("Authorization", $"Bearer {accessToken}");
             request.AddHeader("Client-Id", TwitchConfig.Service().ClientId!);
+            request.AddHeader("Content-Type", "application/json");
             
             RestResponse response = await client.ExecuteAsync(request);
             
@@ -345,5 +396,64 @@ public class TwitchApiService
         {
             _logger.LogError(ex, "Error deleting all EventSub subscriptions");
         }
+    }
+    
+    public async Task<ChannelFollowersResponseData?> GetChannelFollower(string broadcasterId, string userId)
+    {
+        RestClient client = new(TwitchConfig.ApiUrl);
+        RestRequest request = new($"channels/followers");
+        request.AddHeader("Authorization", $"Bearer {TwitchConfig.Service().AccessToken}");
+        request.AddHeader("Client-Id", TwitchConfig.Service().ClientId!);
+        request.AddHeader("Content-Type", "application/json");
+        
+        request.AddQueryParameter("broadcaster_id", broadcasterId);
+        request.AddQueryParameter("user_id", userId);
+        
+        RestResponse response = await client.ExecuteAsync(request);
+        if (!response.IsSuccessful || response.Content is null)
+            throw new(response.Content ?? "Failed to fetch channel followers.");
+        
+        ChannelFollowersResponse? followerResponse = response.Content.FromJson<ChannelFollowersResponse>();
+        if (followerResponse?.Data is null) throw new("Failed to parse channel followers.");
+
+        return followerResponse.Data.FirstOrDefault();
+    }
+    
+    public async Task SendShoutoutAsync(string broadcasterId, string moderatorId, string userId) 
+    {
+        RestClient client = new(TwitchConfig.ApiUrl);
+        RestRequest request = new("chat/shoutouts", Method.Post);
+        request.AddHeader("Authorization", $"Bearer {TwitchConfig.Service().AccessToken}");
+        request.AddHeader("Client-Id", TwitchConfig.Service().ClientId!);
+        request.AddHeader("Content-Type", "application/json");
+        
+        request.AddQueryParameter("from_broadcaster_id", broadcasterId);
+        request.AddQueryParameter("to_broadcaster_id", userId);
+        request.AddQueryParameter("moderator_id", moderatorId);
+        
+        RestResponse response = await client.ExecuteAsync(request);
+        if (!response.IsSuccessful || response.Content is null)
+            throw new(response.Content ?? "Failed to send shoutout.");
+    }
+    
+    public async Task SendAnnouncement(string broadcasterId, string moderatorId, string message, string? color = "primary")
+    {
+        RestClient client = new(TwitchConfig.ApiUrl);
+        RestRequest request = new("chat/announcements", Method.Post);
+        request.AddHeader("Authorization", $"Bearer {TwitchConfig.Service().AccessToken}");
+        request.AddHeader("Client-Id", TwitchConfig.Service().ClientId!);
+        request.AddHeader("Content-Type", "application/json");
+        
+        request.AddQueryParameter("broadcaster_id", broadcasterId);
+        request.AddQueryParameter("moderator_id", moderatorId);
+        request.AddBody(new
+        {
+            message = message,
+            color = color
+        });
+        
+        RestResponse response = await client.ExecuteAsync(request);
+        if (!response.IsSuccessful || response.Content is null)
+            throw new(response.Content ?? "Failed to send announcement.");
     }
 }
