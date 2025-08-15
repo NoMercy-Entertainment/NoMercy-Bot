@@ -38,6 +38,9 @@ public class SeedService : IHostedService
             // Seed event subscriptions
             await EventSubscriptionSeed.Init(_dbContext);
             
+            // Seed default rewards
+            await RewardSeed.Init(_dbContext, _scope);
+            
             // Get the PronounService to load pronouns from the API
             PronounService pronounService = _scope.ServiceProvider.GetRequiredService<PronounService>();
             await pronounService.LoadPronouns();

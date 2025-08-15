@@ -222,5 +222,6 @@ public class AppDbContext : DbContext
     public DbSet<TtsVoice> TtsVoices { get; set; }
     public DbSet<UserTtsVoice> UserTtsVoices { get; set; }
     public DbSet<Command> Commands { get; set; }
+    public DbSet<Reward> Rewards { get; set; }
     public DbSet<Storage> Storages { get; set; }
 }

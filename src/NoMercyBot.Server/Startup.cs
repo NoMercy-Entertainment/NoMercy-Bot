@@ -25,6 +25,7 @@ public class Startup
         ServiceConfiguration.ConfigureServices(services);
         services.AddSingleton(_options);
         services.AddSingleton<CommandScriptLoader>();
+        services.AddSingleton<RewardScriptLoader>();
     }
 
     public void Configure(IApplicationBuilder app)
@@ -42,6 +43,10 @@ public class Startup
         // Load user command scripts
         CommandScriptLoader scriptLoader = app.ApplicationServices.GetRequiredService<CommandScriptLoader>();
         scriptLoader.LoadAllAsync().Wait();
+        
+        // Load user reward scripts
+        RewardScriptLoader rewardScriptLoader = app.ApplicationServices.GetRequiredService<RewardScriptLoader>();
+        rewardScriptLoader.LoadAllAsync().Wait();
         
         ApplicationConfiguration.ConfigureApp(app, _provider);
     }

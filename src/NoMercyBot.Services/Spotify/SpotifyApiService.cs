@@ -176,6 +176,27 @@ public class SpotifyApiService
         return response.Content.FromJson<SpotifyState>();
     }
     
+    public async Task<FullTrack?> GetTrack(string trackId)
+    {
+        if (string.IsNullOrEmpty(trackId))
+        {
+            throw new ArgumentException("Track ID cannot be null or empty.", nameof(trackId));
+        }
+        
+        _logger.LogInformation("Fetching track information for track ID: {TrackId}", trackId);
+        
+        try
+        {
+            FullTrack track = await SpotifyClient.Tracks.Get(trackId);
+            return track;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch track information for track ID: {TrackId}", trackId);
+            return null;
+        }
+    }
+    
     public async Task<bool> AddToQueue(PlayerAddToQueueRequest request){
         if (request?.Uri == null)
         {

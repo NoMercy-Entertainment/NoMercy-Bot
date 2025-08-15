@@ -18,6 +18,7 @@ public static class AppFiles
     public static string DataPath => Path.Combine(AppPath, "data");
     public static string LogPath => Path.Combine(AppPath, "log");
     public static string CommandsPath => Path.Combine(AppPath, "commands");
+    public static string RewardsPath => Path.Combine(AppPath, "rewards");
     public static string WidgetsPath => Path.Combine(AppPath, "widgets");
 
     public static string CachePath => Path.Combine(AppPath, "cache");
@@ -38,6 +39,7 @@ public static class AppFiles
             DataPath,
             LogPath,
             CommandsPath,
+            RewardsPath,
             WidgetsPath,
         ];
     }

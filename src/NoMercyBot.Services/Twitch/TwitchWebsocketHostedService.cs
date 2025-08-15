@@ -33,6 +33,7 @@ public class TwitchWebsocketHostedService : IHostedService
     private readonly IWidgetEventService _widgetEventService;
     private readonly TwitchChatService _twitchChatService;
     private readonly TwitchCommandService _twitchCommandService;
+    private readonly TwitchRewardService _twitchRewardService;
     private readonly TtsService _ttsService;
     private bool _isConnected;
     private Stream? _currentStream;
@@ -46,6 +47,7 @@ public class TwitchWebsocketHostedService : IHostedService
         TwitchMessageDecorator twitchMessageDecorator,
         TtsService ttsService,
         TwitchCommandService twitchCommandService,
+        TwitchRewardService twitchRewardService,
         TwitchChatService twitchTwitchChatServiceService,
         IWidgetEventService widgetEventService)
     {
@@ -60,6 +62,7 @@ public class TwitchWebsocketHostedService : IHostedService
         _twitchCommandService = twitchCommandService;
         _twitchChatService = twitchTwitchChatServiceService;
         _ttsService = ttsService;
+        _twitchRewardService = twitchRewardService;
         
         // Subscribe to the event
         twitchEventSubService.OnEventSubscriptionChanged += HandleEventSubscriptionChange;
@@ -998,6 +1001,9 @@ public class TwitchWebsocketHostedService : IHostedService
             args.Notification.Payload.Event.UserLogin,
             args.Notification.Payload.Event.Reward.Title,
             args.Notification.Payload.Event.BroadcasterUserLogin);
+
+        // Execute the reward through the reward service
+        await _twitchRewardService.ExecuteReward(args);
 
         await SaveChannelEvent(
             args.Notification.Metadata.MessageId,

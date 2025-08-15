@@ -2,6 +2,7 @@
 using NoMercyBot.Services.Emotes;
 using NoMercyBot.Services.Interfaces;
 using NoMercyBot.Services.Other;
+using NoMercyBot.Services.Twitch.Scripting;
 
 namespace NoMercyBot.Services.Twitch;
 
@@ -17,6 +18,8 @@ public static class TwitchServiceExtensions
         services.AddTransient<HtmlMetadataService>();
         services.AddTransient<TwitchMessageDecorator>();
         services.AddTransient<TwitchCommandService>();
+        services.AddTransient<TwitchRewardService>();
+        services.AddTransient<RewardScriptLoader>();
         
         services.AddSingletonHostedService<TwitchBadgeService>();
     }

@@ -14,6 +14,7 @@ using NoMercyBot.Services.Other;
 using NoMercyBot.Services.Twitch.Dto;
 using RestSharp;
 using TwitchLib.Api.Helix.Models.Chat.GetUserChatColor;
+using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 
 namespace NoMercyBot.Services.Twitch;
 
@@ -455,5 +456,126 @@ public class TwitchApiService
         RestResponse response = await client.ExecuteAsync(request);
         if (!response.IsSuccessful || response.Content is null)
             throw new(response.Content ?? "Failed to send announcement.");
+    }
+    
+    public async Task<ChannelPointsCustomRewardsResponseData?> CreateCustomReward(string broadcasterId, string title, int cost, string? prompt = null, bool isUserInputRequired = false, bool isEnabled = true, string? backgroundColor = null, bool isPaused = false, bool shouldRedemptionsSkipRequestQueue = false, int? maxPerStream = null, int? maxPerUserPerStream = null, int? globalCooldownSeconds = null)
+    {
+        if (string.IsNullOrEmpty(broadcasterId)) throw new ArgumentException("Broadcaster ID is required");
+        if (string.IsNullOrEmpty(title)) throw new ArgumentException("Title is required");
+        if (cost < 1) throw new ArgumentException("Cost must be at least 1");
+        
+        _logger.LogInformation("Creating custom reward: {Title} for broadcaster {BroadcasterId}", title, broadcasterId);
+        
+        RestClient client = new(TwitchConfig.ApiUrl);
+        RestRequest request = new("channel_points/custom_rewards", Method.Post);
+        request.AddHeader("Authorization", $"Bearer {TwitchConfig.Service().AccessToken}");
+        request.AddHeader("Client-Id", TwitchConfig.Service().ClientId!);
+        request.AddHeader("Content-Type", "application/json");
+        
+        request.AddQueryParameter("broadcaster_id", broadcasterId);
+        
+        object body = new
+        {
+            title = title,
+            cost = cost,
+            prompt = prompt ?? "",
+            is_user_input_required = isUserInputRequired,
+            is_enabled = isEnabled,
+            background_color = backgroundColor,
+            is_paused = isPaused,
+            should_redemptions_skip_request_queue = shouldRedemptionsSkipRequestQueue,
+            max_per_stream_setting = maxPerStream.HasValue ? new { is_enabled = true, max_per_stream = maxPerStream.Value } : new { is_enabled = false, max_per_stream = 0 },
+            max_per_user_per_stream_setting = maxPerUserPerStream.HasValue ? new { is_enabled = true, max_per_user_per_stream = maxPerUserPerStream.Value } : new { is_enabled = false, max_per_user_per_stream = 0 },
+            global_cooldown_setting = globalCooldownSeconds.HasValue ? new { is_enabled = true, global_cooldown_seconds = globalCooldownSeconds.Value } : new { is_enabled = false, global_cooldown_seconds = 0 }
+        };
+        
+        request.AddJsonBody(body);
+        
+        RestResponse response = await client.ExecuteAsync(request);
+        if (!response.IsSuccessful)
+        {
+            _logger.LogError("Failed to create custom reward. Status: {StatusCode}, Content: {Content}", 
+                response.StatusCode, response.Content);
+            throw new($"Failed to create custom reward: {response.Content}");
+        }
+        
+        _logger.LogInformation("Successfully created custom reward: {Title}", title);
+        
+        ChannelPointsCustomRewardsResponse? rewardResponse = response.Content?.FromJson<ChannelPointsCustomRewardsResponse>();
+        return rewardResponse?.Data?.FirstOrDefault();
+    }
+
+    public async Task UpdateRedemptionStatus(string broadcasterId, string rewardId, string redemptionId, string status)
+    {
+        if (string.IsNullOrEmpty(broadcasterId)) throw new ArgumentException("Broadcaster ID is required");
+        if (string.IsNullOrEmpty(rewardId)) throw new ArgumentException("Reward ID is required");
+        if (string.IsNullOrEmpty(redemptionId)) throw new ArgumentException("Redemption ID is required");
+        if (string.IsNullOrEmpty(status)) throw new ArgumentException("Status is required");
+        
+        if (status != "FULFILLED" && status != "CANCELED")
+            throw new ArgumentException("Status must be either 'FULFILLED' or 'CANCELED'");
+        
+        // Log the request details for debugging
+        _logger.LogInformation("Updating redemption status - Broadcaster: {BroadcasterId}, Reward: {RewardId}, Redemption: {RedemptionId}, Status: {Status}", 
+            broadcasterId, rewardId, redemptionId, status);
+        _logger.LogInformation("Using Client-Id: {ClientId}", TwitchConfig.Service().ClientId);
+        
+        RestClient client = new(TwitchConfig.ApiUrl);
+        RestRequest request = new("channel_points/custom_rewards/redemptions", Method.Patch);
+        request.AddHeader("Authorization", $"Bearer {TwitchConfig.Service().AccessToken}");
+        request.AddHeader("Client-Id", TwitchConfig.Service().ClientId!);
+        request.AddHeader("Content-Type", "application/json");
+        
+        request.AddQueryParameter("broadcaster_id", broadcasterId);
+        request.AddQueryParameter("reward_id", rewardId);
+        request.AddQueryParameter("id", redemptionId);
+        
+        object body = new { status };
+        request.AddJsonBody(body);
+        
+        RestResponse response = await client.ExecuteAsync(request);
+        if (!response.IsSuccessful)
+        {
+            _logger.LogError("Failed to update redemption status. Status: {StatusCode}, Content: {Content}", 
+                response.StatusCode, response.Content);
+            _logger.LogError("Request URL: {Url}", client.BuildUri(request));
+            _logger.LogError("Request Headers: Authorization: Bearer [REDACTED], Client-Id: {ClientId}", TwitchConfig.Service().ClientId);
+            
+            // Don't throw exception immediately, log more details first
+            if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                _logger.LogError("403 Forbidden suggests either insufficient scopes or Client-Id mismatch. " +
+                    "Ensure the access token has 'channel:manage:redemptions' scope and was generated with the same Client-Id used to create this reward.");
+            }
+            
+            throw new($"Failed to update redemption status: {response.Content}");
+        }
+        
+        _logger.LogInformation("Successfully updated redemption {RedemptionId} to status {Status}", redemptionId, status);
+    }
+    
+    public async Task<ChannelPointsCustomRewardsResponse?> GetCustomRewards(string broadcasterId, string? rewardId = null)
+    {
+        if (string.IsNullOrEmpty(broadcasterId)) throw new ArgumentException("Broadcaster ID is required");
+        
+        RestClient client = new(TwitchConfig.ApiUrl);
+        RestRequest request = new("channel_points/custom_rewards");
+        request.AddHeader("Authorization", $"Bearer {TwitchConfig.Service().AccessToken}");
+        request.AddHeader("Client-Id", TwitchConfig.Service().ClientId!);
+        request.AddHeader("Content-Type", "application/json");
+        
+        request.AddQueryParameter("broadcaster_id", broadcasterId);
+        
+        if (!string.IsNullOrEmpty(rewardId))
+            request.AddQueryParameter("id", rewardId);
+        
+        RestResponse response = await client.ExecuteAsync(request);
+        if (!response.IsSuccessful || response.Content is null)
+            throw new(response.Content ?? "Failed to fetch custom rewards.");
+        
+        ChannelPointsCustomRewardsResponse? rewardsResponse = response.Content.FromJson<ChannelPointsCustomRewardsResponse>();
+        if (rewardsResponse?.Data is null) throw new("Failed to parse custom rewards.");
+        
+        return rewardsResponse;
     }
 }

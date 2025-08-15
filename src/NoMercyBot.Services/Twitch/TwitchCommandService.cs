@@ -34,9 +34,9 @@ public class CommandContext
     public ChatMessage Message { get; set; } = null!;
     public Func<string, Task> ReplyAsync { get; set; } = null!;
     public required AppDbContext DatabaseContext { get; init; } = null!;
-    public TwitchCommandService CommandService { get; set; } = null!;
-    public TwitchApiService TwitchApiService { get; set; } = null!;
-    public IServiceProvider ServiceProvider { get; set; } = null!;
+    public required TwitchCommandService CommandService { get; set; } = null!;
+    public required TwitchApiService TwitchApiService { get; set; } = null!;
+    public required IServiceProvider ServiceProvider { get; set; } = null!;
     public CancellationToken CancellationToken { get; set; }
 }
 
