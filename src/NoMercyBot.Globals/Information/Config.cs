@@ -25,4 +25,7 @@ public static class Config
     public static bool UseChatCodeSnippets { get; set; } = true;
     public static bool UseChatHtmlParser { get; set; } = true;
     public static bool UseChatOgParser { get; set; } = true;
+    
+    public static string? AzureTtsEndpoint { get; set; }
+    public static string? AzureTtsApiKey { get; set; }
 }

@@ -1,14 +1,17 @@
 using NoMercyBot.Database;
+using NoMercyBot.Database.Models;
 
 namespace NoMercyBot.Services.Twitch.Scripting;
 
 public class RewardScriptContext
 {
-    public string Channel { get; init; } = null!;
+    public Channel Channel { get; init; } = null!;
+    public string BroadcasterLogin { get; init; } = null!;
     public string BroadcasterId { get; init; } = null!;
     public Guid RewardId { get; init; } = Guid.Empty;
     public string RewardTitle { get; init; } = null!;
     public string RedemptionId { get; init; } = null!;
+    public User User { get; init; } = null!;
     public string UserId { get; init; } = null!;
     public string UserLogin { get; init; } = null!;
     public string UserDisplayName { get; init; } = null!;

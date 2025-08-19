@@ -578,4 +578,55 @@ public class TwitchApiService
         
         return rewardsResponse;
     }
+
+    public async Task<User> GetOrFetchUser(string? id = null, string? name = null)
+    {
+        if (string.IsNullOrEmpty(id) && string.IsNullOrEmpty(name))
+            throw new ArgumentException("Either id or login must be provided.");
+
+        User? user = await _dbContext.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == id || u.Username == name);
+
+        user ??= await FetchUser(id: id, login: name);
+
+        return user;
+    }
+
+    public async Task<ChannelInfo> GetOrFetchChannelInfo(string id)
+    {
+        ChannelInfo? channelInfo = await _dbContext.ChannelInfo
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == id);
+
+        if (channelInfo is not null) return channelInfo;
+        
+        await GetOrFetchUser(id: id);
+        
+        channelInfo = await _dbContext.ChannelInfo
+            .AsNoTracking()
+            .FirstAsync(c => c.Id == id);
+
+        return channelInfo;
+    }
+    
+    public async Task<Channel> GetOrFetchChannel(string? id = null, string? name = null)
+    {
+        if (string.IsNullOrEmpty(id) && string.IsNullOrEmpty(name))
+            throw new ArgumentException("Either id or name must be provided.");
+
+        Channel? channel = await _dbContext.Channels
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == id || c.Name == name);
+
+        if (channel is not null) return channel;
+        
+        await GetOrFetchUser(id, name);
+        
+        channel = await _dbContext.Channels
+            .AsNoTracking()
+            .FirstAsync(c => c.Id == id || c.Name == name);
+        
+        return channel;
+    }
 }

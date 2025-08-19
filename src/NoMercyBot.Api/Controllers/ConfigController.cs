@@ -1,4 +1,4 @@
-using System.Web.Http;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NoMercyBot.Globals.Information;
 using NoMercyBot.Database;
@@ -8,7 +8,7 @@ namespace NoMercyBot.Api.Controllers
 {
     [ApiController]
     [Authorize]
-    [Microsoft.AspNetCore.Mvc.Route("api/[controller]")]
+    [Route("api/[controller]")]
     public class ConfigController : ControllerBase
     {
         private readonly AppDbContext _dbContext;
@@ -18,7 +18,7 @@ namespace NoMercyBot.Api.Controllers
             _dbContext = dbContext;
         }
 
-        [Microsoft.AspNetCore.Mvc.HttpGet]
+        [HttpGet]
         public IActionResult GetConfig()
         {
             var config = new
@@ -39,8 +39,78 @@ namespace NoMercyBot.Api.Controllers
                 Config.UseChatHtmlParser,
                 Config.UseChatOgParser
             };
-            
+
             return Ok(config);
+        }
+
+        [HttpPut("config")]
+        public async Task<IActionResult> UpdateConfig([FromBody] ConfigUpdateRequest request)
+        {
+            await UpdateConfigValue(request.QueueWorkers, "QueueWorkers", v => Config.QueueWorkers = new(Config.QueueWorkers.Key, v));
+            await UpdateConfigValue(request.CronWorkers, "CronWorkers", v => Config.CronWorkers = new(Config.CronWorkers.Key, v));
+            await UpdateConfigValue(request.UseTts, "UseTts", v => Config.UseTts = v);
+            await UpdateConfigValue(request.SaveTtsToDisk, "SaveTtsToDisk", v => Config.SaveTtsToDisk = v);
+            await UpdateConfigValue(request.UseFrankerfacezEmotes, "UseFrankerfacezEmotes", v => Config.UseFrankerfacezEmotes = v);
+            await UpdateConfigValue(request.UseBttvEmotes, "UseBttvEmotes", v => Config.UseBttvEmotes = v);
+            await UpdateConfigValue(request.UseSevenTvEmotes, "UseSevenTvEmotes", v => Config.UseSevenTvEmotes = v);
+            await UpdateConfigValue(request.UseChatCodeSnippets, "UseChatCodeSnippets", v => Config.UseChatCodeSnippets = v);
+            await UpdateConfigValue(request.UseChatHtmlParser, "UseChatHtmlParser", v => Config.UseChatHtmlParser = v);
+            await UpdateConfigValue(request.UseChatOgParser, "UseChatOgParser", v => Config.UseChatOgParser = v);
+            await UpdateConfigValue(request.InternalServerPort, "InternalServerPort", v => Config.InternalServerPort = v);
+            await UpdateConfigValue(request.InternalClientPort, "InternalClientPort", v => Config.InternalClientPort = v);
+            await UpdateConfigValue(request.InternalTtsPort, "InternalTtsPort", v => Config.InternalTtsPort = v);
+            await UpdateConfigValue(request.Swagger, "Swagger", v => Config.Swagger = v);
+
+            return NoContent();
+        }
+
+        [HttpPut("secure-config")]
+        public async Task<IActionResult> UpdateSecureConfig([FromBody] SecureConfigUpdateRequest request)
+        {
+            await UpdateSecureConfigValue(request.AzureTTSKey, "_AzureTtsApiKey", v => Config.AzureTtsApiKey = v);
+            await UpdateSecureConfigValue(request.AzureTTSEndpoint, "_AzureTtsEndpoint", v => Config.AzureTtsEndpoint = v);
+
+            return NoContent();
+        }
+
+        private async Task UpdateConfigValue<T>(T? value, string key, Action<T> updateConfig) where T : struct
+        {
+            if (value == null) return;
+            
+            updateConfig(value.Value);
+            
+            string? stringValue = value is bool b ? b.ToString().ToLower() : value.ToString();
+            if (stringValue == null) return;
+            await _dbContext.Configurations.Upsert(new()
+                {
+                    Key = key, 
+                    Value = stringValue
+                })
+                .On(c => c.Key)
+                .WhenMatched((oldConfig, newConfig) => new()
+                {
+                    Value = newConfig.Value
+                })
+                .RunAsync();
+        }
+
+        private async Task UpdateSecureConfigValue(string? value, string key, Action<string> updateConfig)
+        {
+            if (string.IsNullOrEmpty(value)) return;
+            
+            updateConfig(value);
+            
+            await _dbContext.Configurations.Upsert(new()
+                {
+                    Key = key, 
+                    SecureValue = value
+                })
+                .On(c => c.Key)
+                .WhenMatched((oldConfig, newConfig) => new()
+                {
+                    SecureValue = newConfig.SecureValue
+                })
+                .RunAsync();
         }
 
         public class ConfigUpdateRequest
@@ -61,152 +131,10 @@ namespace NoMercyBot.Api.Controllers
             public bool? UseChatOgParser { get; set; }
         }
 
-        [Microsoft.AspNetCore.Mvc.HttpPut]
-        public async Task<IActionResult> UpdateConfig([Microsoft.AspNetCore.Mvc.FromBody] ConfigUpdateRequest request)
+        public class SecureConfigUpdateRequest
         {
-            if (request.QueueWorkers is not null)
-            {
-                Config.QueueWorkers = new(Config.QueueWorkers.Key, (int)request.QueueWorkers);
-                // await QueueRunner.SetWorkerCount(Config.QueueWorkers.Key, (int)request.QueueWorkers);
-                await _dbContext.Configurations.Upsert(new()
-                        { Key = "QueueWorkers", Value = request.QueueWorkers.ToString()! })
-                    .On(c => c.Key)
-                    .WhenMatched((oldConfig, newConfig) => new() { Value = newConfig.Value })
-                    .RunAsync();
-            }
-
-            if (request.CronWorkers is not null)
-            {
-                Config.CronWorkers = new(Config.CronWorkers.Key, (int)request.CronWorkers);
-                // await QueueRunner.SetWorkerCount(Config.CronWorkers.Key, (int)request.CronWorkers);
-                await _dbContext.Configurations.Upsert(new()
-                        { Key = "CronWorkers", Value = request.CronWorkers.ToString()! })
-                    .On(c => c.Key)
-                    .WhenMatched((oldConfig, newConfig) => new() { Value = newConfig.Value })
-                    .RunAsync();
-            }
-
-            if (request.UseTts is not null)
-            {
-                Config.UseTts = request.UseTts.Value;
-                await _dbContext.Configurations
-                    .Upsert(new() { Key = "UseTts", Value = request.UseTts.Value.ToString().ToLower() })
-                    .On(c => c.Key)
-                    .WhenMatched((oldConfig, newConfig) => new() { Value = newConfig.Value })
-                    .RunAsync();
-            }
-
-            if (request.SaveTtsToDisk is not null)
-            {
-                Config.SaveTtsToDisk = request.SaveTtsToDisk.Value;
-                await _dbContext.Configurations.Upsert(new()
-                        { Key = "SaveTtsToDisk", Value = request.SaveTtsToDisk.Value.ToString().ToLower() })
-                    .On(c => c.Key)
-                    .WhenMatched((oldConfig, newConfig) => new() { Value = newConfig.Value })
-                    .RunAsync();
-            }
-
-            if (request.UseFrankerfacezEmotes is not null)
-            {
-                Config.UseFrankerfacezEmotes = request.UseFrankerfacezEmotes.Value;
-                await _dbContext.Configurations.Upsert(new()
-                        { Key = "UseFrankerfacezEmotes", Value = request.UseFrankerfacezEmotes.Value.ToString().ToLower() })
-                    .On(c => c.Key)
-                    .WhenMatched((oldConfig, newConfig) => new() { Value = newConfig.Value })
-                    .RunAsync();
-            }
-
-            if (request.UseBttvEmotes is not null)
-            {
-                Config.UseBttvEmotes = request.UseBttvEmotes.Value;
-                await _dbContext.Configurations.Upsert(new()
-                        { Key = "UseBttvEmotes", Value = request.UseBttvEmotes.Value.ToString().ToLower() })
-                    .On(c => c.Key)
-                    .WhenMatched((oldConfig, newConfig) => new() { Value = newConfig.Value })
-                    .RunAsync();
-            }
-
-            if (request.UseSevenTvEmotes is not null)
-            {
-                Config.UseSevenTvEmotes = request.UseSevenTvEmotes.Value;
-                await _dbContext.Configurations.Upsert(new()
-                        { Key = "UseSevenTvEmotes", Value = request.UseSevenTvEmotes.Value.ToString().ToLower() })
-                    .On(c => c.Key)
-                    .WhenMatched((oldConfig, newConfig) => new() { Value = newConfig.Value })
-                    .RunAsync();
-            }
-
-            if (request.UseChatCodeSnippets is not null)
-            {
-                Config.UseChatCodeSnippets = request.UseChatCodeSnippets.Value;
-                await _dbContext.Configurations.Upsert(new()
-                        { Key = "UseChatCodeSnippets", Value = request.UseChatCodeSnippets.Value.ToString().ToLower() })
-                    .On(c => c.Key)
-                    .WhenMatched((oldConfig, newConfig) => new() { Value = newConfig.Value })
-                    .RunAsync();
-            }
-
-            if (request.UseChatHtmlParser is not null)
-            {
-                Config.UseChatHtmlParser = request.UseChatHtmlParser.Value;
-                await _dbContext.Configurations.Upsert(new()
-                        { Key = "UseChatHtmlParser", Value = request.UseChatHtmlParser.Value.ToString().ToLower() })
-                    .On(c => c.Key)
-                    .WhenMatched((oldConfig, newConfig) => new() { Value = newConfig.Value })
-                    .RunAsync();
-            }
-
-            if (request.UseChatOgParser is not null)
-            {
-                Config.UseChatOgParser = request.UseChatOgParser.Value;
-                await _dbContext.Configurations.Upsert(new()
-                        { Key = "UseChatOgParser", Value = request.UseChatOgParser.Value.ToString().ToLower() })
-                    .On(c => c.Key)
-                    .WhenMatched((oldConfig, newConfig) => new() { Value = newConfig.Value })
-                    .RunAsync();
-            }
-
-            if (request.InternalServerPort is not null)
-            {
-                Config.InternalServerPort = request.InternalServerPort.Value;
-                await _dbContext.Configurations.Upsert(new()
-                        { Key = "InternalServerPort", Value = request.InternalServerPort.Value.ToString() })
-                    .On(c => c.Key)
-                    .WhenMatched((oldConfig, newConfig) => new() { Value = newConfig.Value })
-                    .RunAsync();
-            }
-
-            if (request.InternalClientPort is not null)
-            {
-                Config.InternalClientPort = request.InternalClientPort.Value;
-                await _dbContext.Configurations.Upsert(new()
-                        { Key = "InternalClientPort", Value = request.InternalClientPort.Value.ToString() })
-                    .On(c => c.Key)
-                    .WhenMatched((oldConfig, newConfig) => new() { Value = newConfig.Value })
-                    .RunAsync();
-            }
-
-            if (request.InternalTtsPort is not null)
-            {
-                Config.InternalTtsPort = request.InternalTtsPort.Value;
-                await _dbContext.Configurations.Upsert(new()
-                        { Key = "InternalTtsPort", Value = request.InternalTtsPort.Value.ToString() })
-                    .On(c => c.Key)
-                    .WhenMatched((oldConfig, newConfig) => new() { Value = newConfig.Value })
-                    .RunAsync();
-            }
-
-            if (request.Swagger is not null)
-            {
-                Config.Swagger = request.Swagger.Value;
-                await _dbContext.Configurations
-                    .Upsert(new() { Key = "Swagger", Value = request.Swagger.Value.ToString() })
-                    .On(c => c.Key)
-                    .WhenMatched((oldConfig, newConfig) => new() { Value = newConfig.Value })
-                    .RunAsync();
-            }
-
-            return NoContent();
+            public string? AzureTTSKey { get; set; }
+            public string? AzureTTSEndpoint { get; set; }
         }
     }
 }

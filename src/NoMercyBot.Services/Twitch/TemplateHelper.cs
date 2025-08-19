@@ -15,8 +15,8 @@ public static class TemplateHelper
         result = Regex.Replace(result, @"\{name\}", message.DisplayName, RegexOptions.IgnoreCase);
 
         // Get pronouns (assuming these are available on the user object)
-        string subjectPronoun = message.User.Pronoun?.Subject ?? "They";
-        string objectPronoun = message.User.Pronoun?.Object ?? "them";
+        string subjectPronoun = message.User?.Pronoun?.Subject ?? "They";
+        string objectPronoun = message.User?.Pronoun?.Object ?? "them";
 
         // Determine verb forms based on pronouns
         string beVerb = subjectPronoun.ToLower() switch
@@ -79,5 +79,24 @@ public static class TemplateHelper
         }
 
         return result;
+    }
+    
+    public static string ReplaceTemplatePlaceholders(string template, RewardScriptContext ctx, bool? isLive = null, string? gameName = null, string? title = null)
+    {
+        CommandScriptContext commandCtx = new()
+        {
+            Message = new()
+            {
+                User = ctx.User,
+                DisplayName = ctx.UserDisplayName,
+                Id = ctx.UserId
+            },
+            DatabaseContext = ctx.DatabaseContext,
+            TwitchApiService = ctx.TwitchApiService,
+            ChatService = ctx.ChatService,
+            ServiceProvider = ctx.ServiceProvider,
+        };
+        
+        return ReplaceTemplatePlaceholders(template, commandCtx, isLive, gameName, title);
     }
 }

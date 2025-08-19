@@ -45,7 +45,7 @@ public class SpotifyWebsocketService : IHostedService, IDisposable
 	{
 		
 		DiscordConfig.SessionToken = _dbContext.Configurations
-			.FirstOrDefault(config => config.Key == "discord_session_token")?.SecureValue;
+			.FirstOrDefault(config => config.Key == "_DiscordSessionToken")?.SecureValue;
 		
 		if (string.IsNullOrWhiteSpace(DiscordConfig.SessionToken))
 		{

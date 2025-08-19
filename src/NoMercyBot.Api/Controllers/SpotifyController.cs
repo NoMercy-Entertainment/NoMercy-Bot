@@ -165,7 +165,7 @@ public class SpotifyController : ControllerBase
     {
         try
         {
-            QueueResponse result = await _spotifyApiService.GetQueue();
+            SpotifyQueueResponse? result = await _spotifyApiService.GetQueue();
             return Ok(result);
         }
         catch (Exception ex)

@@ -25,7 +25,7 @@ public class Start
 
     public static async Task Init(List<TaskDelegate> tasks)
     {
-        if (UserSettings.TryGetUserSettings(out Dictionary<string, string>? settings))
+        if (UserSettings.TryGetUserSettings(out Dictionary<string, (string, string)> settings))
             UserSettings.ApplySettings(settings);
 
         List<TaskDelegate> startupTasks =

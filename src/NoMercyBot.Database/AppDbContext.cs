@@ -197,6 +197,12 @@ public class AppDbContext : DbContext
                 v => TokenStore.EncryptToken(v),
                 v =>  TokenStore.DecryptToken(v));
         
+        modelBuilder.Entity<Storage>()
+            .Property(e => e.SecureValue)
+            .HasConversion(
+                v => TokenStore.EncryptToken(v),
+                v =>  TokenStore.DecryptToken(v));
+        
         modelBuilder.Entity<ChannelEvent>()
             .Property(e => e.Data)
             .HasConversion(

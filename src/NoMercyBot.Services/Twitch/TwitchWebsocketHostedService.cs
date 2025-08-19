@@ -6,7 +6,9 @@ using NoMercyBot.Database;
 using NoMercyBot.Database.Models;
 using NoMercyBot.Database.Models.ChatMessage;
 using NoMercyBot.Services.Other;
+using NoMercyBot.Services.Twitch.Scripting;
 using NoMercyBot.Services.Widgets;
+using Serilog.Events;
 using TwitchLib.Api;
 using TwitchLib.Api.Core.Enums;
 using TwitchLib.Api.Helix.Models.EventSub;
@@ -37,7 +39,7 @@ public class TwitchWebsocketHostedService : IHostedService
     private readonly TtsService _ttsService;
     private bool _isConnected;
     private Stream? _currentStream;
-
+    
     public TwitchWebsocketHostedService(
         IServiceScopeFactory serviceScopeFactory,
         ILogger<TwitchWebsocketHostedService> logger,
@@ -562,16 +564,8 @@ public class TwitchWebsocketHostedService : IHostedService
         
         await _twitchChatService.SendMessageAsBot(
             args.Notification.Payload.Event.ToBroadcasterUserLogin,
-            $"@{args.Notification.Payload.Event.FromBroadcasterUserName} just raided with {args.Notification.Payload.Event.Viewers} viewers! Welcome raiders!");
-        
-        // If the raid is from a different channel, send a message to the raider's channel
-        if (args.Notification.Payload.Event.FromBroadcasterUserLogin != args.Notification.Payload.Event.ToBroadcasterUserLogin)
-        {
-            await _twitchChatService.SendMessageAsBot(
-                args.Notification.Payload.Event.FromBroadcasterUserLogin,
-                $"Thank you for the raid, @{args.Notification.Payload.Event.ToBroadcasterUserName}! We appreciate your support!");
-        } 
-
+            $"!so @{args.Notification.Payload.Event.FromBroadcasterUserName} just raided with {args.Notification.Payload.Event.Viewers} viewers! Welcome raiders!");
+            
         await SaveChannelEvent(
             args.Notification.Metadata.MessageId,
             "channel.raid",

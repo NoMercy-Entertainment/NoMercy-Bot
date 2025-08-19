@@ -20,7 +20,10 @@ public enum RewardPermission
 
 public class RewardContext
 {
-    public string Channel { get; set; } = null!;
+    public Channel Channel { get; set; } = null!;
+    public User User { get; set; } = null!;
+    public User Broadcaster { get; set; } = null!;
+    public string ChannelId { get; set; } = null!;
     public string BroadcasterId { get; set; } = null!;
     public Guid RewardId { get; set; }
     public string RewardTitle { get; set; } = null!;
@@ -172,6 +175,11 @@ public class TwitchRewardService
             User? user = _appDbContext.Users.FirstOrDefault(u => u.Id == args.Notification.Payload.Event.UserId);
             user ??= await _twitchApiService.FetchUser(id: args.Notification.Payload.Event.UserId);
             
+            User? broadcaster = _appDbContext.Users.FirstOrDefault(u => u.Id == broadcasterId);
+            broadcaster ??= await _twitchApiService.FetchUser(id: broadcasterId);
+            
+            Channel? channel = _appDbContext.Channels.FirstOrDefault(c => c.Id == broadcasterId);
+            
             string userType = DetermineUserType(user, broadcasterId);
             
             if (!_permissionService.HasMinLevel(userType, reward.Permission.ToString().ToLowerInvariant()))
@@ -191,7 +199,9 @@ public class TwitchRewardService
             
             RewardContext context = new()
             {
-                Channel = broadcasterLogin,
+                Channel = channel,
+                User = user,
+                Broadcaster = broadcaster,
                 BroadcasterId = broadcasterId,
                 RewardId = reward.RewardId, // Use the Guid from our reward
                 RewardTitle = rewardTitle,

@@ -72,6 +72,7 @@ public class RewardScriptLoader
                         RewardId = ctx.RewardId,
                         RewardTitle = ctx.RewardTitle,
                         RedemptionId = ctx.RedemptionId,
+                        User = ctx.User,
                         UserId = ctx.UserId,
                         UserLogin = ctx.UserLogin,
                         UserDisplayName = ctx.UserDisplayName,

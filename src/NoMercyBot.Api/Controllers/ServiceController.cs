@@ -159,7 +159,7 @@ public class ServiceController : BaseController
         
         await _dbContext.Configurations.Upsert(new()
             {
-                Key = "discord_session_token",
+                Key = "_DiscordSessionToken",
                 SecureValue = token
             })
             .On(x => x.Key)
@@ -175,6 +175,59 @@ public class ServiceController : BaseController
             message = "Discord session token updated successfully"
         });
     }
+    
+    [HttpPost("azure-tts-endpoint")]
+    public async Task<IActionResult> SetAzureTtsEndpoint([FromBody] string? endpoint)
+    {
+        if (string.IsNullOrWhiteSpace(endpoint))
+        {
+            return BadRequest("Azure TTS endpoint cannot be empty");
+        }
+        await _dbContext.Configurations.Upsert(new()
+            {
+                Key = "azure_tts_endpoint",
+                SecureValue = endpoint
+            })
+            .On(x => x.Key)
+            .WhenMatched((oldConfig, newConfig) => new()
+            {
+                Key = oldConfig.Key,
+                SecureValue = newConfig.SecureValue 
+            })
+            .RunAsync();
+        return Ok(new
+        {
+            message = "Azure TTS endpoint updated successfully"
+        });
+    }
+    
+    [HttpPost("azure-tts-api-key")]
+    public async Task<IActionResult> SetAzureTtsToken([FromBody] string? key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return BadRequest("Azure TTS API key cannot be empty");
+        }
+        
+        await _dbContext.Configurations.Upsert(new()
+            {
+                Key = "azure_tts_api_key",
+                SecureValue = key
+            })
+            .On(x => x.Key)
+            .WhenMatched((oldConfig, newConfig) => new()
+            {
+                Key = oldConfig.Key,
+                SecureValue = newConfig.SecureValue 
+            })
+            .RunAsync();
+        
+        return Ok(new
+        {
+            message = "Azure TTS API key updated successfully"
+        });
+    }
+    
 }
 
 public class ServiceUpdateRequest

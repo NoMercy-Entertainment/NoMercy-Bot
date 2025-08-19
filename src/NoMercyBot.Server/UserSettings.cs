@@ -8,7 +8,7 @@ namespace NoMercyBot.Server;
 
 public static class UserSettings
 {
-    public static bool TryGetUserSettings(out Dictionary<string, string> settings)
+    public static bool TryGetUserSettings(out Dictionary<string, (string, string)> settings)
     {
         settings = new();
 
@@ -19,7 +19,7 @@ public static class UserSettings
                 .Where(configuration => string.IsNullOrWhiteSpace(configuration.SecureValue) && string.IsNullOrEmpty(configuration.Value))
                 .ToList();
 
-            foreach (Configuration? config in configuration) settings[config.Key] = config.Value;
+            foreach (Configuration? config in configuration) settings[config.Key] = (config.Value, config.SecureValue);
 
             return true;
         }
@@ -29,62 +29,68 @@ public static class UserSettings
         }
     }
 
-    public static void ApplySettings(Dictionary<string, string> settings)
+    public static void ApplySettings(Dictionary<string, (string value, string secureValue)> settings)
     {
-        foreach (KeyValuePair<string, string> setting in settings)
+        foreach (KeyValuePair<string, (string value, string secureValue)> setting in settings)
         {
-            Logger.App($"Configuration: {setting.Key} = {setting.Value}");
+            Logger.App($"Configuration: {setting.Key} = {setting.Value.value}");
             switch (setting.Key)
             {
                 case "internalPort":
-                    Config.InternalServerPort = int.Parse(setting.Value);
+                    Config.InternalServerPort = int.Parse(setting.Value.value);
                     break;
                 case "queueRunners":
-                    Config.QueueWorkers = new(Config.QueueWorkers.Key, setting.Value.ToInt());
-                    // await QueueRunner.SetWorkerCount(Config.QueueWorkers.Key, setting.Value.ToInt());
+                    Config.QueueWorkers = new(Config.QueueWorkers.Key, setting.Value.value.ToInt());
+                    // await QueueRunner.SetWorkerCount(Config.QueueWorkers.Key, setting.Value.value.ToInt());
                     break;
                 case "cronRunners":
-                    Config.CronWorkers = new(Config.CronWorkers.Key, setting.Value.ToInt());
-                    // await QueueRunner.SetWorkerCount(Config.CronWorkers.Key, setting.Value.ToInt());
+                    Config.CronWorkers = new(Config.CronWorkers.Key, setting.Value.value.ToInt());
+                    // await QueueRunner.SetWorkerCount(Config.CronWorkers.Key, setting.Value.value.ToInt());
                     break;
                 case "swagger":
-                    Config.Swagger = setting.Value.ToBoolean();
+                    Config.Swagger = setting.Value.value.ToBoolean();
                     break;
                 case "DnsServer":
                     // Config.DnsServer is readonly, cannot set
                     break;
                 case "InternalClientPort":
-                    Config.InternalClientPort = int.Parse(setting.Value);
+                    Config.InternalClientPort = int.Parse(setting.Value.value);
                     break;
                 case "QueueWorkers":
-                    Config.QueueWorkers = new(Config.QueueWorkers.Key, setting.Value.ToInt());
+                    Config.QueueWorkers = new(Config.QueueWorkers.Key, setting.Value.value.ToInt());
                     break;
                 case "CronWorkers":
-                    Config.CronWorkers = new(Config.CronWorkers.Key, setting.Value.ToInt());
+                    Config.CronWorkers = new(Config.CronWorkers.Key, setting.Value.value.ToInt());
                     break;
                 case "UseTts":
-                    Config.UseTts = setting.Value.ToBoolean();
+                    Config.UseTts = setting.Value.value.ToBoolean();
                     break;
                 case "SaveTtsToDisk":
-                    Config.SaveTtsToDisk = setting.Value.ToBoolean();
+                    Config.SaveTtsToDisk = setting.Value.value.ToBoolean();
                     break;
                 case "UseFrankerfacezEmotes":
-                    Config.UseFrankerfacezEmotes = setting.Value.ToBoolean();
+                    Config.UseFrankerfacezEmotes = setting.Value.value.ToBoolean();
                     break;
                 case "UseBttvEmotes":
-                    Config.UseBttvEmotes = setting.Value.ToBoolean();
+                    Config.UseBttvEmotes = setting.Value.value.ToBoolean();
                     break;
                 case "UseSevenTvEmotes":
-                    Config.UseSevenTvEmotes = setting.Value.ToBoolean();
+                    Config.UseSevenTvEmotes = setting.Value.value.ToBoolean();
                     break;
                 case "UseChatCodeSnippets":
-                    Config.UseChatCodeSnippets = setting.Value.ToBoolean();
+                    Config.UseChatCodeSnippets = setting.Value.value.ToBoolean();
                     break;
                 case "UseChatHtmlParser":
-                    Config.UseChatHtmlParser = setting.Value.ToBoolean();
+                    Config.UseChatHtmlParser = setting.Value.value.ToBoolean();
                     break;
                 case "UseChatOgParser":
-                    Config.UseChatOgParser = setting.Value.ToBoolean();
+                    Config.UseChatOgParser = setting.Value.value.ToBoolean();
+                    break;
+                case "_AzureTtsApiKey":
+                    Config.AzureTtsApiKey = setting.Value.secureValue;
+                    break;
+                case "_AzureTtsEndpoint":
+                    Config.AzureTtsEndpoint = setting.Value.secureValue;
                     break;
             }
         }

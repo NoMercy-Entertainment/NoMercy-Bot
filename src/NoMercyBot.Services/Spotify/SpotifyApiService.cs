@@ -211,10 +211,27 @@ public class SpotifyApiService
         throw new InvalidOperationException("Could not add item to queue on Spotify.");
     }
     
-    public async Task<QueueResponse> GetQueue()
+    public async Task<SpotifyQueueResponse?> GetQueue()
     {
         _logger.LogInformation("Fetching current playlist from Spotify...");
-        return await SpotifyClient.Player.GetQueue();
+        _logger.LogInformation("Fetching currently playing track from Spotify...");
+        
+        RestClient client = new(SpotifyConfig.ApiUrl);
+        
+        RestRequest request = new("/me/player/queue");
+        request.AddHeader("Authorization", $"Bearer {Service.AccessToken}");
+        request.AddHeader("Content-Type", "application/json");
+        
+        RestResponse response = await client.ExecuteAsync(request);
+        if (!response.IsSuccessful)
+        {
+            _logger.LogError("Failed to fetch currently playing track: {StatusCode} - {Content}", response.StatusCode, response.Content);
+            throw new InvalidOperationException("Could not retrieve currently playing track from Spotify.");
+        }
+        
+        SpotifyQueueResponse? queue = response.Content?.FromJson<SpotifyQueueResponse>();
+        
+        return queue;
     }
     
     public async Task<object> GetDevices()
@@ -300,6 +317,27 @@ public class SpotifyApiService
             throw new("Invalid response from Spotify.");
         
         return meResponse;
+    }
+    
+    public async Task<FullPlaylist?> GetPlaylist(string playlistId)
+    {
+        if (string.IsNullOrEmpty(playlistId))
+        {
+            throw new ArgumentException("Playlist ID cannot be null or empty.", nameof(playlistId));
+        }
+        
+        _logger.LogInformation("Fetching playlist information for playlist ID: {PlaylistId}", playlistId);
+        
+        try
+        {
+            FullPlaylist playlist = await SpotifyClient.Playlists.Get(playlistId);
+            return playlist;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch playlist information for playlist ID: {PlaylistId}", playlistId);
+            return null;
+        }
     }
     
     public void Dispose()
