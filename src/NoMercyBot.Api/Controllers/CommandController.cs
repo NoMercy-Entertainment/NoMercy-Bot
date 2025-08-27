@@ -41,7 +41,8 @@ public class CommandController : ControllerBase
             return Conflict("Command with this name already exists.");
         _dbContext.Commands.Add(command);
         await _dbContext.SaveChangesAsync();
-        await _commandService.AddOrUpdateUserCommandAsync(command.Name, command.Response, command.Permission, command.Type, command.IsEnabled, command.Description);
+        await _commandService.AddOrUpdateUserCommandAsync(command.Name, command.Response, command.Permission,
+            command.Type, command.IsEnabled, command.Description);
         return CreatedAtAction(nameof(Get), new { name = command.Name }, command);
     }
 
@@ -59,7 +60,8 @@ public class CommandController : ControllerBase
         dbCommand.IsEnabled = command.IsEnabled;
         dbCommand.Description = command.Description;
         await _dbContext.SaveChangesAsync();
-        await _commandService.AddOrUpdateUserCommandAsync(dbCommand.Name, dbCommand.Response, dbCommand.Permission, dbCommand.Type, dbCommand.IsEnabled, dbCommand.Description);
+        await _commandService.AddOrUpdateUserCommandAsync(dbCommand.Name, dbCommand.Response, dbCommand.Permission,
+            dbCommand.Type, dbCommand.IsEnabled, dbCommand.Description);
         return Ok(dbCommand);
     }
 
@@ -74,4 +76,3 @@ public class CommandController : ControllerBase
         return NoContent();
     }
 }
-

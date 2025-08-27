@@ -10,15 +10,17 @@ namespace NoMercyBot.Database.Models;
 public class Command : Timestamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    [JsonProperty("id")] public int Id { get; set; }
+    [JsonProperty("id")]
+    public int Id { get; set; }
 
     [Required]
     [MaxLength(100)]
-    [JsonProperty("name")] public string Name { get; set; } = null!;
+    [JsonProperty("name")]
+    public string Name { get; set; } = null!;
+
     [JsonProperty("permission")] public string Permission { get; set; } = "everyone";
     [JsonProperty("type")] public string Type { get; set; } = "command";
     [JsonProperty("response")] public string Response { get; set; } = null!;
     [JsonProperty("is_enabled")] public bool IsEnabled { get; set; } = true;
     [JsonProperty("description")] public string? Description { get; set; }
 }
-

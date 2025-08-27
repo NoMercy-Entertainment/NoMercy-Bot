@@ -15,11 +15,10 @@ public static class Info
     public static readonly DateTime StartTime = DateTime.UtcNow;
     public static readonly string ExecSuffix = Platform == "windows" ? ".exe" : "";
     public static readonly string IconSuffix = Platform == "windows" ? ".ico" : Platform == "macos" ? ".icns" : ".png";
-    
+
     public static string UserId { get; set; } = string.Empty;
     public static string UserName { get; set; } = string.Empty;
-    
+
     public static string BotUserId { get; set; } = string.Empty;
     public static string BotUserName { get; set; } = string.Empty;
-    
 }

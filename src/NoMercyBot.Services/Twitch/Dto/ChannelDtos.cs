@@ -3,7 +3,6 @@ using TwitchLib.Api.Helix.Models.Chat.Badges;
 
 namespace NoMercyBot.Services.Twitch.Dto;
 
-
 public class ChannelResponse
 {
     [JsonProperty("data")] public List<ChannelData> Data { get; set; } = [];

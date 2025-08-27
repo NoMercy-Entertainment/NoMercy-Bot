@@ -7,7 +7,6 @@ public class TokenParamAuthMiddleware(RequestDelegate next)
 {
     public async Task InvokeAsync(HttpContext context)
     {
-
         if (context.Request.Query.ContainsKey("token") || context.Request.Query.ContainsKey("access_token"))
         {
             string jwt = context.Request.Query

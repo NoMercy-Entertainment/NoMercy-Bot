@@ -20,7 +20,8 @@ public class WidgetController : BaseController
     private readonly IWidgetScaffoldService _scaffoldService;
     private readonly IWidgetEventService _widgetEventService;
 
-    public WidgetController(AppDbContext dbContext, IWidgetEventService widgetEventService, IWidgetScaffoldService scaffoldService)
+    public WidgetController(AppDbContext dbContext, IWidgetEventService widgetEventService,
+        IWidgetScaffoldService scaffoldService)
     {
         _dbContext = dbContext;
         _scaffoldService = scaffoldService;
@@ -56,10 +57,7 @@ public class WidgetController : BaseController
         Widget? widget = await _dbContext.Widgets
             .FirstOrDefaultAsync(w => w.Id == id);
 
-        if (widget == null)
-        {
-            return NotFound(new { message = "Widget not found" });
-        }
+        if (widget == null) return NotFound(new { message = "Widget not found" });
 
         return Ok(new WidgetDto
         {
@@ -79,20 +77,16 @@ public class WidgetController : BaseController
     [HttpPost]
     public async Task<IActionResult> CreateWidget([FromBody] CreateWidgetRequest request)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
+        if (!ModelState.IsValid) return BadRequest(ModelState);
 
         // Validate framework
         if (!await _scaffoldService.ValidateFrameworkAsync(request.Framework))
-        {
-            return BadRequest(new { 
-                message = "Unsupported framework", 
+            return BadRequest(new
+            {
+                message = "Unsupported framework",
                 framework = request.Framework,
                 supportedFrameworks = _scaffoldService.GetSupportedFrameworks()
             });
-        }
 
         Ulid widgetId = Ulid.NewUlid();
 
@@ -115,17 +109,15 @@ public class WidgetController : BaseController
 
             // Use framework-specific scaffolding instead of basic HTML template
             bool scaffoldSuccess = await _scaffoldService.CreateWidgetScaffoldAsync(
-                widgetId, 
-                request.Name, 
-                request.Framework, 
+                widgetId,
+                request.Name,
+                request.Framework,
                 request.Settings
             );
 
             if (!scaffoldSuccess)
-            {
                 throw new InvalidOperationException($"Failed to create {request.Framework} scaffold for widget");
-            }
-            
+
             await _scaffoldService.SaveConfigurationFileAsync(widget);
 
             // Add to database
@@ -165,18 +157,12 @@ public class WidgetController : BaseController
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateWidget(Ulid id, [FromBody] UpdateWidgetRequest request)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
+        if (!ModelState.IsValid) return BadRequest(ModelState);
 
         Widget? widget = await _dbContext.Widgets
             .FirstOrDefaultAsync(w => w.Id == id);
 
-        if (widget == null)
-        {
-            return NotFound(new { message = "Widget not found" });
-        }
+        if (widget == null) return NotFound(new { message = "Widget not found" });
 
         // Update only provided properties
         if (request.Name != null) widget.Name = request.Name;
@@ -190,9 +176,9 @@ public class WidgetController : BaseController
         try
         {
             await _dbContext.SaveChangesAsync();
-            
+
             await _scaffoldService.SaveConfigurationFileAsync(widget);
-            
+
             await _widgetEventService.NotifyWidgetReloadAsync(widget.Id);
             return Ok(new WidgetDto
             {
@@ -224,10 +210,7 @@ public class WidgetController : BaseController
         Widget? widget = await _dbContext.Widgets
             .FirstOrDefaultAsync(w => w.Id == id);
 
-        if (widget == null)
-        {
-            return NotFound(new { message = "Widget not found" });
-        }
+        if (widget == null) return NotFound(new { message = "Widget not found" });
 
         try
         {
@@ -256,10 +239,7 @@ public class WidgetController : BaseController
         Widget? widget = await _dbContext.Widgets
             .FirstOrDefaultAsync(w => w.Id == id);
 
-        if (widget == null)
-        {
-            return NotFound(new { message = "Widget not found" });
-        }
+        if (widget == null) return NotFound(new { message = "Widget not found" });
 
         widget.IsEnabled = !widget.IsEnabled;
 
@@ -296,16 +276,13 @@ public class WidgetController : BaseController
         Widget? widget = await _dbContext.Widgets
             .FirstOrDefaultAsync(w => w.Id == id);
 
-        if (widget == null)
-        {
-            return NotFound(new { message = "Widget not found" });
-        }
+        if (widget == null) return NotFound(new { message = "Widget not found" });
 
         List<string> currentSubscriptions = widget.EventSubscriptions;
         List<string> newSubscriptions = currentSubscriptions.Union(request.Events).ToList();
-        
+
         widget.EventSubscriptions = newSubscriptions;
-        
+
         try
         {
             await _dbContext.SaveChangesAsync();
@@ -327,16 +304,13 @@ public class WidgetController : BaseController
         Widget? widget = await _dbContext.Widgets
             .FirstOrDefaultAsync(w => w.Id == id);
 
-        if (widget == null)
-        {
-            return NotFound(new { message = "Widget not found" });
-        }
+        if (widget == null) return NotFound(new { message = "Widget not found" });
 
         List<string> currentSubscriptions = widget.EventSubscriptions;
         List<string> newSubscriptions = currentSubscriptions.Except(request.Events).ToList();
-        
+
         widget.EventSubscriptions = newSubscriptions;
-        
+
         try
         {
             await _dbContext.SaveChangesAsync();
@@ -358,10 +332,7 @@ public class WidgetController : BaseController
         Widget? widget = await _dbContext.Widgets
             .FirstOrDefaultAsync(w => w.Id == id);
 
-        if (widget == null)
-        {
-            return NotFound(new { message = "Widget not found" });
-        }
+        if (widget == null) return NotFound(new { message = "Widget not found" });
 
         return Ok(new { events = widget.EventSubscriptions });
     }

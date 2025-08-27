@@ -24,7 +24,8 @@ public class WidgetHub : Hub
         await Groups.AddToGroupAsync(Context.ConnectionId, $"widget-{widgetId}");
         _logger.LogDebug("Connection {ConnectionId} joined widget group {WidgetId}", Context.ConnectionId, widgetId);
 
-        await Task.Delay(5000).ContinueWith(async _ => {
+        await Task.Delay(5000).ContinueWith(async _ =>
+        {
             await _widgetEventService.PublishEventAsync("spotify.state.changed", _spotifyApiService.SpotifyState);
         });
     }

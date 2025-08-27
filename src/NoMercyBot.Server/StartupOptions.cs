@@ -10,7 +10,7 @@ public class StartupOptions
 {
     [Option('i', "internal-port", Required = false, HelpText = "Internal port to use for the server.")]
     public int InternalPort { get; set; }
-    
+
     [Option('l', "loglevel", Required = false, HelpText = "Run the server in development mode.")]
     public string LogLevel { get; set; } = nameof(LogEventLevel.Information);
 

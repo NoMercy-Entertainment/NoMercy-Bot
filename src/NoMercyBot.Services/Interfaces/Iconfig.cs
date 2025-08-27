@@ -5,8 +5,12 @@ namespace NoMercyBot.Services.Interfaces;
 public interface IConfig
 {
     static Service _service { get; }
-    static Service Service() => _service;
-    
+
+    static Service Service()
+    {
+        return _service;
+    }
+
     static bool IsEnabled => true;
     static string ApiUrl { get; }
     static string AuthUrl { get; }

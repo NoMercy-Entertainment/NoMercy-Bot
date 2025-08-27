@@ -9,61 +9,80 @@ using TwitchLib.EventSub.Websockets.Core.Models;
 namespace NoMercyBot.Database.Models.ChatMessage;
 
 [PrimaryKey(nameof(Id))]
-public class ChatMessage: Timestamps
+public class ChatMessage : Timestamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
-    [JsonProperty("id")] [MaxLength(255)] public string Id { get; set; } = null!;
-    
+    [JsonProperty("id")]
+    [MaxLength(255)]
+    public string Id { get; set; } = null!;
+
     [JsonProperty("is_command")] public bool IsCommand { get; set; }
-    
+
     [JsonProperty("is_cheer")] public bool IsCheer { get; set; }
-    [JsonProperty("bits_amount", NullValueHandling = NullValueHandling.Ignore)] public int? BitsAmount { get; set; }
+
+    [JsonProperty("bits_amount", NullValueHandling = NullValueHandling.Ignore)]
+    public int? BitsAmount { get; set; }
+
     [JsonProperty("is_highlighted")] public bool IsHighlighted { get; set; }
-    
-    [JsonProperty("color_hex", NullValueHandling = NullValueHandling.Ignore)] public string ColorHex { get; set; } = null!;
+
+    [JsonProperty("color_hex", NullValueHandling = NullValueHandling.Ignore)]
+    public string ColorHex { get; set; } = null!;
+
     [JsonProperty("badges")] public List<ChatBadge> Badges { get; set; } = [];
-    
+
     [MaxLength(50)]
     [ForeignKey(nameof(User))]
-    [JsonProperty("user_id")] public string UserId { get; set; } = null!;
+    [JsonProperty("user_id")]
+    public string UserId { get; set; } = null!;
+
     [JsonProperty("user_name")] public string Username { get; set; } = null!;
     [JsonProperty("display_name")] public string DisplayName { get; set; } = null!;
     [JsonProperty("user_type")] public string UserType { get; set; } = null!;
     [JsonProperty("user")] public User User { get; set; } = null!;
-    
+
     [JsonProperty("channel_id")] public string? BroadcasterId { get; set; }
     [JsonProperty("broadcaster")] public User Broadcaster { get; set; } = new();
-    
+
     [JsonProperty("message")] public string Message { get; set; } = null!;
     [JsonProperty("fragments")] public List<ChatMessageFragment> Fragments { get; set; } = [];
-    [JsonProperty("message_node", NullValueHandling = NullValueHandling.Ignore)] public MessageNode? MessageNode { get; set; }
-    
-    [JsonProperty("tmi_sent_ts")] public string TmiSentTs { get; set; } = null!;
-    
-    [JsonProperty("is_command_successful_reply", NullValueHandling = NullValueHandling.Ignore)] public string? SuccessfulReply { get; set; }
-    [JsonProperty("reply_to_message_id", NullValueHandling = NullValueHandling.Ignore)] public string? ReplyToMessageId { get; set; }
-    [ForeignKey(nameof(ReplyToMessageId))]
-    [JsonProperty("reply_to_message", NullValueHandling = NullValueHandling.Ignore)] public virtual ChatMessage? ReplyToMessage { get; set; }
 
-    [JsonProperty("replies", NullValueHandling = NullValueHandling.Ignore)] public virtual ICollection<ChatMessage> Replies { get; set; } = [];
-    [JsonProperty("deleted_at", NullValueHandling = NullValueHandling.Ignore)] public DateTime? DeletedAt { get; set; }
-    
+    [JsonProperty("message_node", NullValueHandling = NullValueHandling.Ignore)]
+    public MessageNode? MessageNode { get; set; }
+
+    [JsonProperty("tmi_sent_ts")] public string TmiSentTs { get; set; } = null!;
+
+    [JsonProperty("is_command_successful_reply", NullValueHandling = NullValueHandling.Ignore)]
+    public string? SuccessfulReply { get; set; }
+
+    [JsonProperty("reply_to_message_id", NullValueHandling = NullValueHandling.Ignore)]
+    public string? ReplyToMessageId { get; set; }
+
+    [ForeignKey(nameof(ReplyToMessageId))]
+    [JsonProperty("reply_to_message", NullValueHandling = NullValueHandling.Ignore)]
+    public virtual ChatMessage? ReplyToMessage { get; set; }
+
+    [JsonProperty("replies", NullValueHandling = NullValueHandling.Ignore)]
+    public virtual ICollection<ChatMessage> Replies { get; set; } = [];
+
+    [JsonProperty("deleted_at", NullValueHandling = NullValueHandling.Ignore)]
+    public DateTime? DeletedAt { get; set; }
+
     [JsonProperty("stream_id")] public string? StreamId { get; set; }
     [JsonProperty("stream")] public Stream? Stream { get; set; }
 
     public ChatMessage()
     {
-        
     }
-    
-    public ChatMessage(EventSubNotification<ChannelChatMessage> payloadEvent, Stream? currentStream, User user, User broadcaster)
+
+    public ChatMessage(EventSubNotification<ChannelChatMessage> payloadEvent, Stream? currentStream, User user,
+        User broadcaster)
     {
         User = user;
         UserId = payloadEvent.Payload.Event.ChatterUserId;
         Broadcaster = broadcaster;
         BroadcasterId = payloadEvent.Payload.Event.BroadcasterUserId;
         StreamId = currentStream?.Id;
-        
+
         Id = payloadEvent.Payload.Event.MessageId;
         Username = payloadEvent.Payload.Event.ChatterUserLogin;
         DisplayName = payloadEvent.Payload.Event.ChatterUserName;
@@ -71,12 +90,19 @@ public class ChatMessage: Timestamps
         IsHighlighted = payloadEvent.Payload.Event.MessageType == "channel_points_highlighted";
         IsCheer = payloadEvent.Payload.Event.Cheer != null;
         BitsAmount = payloadEvent.Payload.Event.Cheer?.Bits;
-        
+
         ColorHex = payloadEvent.Payload.Event.Color;
         Badges = GetBadges(payloadEvent);
         Fragments = MakeFragments(payloadEvent);
-        ReplyToMessageId = payloadEvent.Payload.Event.Reply?.ParentMessageId;
-        TmiSentTs = payloadEvent.Metadata.MessageTimestamp.Date.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
+        
+        // TODO: replace this!
+        using AppDbContext dbContext = new();
+        bool hasOriginMessage = payloadEvent.Payload.Event.Reply?.ParentMessageId is not null && dbContext.ChatMessages
+            .Any(m => m.Id == payloadEvent.Payload.Event.Reply.ParentMessageId);
+        
+        ReplyToMessageId = hasOriginMessage ? payloadEvent.Payload.Event.Reply?.ParentMessageId : null;
+        TmiSentTs = payloadEvent.Metadata.MessageTimestamp.Date.ToString("yyyy-MM-ddTHH:mm:ss.fffZ",
+            CultureInfo.InvariantCulture);
         UserType = GetUserType(payloadEvent);
     }
 
@@ -96,8 +122,8 @@ public class ChatMessage: Timestamps
     private List<ChatMessageFragment> MakeFragments(EventSubNotification<ChannelChatMessage> payloadEvent)
     {
         List<ChatMessageFragment> fragments = payloadEvent.Payload.Event.Message.Fragments
-                .Select(fragment => new ChatMessageFragment(fragment))
-                .ToList();
+            .Select(fragment => new ChatMessageFragment(fragment))
+            .ToList();
 
         return fragments;
     }
@@ -111,6 +137,4 @@ public class ChatMessage: Timestamps
         if (payloadEvent.Payload.Event.IsSubscriber) return "Subscriber";
         return "Viewer";
     }
-    
 }
-

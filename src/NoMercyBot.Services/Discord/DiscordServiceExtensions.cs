@@ -10,7 +10,7 @@ public static class DiscordServiceExtensions
         services.AddSingleton<DiscordApiService>();
         services.AddSingleton<DiscordAuthService>();
         services.AddSingleton<IAuthService>(sp => sp.GetRequiredService<DiscordAuthService>());
-        
+
         return services;
     }
 }

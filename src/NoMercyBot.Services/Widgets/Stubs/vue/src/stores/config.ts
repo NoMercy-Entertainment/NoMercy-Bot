@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import {ref} from 'vue';
 
 // Type definitions matching your chat overlay settings
 interface WidgetSettings {
@@ -11,8 +11,7 @@ const getWidgetSettings = (): WidgetSettings => {
     }
 
     // Fallback defaults matching your ChatOverlay
-    return {
-    };
+    return {};
 }
 
 // Reactive settings store
@@ -20,11 +19,11 @@ const widgetSettings = ref<WidgetSettings>(getWidgetSettings());
 
 // Function to update settings (for hot-reload via SignalR)
 export const updateWidgetSettings = (newSettings: Partial<WidgetSettings>) => {
-    widgetSettings.value = { ...widgetSettings.value, ...newSettings };
+    widgetSettings.value = {...widgetSettings.value, ...newSettings};
 };
 
 // Export the entire settings object for direct access
-export { widgetSettings };
+export {widgetSettings};
 
 // Widget metadata from global variables
 export const widgetId = typeof window !== 'undefined' ? window.WIDGET_ID || '{{WIDGET_ID}}' : '{{WIDGET_ID}}';

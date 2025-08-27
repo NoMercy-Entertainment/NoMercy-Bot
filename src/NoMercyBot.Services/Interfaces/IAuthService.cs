@@ -9,13 +9,13 @@ public interface IAuthService
 
     public Service Service { get; }
     Dictionary<string, string> AvailableScopes => [];
-    
+
     Task<(User, TokenResponse)> Callback(string code);
     Task<(User, TokenResponse)> ValidateToken(string accessToken);
     Task<(User, TokenResponse)> RefreshToken(string refreshToken);
     Task RevokeToken(string accessToken);
     string GetRedirectUrl();
     Task<DeviceCodeResponse> Authorize(string[]? scopes = null);
-    Task StoreTokens(TokenResponse tokenResponse, User user); 
+    Task StoreTokens(TokenResponse tokenResponse, User user);
     Task<bool> ConfigureService(ProviderConfigRequest config);
 }

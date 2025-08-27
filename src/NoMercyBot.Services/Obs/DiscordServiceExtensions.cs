@@ -10,7 +10,7 @@ public static class ObsServiceExtensions
         services.AddSingleton<ObsApiService>();
         services.AddSingleton<ObsAuthService>();
         services.AddSingleton<IAuthService>(sp => sp.GetRequiredService<ObsAuthService>());
-        
+
         return services;
     }
 }

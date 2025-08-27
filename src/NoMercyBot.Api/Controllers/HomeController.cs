@@ -24,5 +24,4 @@ public class HomeController : BaseController
             Timestamp = DateTime.UtcNow
         });
     }
-
 }

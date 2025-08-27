@@ -17,7 +17,7 @@ public class AppDbContext : DbContext
     public AppDbContext()
     {
     }
-    
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         if (optionsBuilder.IsConfigured) return;
@@ -45,7 +45,7 @@ public class AppDbContext : DbContext
             .Where(p => p.ClrType == typeof(Ulid))
             .ToList()
             .ForEach(p => p.SetElementType(typeof(string)));
-        
+
         modelBuilder.Model.GetEntityTypes()
             .SelectMany(t => t.GetProperties())
             .Where(p => p.Name is "CreatedAt" or "UpdatedAt")
@@ -57,43 +57,43 @@ public class AppDbContext : DbContext
             .Where(p => p.ClrType == typeof(DateTime))
             .ToList()
             .ForEach(p => p.SetDefaultValue(null));
-        
+
         modelBuilder.Model.GetEntityTypes()
             .SelectMany(t => t.GetForeignKeys())
             .ToList()
             .ForEach(p => p.DeleteBehavior = DeleteBehavior.Cascade);
-        
+
         // Make sure to encrypt and decrypt the access and refresh tokens
         modelBuilder.Entity<Service>()
             .Property(e => e.AccessToken)
             .HasConversion(
                 v => TokenStore.EncryptToken(v),
-                v =>  TokenStore.DecryptToken(v));
-        
+                v => TokenStore.DecryptToken(v));
+
         modelBuilder.Entity<Service>()
             .Property(e => e.RefreshToken)
             .HasConversion(
                 v => TokenStore.EncryptToken(v),
-                v =>  TokenStore.DecryptToken(v));
-        
+                v => TokenStore.DecryptToken(v));
+
         modelBuilder.Entity<Service>()
             .Property(e => e.ClientId)
             .HasConversion(
                 v => TokenStore.EncryptToken(v),
-                v =>  TokenStore.DecryptToken(v));
-        
+                v => TokenStore.DecryptToken(v));
+
         modelBuilder.Entity<Service>()
             .Property(e => e.ClientSecret)
             .HasConversion(
                 v => TokenStore.EncryptToken(v),
-                v =>  TokenStore.DecryptToken(v));
-        
+                v => TokenStore.DecryptToken(v));
+
         modelBuilder.Entity<ChatMessage>()
             .HasOne(m => m.ReplyToMessage)
             .WithMany(m => m.Replies)
             .HasForeignKey(m => m.ReplyToMessageId)
             .OnDelete(DeleteBehavior.Restrict);
-        
+
         modelBuilder.Entity<ChatMessage>()
             .Property(e => e.Badges)
             .HasConversion(
@@ -105,43 +105,43 @@ public class AppDbContext : DbContext
             .HasConversion(
                 v => JsonConvert.SerializeObject(v),
                 v => JsonConvert.DeserializeObject<List<ChatMessageFragment>>(v) ?? new List<ChatMessageFragment>());
-        
+
         modelBuilder.Entity<ChatEmote>()
             .Property(e => e.Urls)
             .HasConversion(
                 v => JsonConvert.SerializeObject(v),
                 v => JsonConvert.DeserializeObject<Dictionary<string, Uri>>(v) ?? new Dictionary<string, Uri>());
-        
+
         modelBuilder.Entity<ChannelInfo>()
             .Property(e => e.Tags)
             .HasConversion(
                 v => JsonConvert.SerializeObject(v),
                 v => JsonConvert.DeserializeObject<List<string>>(v) ?? new List<string>());
-        
+
         modelBuilder.Entity<ChannelInfo>()
             .Property(e => e.ContentLabels)
             .HasConversion(
                 v => JsonConvert.SerializeObject(v),
                 v => JsonConvert.DeserializeObject<List<string>>(v) ?? new List<string>());
-        
+
         modelBuilder.Entity<EventSubscription>()
             .Property(e => e.Metadata)
             .HasConversion(
                 v => JsonConvert.SerializeObject(v),
                 v => JsonConvert.DeserializeObject<Dictionary<string, string>>(v) ?? new Dictionary<string, string>());
-        
+
         modelBuilder.Entity<EventSubscription>()
             .Property(e => e.Condition)
             .HasConversion(
                 v => JsonConvert.SerializeObject(v),
                 v => JsonConvert.DeserializeObject<string[]>(v) ?? Array.Empty<string>());
-        
+
         modelBuilder.Entity<User>()
             .Property(e => e.Pronoun)
             .HasConversion(
                 v => JsonConvert.SerializeObject(v),
                 v => JsonConvert.DeserializeObject<Pronoun>(v) ?? new Pronoun());
-        
+
         // Configure the ChatPresence-User (as Channel) relationship
         modelBuilder.Entity<ChatPresence>()
             .HasOne(cp => cp.Channel)
@@ -155,7 +155,7 @@ public class AppDbContext : DbContext
             .WithMany()
             .HasForeignKey(cp => cp.UserId)
             .OnDelete(DeleteBehavior.Restrict);
-        
+
         // Configure the Channel-ChatPresence relationship
         modelBuilder.Entity<Channel>()
             .HasMany(c => c.UsersInChat)
@@ -186,29 +186,29 @@ public class AppDbContext : DbContext
             .HasConversion(
                 v => TokenStore.EncryptToken(v),
                 v => TokenStore.DecryptToken(v));
-        
+
         modelBuilder.Entity<BotAccount>()
             .Property(e => e.TokenExpiry)
             .IsRequired(false);
-        
+
         modelBuilder.Entity<Configuration>()
             .Property(e => e.SecureValue)
             .HasConversion(
                 v => TokenStore.EncryptToken(v),
-                v =>  TokenStore.DecryptToken(v));
-        
+                v => TokenStore.DecryptToken(v));
+
         modelBuilder.Entity<Storage>()
             .Property(e => e.SecureValue)
             .HasConversion(
                 v => TokenStore.EncryptToken(v),
-                v =>  TokenStore.DecryptToken(v));
-        
+                v => TokenStore.DecryptToken(v));
+
         modelBuilder.Entity<ChannelEvent>()
             .Property(e => e.Data)
             .HasConversion(
                 v => JsonConvert.SerializeObject(v),
                 v => JsonConvert.DeserializeObject(v));
-        
+
         base.OnModelCreating(modelBuilder);
     }
 
@@ -227,6 +227,9 @@ public class AppDbContext : DbContext
     public DbSet<ChannelEvent> ChannelEvents { get; set; }
     public DbSet<TtsVoice> TtsVoices { get; set; }
     public DbSet<UserTtsVoice> UserTtsVoices { get; set; }
+    public DbSet<TtsProvider> TtsProviders { get; set; }
+    public DbSet<TtsUsageRecord> TtsUsageRecords { get; set; }
+    public DbSet<TtsCacheEntry> TtsCacheEntries { get; set; }
     public DbSet<Command> Commands { get; set; }
     public DbSet<Reward> Rewards { get; set; }
     public DbSet<Storage> Storages { get; set; }

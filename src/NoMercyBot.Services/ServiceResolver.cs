@@ -18,7 +18,8 @@ public class ServiceResolver
     private readonly AppDbContext _dbContext;
     private readonly TwitchAuthService _twitchAuthService;
 
-    public ServiceResolver(IServiceScopeFactory serviceScopeFactory, ILogger<ServiceResolver> logger, TwitchAuthService twitchAuthService)
+    public ServiceResolver(IServiceScopeFactory serviceScopeFactory, ILogger<ServiceResolver> logger,
+        TwitchAuthService twitchAuthService)
     {
         _scope = serviceScopeFactory.CreateScope();
         _dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -32,11 +33,12 @@ public class ServiceResolver
         Service? service = await _dbContext.Services
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.Name == "Twitch");
-            
+
         if (service != null)
         {
             TwitchConfig._service = service;
-            _logger.LogInformation("Twitch service initialized. Enabled: {Enabled}, UserId: {UserId}, UserName: {UserName}", 
+            _logger.LogInformation(
+                "Twitch service initialized. Enabled: {Enabled}, UserId: {UserId}, UserName: {UserName}",
                 service.Enabled, service.UserId, service.UserName);
         }
         else
@@ -100,14 +102,15 @@ public class ServiceResolver
             }
             else
             {
-                _logger.LogWarning("Bot provider OAuth credentials are invalid or expired. Attempting to refresh token...");
-                
+                _logger.LogWarning(
+                    "Bot provider OAuth credentials are invalid or expired. Attempting to refresh token...");
+
                 (User user, TokenResponse response) = await _twitchAuthService.RefreshToken(botAccount.RefreshToken!);
 
                 botAccount.AccessToken = response.AccessToken;
                 botAccount.RefreshToken = response.RefreshToken;
                 botAccount.TokenExpiry = DateTime.UtcNow.AddSeconds(response.ExpiresIn);
-            
+
                 botAccount.Username = string.IsNullOrWhiteSpace(user.Username)
                     ? botAccount.Username
                     : user.Username;
@@ -119,11 +122,12 @@ public class ServiceResolver
                         AccessToken = newBot.AccessToken,
                         RefreshToken = newBot.RefreshToken,
                         TokenExpiry = newBot.TokenExpiry,
-                        Username = newBot.Username,
+                        Username = newBot.Username
                     })
                     .RunAsync();
-                
-                _logger.LogInformation("Bot provider OAuth credentials refreshed successfully. Username: {Username}", botAccount.Username);
+
+                _logger.LogInformation("Bot provider OAuth credentials refreshed successfully. Username: {Username}",
+                    botAccount.Username);
             }
         }
         else
@@ -134,13 +138,14 @@ public class ServiceResolver
 
     private bool ValidateBotOAuth(BotAccount botAccount)
     {
-        return !string.IsNullOrEmpty(botAccount.AccessToken) && botAccount.TokenExpiry.HasValue && botAccount.TokenExpiry.Value > DateTime.UtcNow;
+        return !string.IsNullOrEmpty(botAccount.AccessToken) && botAccount.TokenExpiry.HasValue &&
+               botAccount.TokenExpiry.Value > DateTime.UtcNow;
     }
 
     public async Task InitializeAllServices()
     {
         _dbContext.ChangeTracker.Clear();
-        
+
         await InitializeTwitch();
         await InitializeBotProvider();
         await InitializeSpotify();

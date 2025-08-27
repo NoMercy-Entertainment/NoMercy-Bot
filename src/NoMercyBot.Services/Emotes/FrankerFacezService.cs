@@ -18,8 +18,10 @@ public class FrankerFacezService : IHostedService
     private readonly TwitchAuthService _twitchAuthService;
     public List<Emoticon> FrankerFacezEmotes { get; private set; } = [];
 
-    public FrankerFacezService(IServiceScopeFactory serviceScopeFactory,  ILogger<FrankerFacezService> logger, TwitchAuthService twitchAuthService)
-    {;
+    public FrankerFacezService(IServiceScopeFactory serviceScopeFactory, ILogger<FrankerFacezService> logger,
+        TwitchAuthService twitchAuthService)
+    {
+        ;
         _scope = serviceScopeFactory.CreateScope();
         _dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
         _logger = logger;
@@ -33,7 +35,7 @@ public class FrankerFacezService : IHostedService
         try
         {
             // Run initialization in background so it doesn't block startup
-            _ = Task.Run(async () => 
+            _ = Task.Run(async () =>
             {
                 try
                 {
@@ -82,12 +84,12 @@ public class FrankerFacezService : IHostedService
                 throw new("Failed to fetch global FFZ emotes");
 
             FrankerFacezResponse? obj = JsonConvert.DeserializeObject<FrankerFacezResponse>(response.Content);
-            
+
             foreach (int setId in obj?.DefaultSets ?? [])
                 if (obj?.Sets.TryGetValue(setId.ToString(), out FrankerFacezSet? set) ?? false)
                     foreach (Emoticon emote in set.Emoticons)
                         FrankerFacezEmotes.Add(emote);
-                        
+
             _logger.LogInformation($"Loaded {FrankerFacezEmotes.Count} global FFZ emotes");
         }
         catch (Exception ex)
@@ -106,14 +108,15 @@ public class FrankerFacezService : IHostedService
             if (!response.IsSuccessful || response.Content == null)
                 return;
 
-            FrankerFacezResponse? frankerFacezResponse = JsonConvert.DeserializeObject<FrankerFacezResponse>(response.Content);
-            
+            FrankerFacezResponse? frankerFacezResponse =
+                JsonConvert.DeserializeObject<FrankerFacezResponse>(response.Content);
+
             if (frankerFacezResponse?.Sets != null)
             {
                 foreach (FrankerFacezSet set in frankerFacezResponse.Sets.Values)
-                    foreach (Emoticon emote in set.Emoticons)
-                        FrankerFacezEmotes.Add(emote);
-                
+                foreach (Emoticon emote in set.Emoticons)
+                    FrankerFacezEmotes.Add(emote);
+
                 _logger.LogInformation($"Loaded {frankerFacezResponse.Sets.Count} FFZ sets for channel {channelName}");
             }
         }

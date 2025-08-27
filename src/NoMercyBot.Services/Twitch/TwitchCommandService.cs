@@ -37,7 +37,9 @@ public class CommandContext
     public required TwitchCommandService CommandService { get; set; } = null!;
     public required TwitchApiService TwitchApiService { get; set; } = null!;
     public required IServiceProvider ServiceProvider { get; set; } = null!;
+    public required TwitchChatService TwitchChatService { get; set; } = null!;
     public CancellationToken CancellationToken { get; set; }
+    public TtsService TtsService { get; set; } = null!;
 }
 
 public class ChatCommand
@@ -56,13 +58,15 @@ public class TwitchCommandService
     private readonly AppDbContext _appDbContext;
     private readonly TwitchChatService _twitchChatService;
     private readonly TwitchApiService _twitchApiService;
+    private readonly TtsService _ttsService;
     private readonly IServiceProvider _serviceProvider;
     private readonly PermissionService _permissionService;
 
     public TwitchCommandService(
-        AppDbContext appDbContext, 
-        TwitchChatService twitchChatService, 
+        AppDbContext appDbContext,
+        TwitchChatService twitchChatService,
         TwitchApiService twitchApiService,
+        TtsService ttsService,
         PermissionService permissionService,
         IServiceScopeFactory scopeFactory,
         ILogger<TwitchCommandService> logger)
@@ -71,6 +75,7 @@ public class TwitchCommandService
         _appDbContext = appDbContext;
         _twitchChatService = twitchChatService;
         _twitchApiService = twitchApiService;
+        _ttsService = ttsService;
         IServiceScope scope = scopeFactory.CreateScope();
         _serviceProvider = scope.ServiceProvider;
         _permissionService = permissionService;
@@ -79,15 +84,24 @@ public class TwitchCommandService
 
     private void LoadCommandsFromDatabase()
     {
-        List<Command> dbCommands = _appDbContext.Commands.Where(c => c.IsEnabled).ToList();
-        foreach (Command dbCommand in dbCommands)
+        lock (_appDbContext)
         {
-            RegisterCommand(new()
+            List<Command> dbCommands = _appDbContext.Commands.Where(c => c.IsEnabled).ToList();
+
+            Parallel.ForEach(dbCommands, (dbCommand, _) =>
             {
-                Name = dbCommand.Name,
-                Permission = Enum.TryParse<CommandPermission>(dbCommand.Permission, true, out CommandPermission perm) ? perm : CommandPermission.Everyone,
-                Type = Enum.TryParse<CommandType>(dbCommand.Type, true, out CommandType type) ? type : CommandType.Command,
-                Callback = async ctx => await ctx.ReplyAsync(dbCommand.Response)
+                RegisterCommand(new()
+                {
+                    Name = dbCommand.Name,
+                    Permission =
+                        Enum.TryParse<CommandPermission>(dbCommand.Permission, true, out CommandPermission perm)
+                            ? perm
+                            : CommandPermission.Everyone,
+                    Type = Enum.TryParse<CommandType>(dbCommand.Type, true, out CommandType type)
+                        ? type
+                        : CommandType.Command,
+                    Callback = async ctx => await ctx.ReplyAsync(dbCommand.Response)
+                });
             });
         }
     }
@@ -95,7 +109,7 @@ public class TwitchCommandService
     public bool RegisterCommand(ChatCommand command)
     {
         Commands.TryAdd(command.Name.ToLowerInvariant(), command);
-        
+
         _logger.LogInformation($"Registered/Updated command: {command.Name}");
         return true;
     }
@@ -111,19 +125,23 @@ public class TwitchCommandService
         return true;
     }
 
-    public IEnumerable<ChatCommand> ListCommands() => Commands.Values;
+    public IEnumerable<ChatCommand> ListCommands()
+    {
+        return Commands.Values;
+    }
 
     public async Task ExecuteCommand(ChatMessage message)
     {
         if (!message.IsCommand || string.IsNullOrWhiteSpace(message.Message))
             return;
-        
+
         ChatMessageFragment commandFragment = message.Fragments.First();
 
         if (Commands.TryGetValue(commandFragment.Command!, out ChatCommand? command))
         {
-            if(!_permissionService.HasMinLevel(message.UserType, command.Permission.ToString().ToLowerInvariant())) return;
-            
+            if (!_permissionService.HasMinLevel(message.UserType, command.Permission.ToString().ToLowerInvariant()))
+                return;
+
             CommandContext context = new()
             {
                 Channel = message.BroadcasterId,
@@ -134,6 +152,8 @@ public class TwitchCommandService
                 CommandService = this,
                 ServiceProvider = _serviceProvider,
                 TwitchApiService = _twitchApiService,
+                TwitchChatService = _twitchChatService,
+                TtsService = _ttsService,
                 DatabaseContext = _appDbContext,
                 ReplyAsync = async (reply) =>
                 {
@@ -150,7 +170,8 @@ public class TwitchCommandService
         }
     }
 
-    public async Task AddOrUpdateUserCommandAsync(string name, string response, string permission = "everyone", string type = "command", bool isEnabled = true, string? description = null)
+    public async Task AddOrUpdateUserCommandAsync(string name, string response, string permission = "everyone",
+        string type = "command", bool isEnabled = true, string? description = null)
     {
         Command? dbCommand = await _appDbContext.Commands.FirstOrDefaultAsync(c => c.Name == name);
         if (dbCommand == null)
@@ -176,14 +197,18 @@ public class TwitchCommandService
             dbCommand.Description = description;
             _appDbContext.Commands.Update(dbCommand);
         }
-        
+
         await _appDbContext.SaveChangesAsync();
-        
+
         RegisterCommand(new()
         {
             Name = dbCommand.Name,
-            Permission = Enum.TryParse<CommandPermission>(dbCommand.Permission, true, out CommandPermission perm) ? perm : CommandPermission.Everyone,
-            Type = Enum.TryParse<CommandType>(dbCommand.Type, true, out CommandType commandType) ? commandType : CommandType.Command,
+            Permission = Enum.TryParse<CommandPermission>(dbCommand.Permission, true, out CommandPermission perm)
+                ? perm
+                : CommandPermission.Everyone,
+            Type = Enum.TryParse<CommandType>(dbCommand.Type, true, out CommandType commandType)
+                ? commandType
+                : CommandType.Command,
             Callback = async ctx => await ctx.ReplyAsync(dbCommand.Response)
         });
     }

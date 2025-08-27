@@ -21,6 +21,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Commands", "%APPDATA%\..\Lo
 		skip.cs = C:\Users\patri\AppData\Local\NoMercyBot\commands\skip.cs
 		volume.cs = C:\Users\patri\AppData\Local\NoMercyBot\commands\volume.cs
 		
+		voice.cs = C:\Users\patri\AppData\Local\NoMercyBot\commands\voice.cs
 		whitelist.cs = C:\Users\patri\AppData\Local\NoMercyBot\commands\whitelist.cs
 		unwhitelist.cs = C:\Users\patri\AppData\Local\NoMercyBot\commands\unwhitelist.cs
 	EndProjectSection
@@ -28,6 +29,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Rewards", "%APPDATA%\..\Local\NoMercyBot\rewards", "{D821EF03-A6D9-484D-83C3-08052D584C3G}"
 	ProjectSection(SolutionItems) = preProject
 	    song.cs = C:\Users\patri\AppData\Local\NoMercyBot\rewards\song.cs
+	    tts.cs = C:\Users\patri\AppData\Local\NoMercyBot\rewards\tts.cs
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercyBot.Database", "src\NoMercyBot.Database\NoMercyBot.Database.csproj", "{BC8B3B7C-203E-44E0-9713-1EEC32BA80A8}"

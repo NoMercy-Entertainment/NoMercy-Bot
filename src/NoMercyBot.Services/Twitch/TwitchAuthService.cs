@@ -26,15 +26,22 @@ public class TwitchAuthService : IAuthService
     private readonly TwitchApiService _twitchApiService;
 
     public Service Service => TwitchConfig.Service();
-    
+
     public string ClientId => Service.ClientId ?? throw new InvalidOperationException("Twitch ClientId is not set.");
-    private string ClientSecret => Service.ClientSecret ?? throw new InvalidOperationException("Twitch ClientSecret is not set.");
+
+    private string ClientSecret =>
+        Service.ClientSecret ?? throw new InvalidOperationException("Twitch ClientSecret is not set.");
+
     private string[] Scopes => Service.Scopes ?? throw new InvalidOperationException("Twitch Scopes are not set.");
     public string UserId => Service.UserId ?? throw new InvalidOperationException("Twitch UserId is not set.");
     public string UserName => Service.UserName ?? throw new InvalidOperationException("Twitch UserName is not set.");
-    public Dictionary<string, string> AvailableScopes => TwitchConfig.AvailableScopes ?? throw new InvalidOperationException("Twitch Scopes are not set.");
-    
-    public TwitchAuthService(IServiceScopeFactory serviceScopeFactory, IConfiguration conf, ILogger<TwitchAuthService> logger, TwitchApiService twitchApiService)
+
+    public Dictionary<string, string> AvailableScopes => TwitchConfig.AvailableScopes ??
+                                                         throw new InvalidOperationException(
+                                                             "Twitch Scopes are not set.");
+
+    public TwitchAuthService(IServiceScopeFactory serviceScopeFactory, IConfiguration conf,
+        ILogger<TwitchAuthService> logger, TwitchApiService twitchApiService)
     {
         _scope = serviceScopeFactory.CreateScope();
         _dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -44,37 +51,37 @@ public class TwitchAuthService : IAuthService
     }
 
     public async Task<(User, TokenResponse)> Callback(string code)
-    {        
+    {
         RestClient restClient = new(TwitchConfig.AuthUrl);
-        
+
         RestRequest request = new("token", Method.Post);
-                    request.AddParameter("client_id", ClientId);
-                    request.AddParameter("client_secret", ClientSecret);
-                    request.AddParameter("code", code);
-                    request.AddParameter("scope", string.Join(' ', Scopes));
-                    request.AddParameter("grant_type", "authorization_code");
-                    request.AddParameter("redirect_uri", TwitchConfig.RedirectUri);
+        request.AddParameter("client_id", ClientId);
+        request.AddParameter("client_secret", ClientSecret);
+        request.AddParameter("code", code);
+        request.AddParameter("scope", string.Join(' ', Scopes));
+        request.AddParameter("grant_type", "authorization_code");
+        request.AddParameter("redirect_uri", TwitchConfig.RedirectUri);
 
         RestResponse response = await restClient.ExecuteAsync(request);
 
-        if (!response.IsSuccessful || response.Content is null) 
+        if (!response.IsSuccessful || response.Content is null)
             throw new(response.Content ?? "Failed to fetch token from Twitch.");
-        
+
         TokenResponse? tokenResponse = response.Content.FromJson<TokenResponse>();
         if (tokenResponse == null) throw new("Invalid response from Twitch.");
-        
+
         User user = await _twitchApiService.FetchUser();
-        
+
         await StoreTokens(tokenResponse, user);
 
         return (user, tokenResponse);
     }
-    
+
     public Task<(User, TokenResponse)> ValidateToken(HttpRequest request)
-    {        
+    {
         string authorizationHeader = request.Headers["Authorization"].First() ?? throw new InvalidOperationException();
         string accessToken = authorizationHeader["Bearer ".Length..];
-        
+
         return ValidateToken(accessToken);
     }
 
@@ -82,37 +89,37 @@ public class TwitchAuthService : IAuthService
     {
         RestClient client = new(TwitchConfig.AuthUrl);
         RestRequest request = new("validate");
-                    request.AddHeader("Authorization", $"Bearer {accessToken}");
+        request.AddHeader("Authorization", $"Bearer {accessToken}");
 
         RestResponse response = await client.ExecuteAsync(request);
         if (!response.IsSuccessful || response.Content is null)
             throw new(response.Content ?? "Failed to fetch token from Twitch.");
-            
+
         TokenResponse? tokenResponse = response.Content.FromJson<TokenResponse>();
         if (tokenResponse == null) throw new("Invalid response from Twitch.");
 
         Service service = await _dbContext.Services
-            .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Name == Service.Name)
-            ?? throw new InvalidOperationException($"_service {Service.Name} not found in database.");
+                              .AsNoTracking()
+                              .FirstOrDefaultAsync(s => s.Name == Service.Name)
+                          ?? throw new InvalidOperationException($"_service {Service.Name} not found in database.");
 
         return (new(), new()
         {
             AccessToken = service.AccessToken,
             RefreshToken = service.RefreshToken,
-            ExpiresIn = (int)(service.TokenExpiry - DateTime.UtcNow).Value.TotalSeconds,
+            ExpiresIn = (int)(service.TokenExpiry - DateTime.UtcNow).Value.TotalSeconds
         });
     }
 
     public async Task<(User, TokenResponse)> RefreshToken(string refreshToken)
-    {        
+    {
         RestClient client = new(TwitchConfig.AuthUrl);
-        
+
         RestRequest request = new("token", Method.Post);
-                    request.AddParameter("client_id", ClientId);
-                    request.AddParameter("client_secret", ClientSecret);
-                    request.AddParameter("refresh_token", refreshToken);
-                    request.AddParameter("grant_type", "refresh_token");
+        request.AddParameter("client_id", ClientId);
+        request.AddParameter("client_secret", ClientSecret);
+        request.AddParameter("refresh_token", refreshToken);
+        request.AddParameter("grant_type", "refresh_token");
 
         RestResponse response = await client.ExecuteAsync(request);
         if (!response.IsSuccessful || response.Content is null)
@@ -123,50 +130,50 @@ public class TwitchAuthService : IAuthService
 
         return (new(), tokenResponse);
     }
-    
+
     public async Task RevokeToken(string accessToken)
-    {        
+    {
         RestClient client = new(TwitchConfig.AuthUrl);
-        
+
         RestRequest request = new("revoke", Method.Post);
-                    request.AddParameter("client_id", ClientId);
-                    request.AddParameter("token", accessToken);
-                    request.AddParameter("token_type_hint", "access_token");
+        request.AddParameter("client_id", ClientId);
+        request.AddParameter("token", accessToken);
+        request.AddParameter("token_type_hint", "access_token");
 
         RestResponse response = await client.ExecuteAsync(request);
         if (!response.IsSuccessful || response.Content is null)
             throw new(response.Content ?? "Failed to fetch token from Twitch.");
     }
-    
+
     public string GetRedirectUrl()
-    {        
+    {
         NameValueCollection query = HttpUtility.ParseQueryString(string.Empty);
-                            query.Add("response_type", "code");
-                            query.Add("client_id", ClientId);
-                            query.Add("redirect_uri", TwitchConfig.RedirectUri);
-                            query.Add("scope", string.Join(' ', Scopes));
-                            // query.Add("force_verify", "true");
-        
+        query.Add("response_type", "code");
+        query.Add("client_id", ClientId);
+        query.Add("redirect_uri", TwitchConfig.RedirectUri);
+        query.Add("scope", string.Join(' ', Scopes));
+        // query.Add("force_verify", "true");
+
         UriBuilder uriBuilder = new(TwitchConfig.AuthUrl + "/authorize")
         {
             Query = query.ToString(),
-            Scheme = Uri.UriSchemeHttps,
+            Scheme = Uri.UriSchemeHttps
         };
-        
+
         return uriBuilder.ToString();
     }
 
     public async Task<DeviceCodeResponse> Authorize(string[]? scopes = null)
-    {        
+    {
         RestClient client = new(TwitchConfig.AuthUrl);
-        
+
         RestRequest request = new("device", Method.Post);
-                    request.AddParameter("client_id", ClientId);
-                    request.AddParameter("scopes", string.Join(' ', scopes ?? Scopes));
+        request.AddParameter("client_id", ClientId);
+        request.AddParameter("scopes", string.Join(' ', scopes ?? Scopes));
 
         RestResponse response = await client.ExecuteAsync(request);
-        
-        if (!response.IsSuccessful || response.Content is null) 
+
+        if (!response.IsSuccessful || response.Content is null)
             throw new(response.Content ?? "Failed to fetch device code from Twitch.");
 
         DeviceCodeResponse? deviceCodeResponse = response.Content.FromJson<DeviceCodeResponse>();
@@ -176,18 +183,18 @@ public class TwitchAuthService : IAuthService
     }
 
     public async Task<TokenResponse> PollForToken(string deviceCode)
-    {        
+    {
         RestClient restClient = new(TwitchConfig.AuthUrl);
-        
+
         RestRequest request = new("token", Method.Post);
-                    request.AddParameter("client_id", ClientId);
-                    request.AddParameter("client_secret", ClientSecret);
-                    request.AddParameter("grant_type", "urn:ietf:params:oauth:grant-type:device_code");
-                    request.AddParameter("device_code", deviceCode);
-                    request.AddParameter("scopes", string.Join(' ', Scopes));
+        request.AddParameter("client_id", ClientId);
+        request.AddParameter("client_secret", ClientSecret);
+        request.AddParameter("grant_type", "urn:ietf:params:oauth:grant-type:device_code");
+        request.AddParameter("device_code", deviceCode);
+        request.AddParameter("scopes", string.Join(' ', Scopes));
 
         RestResponse response = await restClient.ExecuteAsync(request);
-        if (!response.IsSuccessful || response.Content is null) 
+        if (!response.IsSuccessful || response.Content is null)
             throw new(response.Content ?? "Failed to fetch token from Twitch.");
 
         TokenResponse? tokenResponse = response.Content.FromJson<TokenResponse>();
@@ -197,7 +204,7 @@ public class TwitchAuthService : IAuthService
     }
 
     internal async Task<TokenResponse> BotToken()
-    {        
+    {
         RestClient client = new(TwitchConfig.AuthUrl);
         RestRequest request = new("token", Method.Post);
         request.AddParameter("client_id", ClientId);
@@ -213,14 +220,18 @@ public class TwitchAuthService : IAuthService
 
         return botToken;
     }
-    
+
     public async Task StoreTokens(TokenResponse tokenResponse, User user)
     {
         // Always check the database for the current user before overwriting tokens
-        Service? existingService = await _dbContext.Services.AsNoTracking().FirstOrDefaultAsync(s => s.Name == Service.Name);
-        if (existingService != null && !string.IsNullOrEmpty(existingService.UserId) && existingService.UserId != user.Id)
+        Service? existingService =
+            await _dbContext.Services.AsNoTracking().FirstOrDefaultAsync(s => s.Name == Service.Name);
+        if (existingService != null && !string.IsNullOrEmpty(existingService.UserId) &&
+            existingService.UserId != user.Id)
         {
-            _logger.LogWarning("Attempt to overwrite Twitch provider tokens for {Provider} with a different user. Existing: {ExistingUserId}, Incoming: {IncomingUserId}", Service.Name, existingService.UserName, user.Username);
+            _logger.LogWarning(
+                "Attempt to overwrite Twitch provider tokens for {Provider} with a different user. Existing: {ExistingUserId}, Incoming: {IncomingUserId}",
+                Service.Name, existingService.UserName, user.Username);
             throw new InvalidOperationException("This provider is already linked to a different user.");
         }
 
@@ -243,10 +254,10 @@ public class TwitchAuthService : IAuthService
                 TokenExpiry = newUser.TokenExpiry,
                 UserId = newUser.UserId,
                 UserName = newUser.UserName,
-                UpdatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
             })
             .RunAsync();
-    
+
         Service.AccessToken = updateService.AccessToken;
         Service.RefreshToken = updateService.RefreshToken;
         Service.TokenExpiry = updateService.TokenExpiry;
@@ -286,35 +297,35 @@ public class TwitchAuthService : IAuthService
     }
 
     public string GetRedirectUrlWithScopes(string[] specificScopes)
-    {        
+    {
         NameValueCollection query = HttpUtility.ParseQueryString(string.Empty);
-                            query.Add("response_type", "code");
-                            query.Add("client_id", ClientId);
-                            query.Add("redirect_uri", TwitchConfig.RedirectUri);
-                            query.Add("scope", string.Join(' ', specificScopes));
-                            query.Add("force_verify", "true");
-        
+        query.Add("response_type", "code");
+        query.Add("client_id", ClientId);
+        query.Add("redirect_uri", TwitchConfig.RedirectUri);
+        query.Add("scope", string.Join(' ', specificScopes));
+        query.Add("force_verify", "true");
+
         UriBuilder uriBuilder = new(TwitchConfig.AuthUrl + "/authorize")
         {
             Query = query.ToString(),
-            Scheme = Uri.UriSchemeHttps,
+            Scheme = Uri.UriSchemeHttps
         };
-        
+
         return uriBuilder.ToString();
     }
 
     // Method to authorize with specific scopes (used by BotAuthService)
     public async Task<DeviceCodeResponse> AuthorizeWithScopes(string[] specificScopes)
-    {        
+    {
         RestClient client = new(TwitchConfig.AuthUrl);
-        
+
         RestRequest request = new("device", Method.Post);
-                    request.AddParameter("client_id", ClientId);
-                    request.AddParameter("scopes", string.Join(' ', specificScopes));
+        request.AddParameter("client_id", ClientId);
+        request.AddParameter("scopes", string.Join(' ', specificScopes));
 
         RestResponse response = await client.ExecuteAsync(request);
-        
-        if (!response.IsSuccessful || response.Content is null) 
+
+        if (!response.IsSuccessful || response.Content is null)
             throw new(response.Content ?? "Failed to fetch device code from Twitch.");
 
         DeviceCodeResponse? deviceCodeResponse = response.Content.FromJson<DeviceCodeResponse>();

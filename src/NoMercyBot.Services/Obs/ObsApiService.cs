@@ -10,7 +10,7 @@ public class ObsApiService
     private readonly ILogger<ObsApiService> _logger;
 
     public Service Service => ObsConfig.Service();
-    
+
     public string ClientId => Service.ClientId ?? throw new InvalidOperationException("OBS ClientId is not set.");
 
     public ObsApiService(IConfiguration conf, ILogger<ObsApiService> logger)

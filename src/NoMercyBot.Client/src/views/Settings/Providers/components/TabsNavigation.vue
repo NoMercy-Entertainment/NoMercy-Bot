@@ -26,9 +26,9 @@ router.afterEach((to, from, next) => {
 function selectTab(tabName: string) {
   selectedTab.value = tabName;
 
-  router.replace({ 
+  router.replace({
     path: route.path,
-    hash: `#tab=${tabName}` 
+    hash: `#tab=${tabName}`
   });
 }
 </script>

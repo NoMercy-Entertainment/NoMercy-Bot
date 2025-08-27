@@ -58,7 +58,7 @@ public static class ClaimsPrincipleExtensions
         string? userId = principal?
             .FindFirst(ClaimTypes.NameIdentifier)?
             .Value;
-        
+
         using AppDbContext dbContext = new();
 
         return userId is null

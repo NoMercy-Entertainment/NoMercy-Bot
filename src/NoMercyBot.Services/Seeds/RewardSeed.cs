@@ -14,9 +14,9 @@ public static class RewardSeed
         try
         {
             TwitchApiService twitchApiService = scope.ServiceProvider.GetRequiredService<TwitchApiService>();
-            
+
             string broadcasterId = TwitchConfig.Service().UserId;
-            
+
             if (string.IsNullOrEmpty(broadcasterId))
             {
                 Logger.Setup("No broadcaster ID found in Twitch configuration - skipping reward seeding");
@@ -24,8 +24,9 @@ public static class RewardSeed
             }
 
             // Fetch custom rewards from Twitch API
-            ChannelPointsCustomRewardsResponse? rewardsResponse = await twitchApiService.GetCustomRewards(broadcasterId);
-            
+            ChannelPointsCustomRewardsResponse?
+                rewardsResponse = await twitchApiService.GetCustomRewards(broadcasterId);
+
             if (rewardsResponse?.Data == null || !rewardsResponse.Data.Any())
             {
                 Logger.Setup("No custom rewards found on Twitch channel - skipping reward seeding");
@@ -33,9 +34,8 @@ public static class RewardSeed
             }
 
             List<Reward> rewards = [];
-            
+
             foreach (ChannelPointsCustomRewardsResponseData twitchReward in rewardsResponse.Data)
-            {
                 rewards.Add(new()
                 {
                     Id = twitchReward.Id,
@@ -45,12 +45,11 @@ public static class RewardSeed
                     IsEnabled = twitchReward.IsEnabled,
                     Description = twitchReward.Prompt
                 });
-            }
 
             // Add fetched rewards to database
             await dbContext.Rewards.AddRangeAsync(rewards);
             await dbContext.SaveChangesAsync();
-            
+
             Logger.Setup("Successfully seeded {rewards.Count} custom rewards from Twitch API");
         }
         catch (Exception ex)

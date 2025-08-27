@@ -24,7 +24,7 @@ const socket = useWidgetSocket(widgetId);
     </div>
 
     <!-- Optional: Show additional status info -->
-    <slot name="additional-status" />
+    <slot name="additional-status"/>
   </div>
 </template>
 

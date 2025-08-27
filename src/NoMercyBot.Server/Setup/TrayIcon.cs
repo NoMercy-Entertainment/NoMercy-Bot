@@ -97,5 +97,4 @@ public class TrayIcon
 
         return Task.CompletedTask;
     }
-    
 }

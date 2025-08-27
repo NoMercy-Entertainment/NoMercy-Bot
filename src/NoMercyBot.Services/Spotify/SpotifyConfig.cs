@@ -4,7 +4,7 @@ using NoMercyBot.Services.Interfaces;
 
 namespace NoMercyBot.Services.Spotify;
 
-public class SpotifyConfig: IConfig
+public class SpotifyConfig : IConfig
 {
     internal static Service? _service;
 
@@ -12,14 +12,14 @@ public class SpotifyConfig: IConfig
     {
         return _service ??= new();
     }
-    
+
     public bool IsEnabled => Service().Enabled;
-    
+
     public static string ApiUrl { get; } = "https://api.spotify.com/v1";
     public static string AuthUrl { get; } = "https://accounts.spotify.com/api";
-    
+
     public static string RedirectUri => $"http://localhost:{Config.InternalClientPort}/oauth/spotify/callback";
-    
+
     public static readonly Dictionary<string, string> AvailableScopes = new()
     {
         { "user-read-playback-state", "Read the current playback state of a user." },

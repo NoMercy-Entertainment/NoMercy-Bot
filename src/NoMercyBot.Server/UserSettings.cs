@@ -16,7 +16,8 @@ public static class UserSettings
         {
             using AppDbContext context = new();
             List<Configuration> configuration = context.Configurations
-                .Where(configuration => string.IsNullOrWhiteSpace(configuration.SecureValue) && string.IsNullOrEmpty(configuration.Value))
+                .Where(configuration => !string.IsNullOrWhiteSpace(configuration.SecureValue) ||
+                                        !string.IsNullOrEmpty(configuration.Value))
                 .ToList();
 
             foreach (Configuration? config in configuration) settings[config.Key] = (config.Value, config.SecureValue);
@@ -68,6 +69,9 @@ public static class UserSettings
                 case "SaveTtsToDisk":
                     Config.SaveTtsToDisk = setting.Value.value.ToBoolean();
                     break;
+                case "PlayTtsLocally":
+                    Config.PlayTtsLocally = setting.Value.value.ToBoolean();
+                    break;
                 case "UseFrankerfacezEmotes":
                     Config.UseFrankerfacezEmotes = setting.Value.value.ToBoolean();
                     break;
@@ -85,12 +89,6 @@ public static class UserSettings
                     break;
                 case "UseChatOgParser":
                     Config.UseChatOgParser = setting.Value.value.ToBoolean();
-                    break;
-                case "_AzureTtsApiKey":
-                    Config.AzureTtsApiKey = setting.Value.secureValue;
-                    break;
-                case "_AzureTtsEndpoint":
-                    Config.AzureTtsEndpoint = setting.Value.secureValue;
                     break;
             }
         }

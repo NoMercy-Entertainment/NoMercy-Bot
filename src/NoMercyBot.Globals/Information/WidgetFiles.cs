@@ -3,16 +3,31 @@ namespace NoMercyBot.Globals.Information;
 public static class WidgetFiles
 {
     public static string WidgetsPath => Path.Combine(AppFiles.AppPath, "widgets");
-    
-    public static string GetWidgetPath(Ulid widgetId) => Path.Combine(WidgetsPath, widgetId.ToString());
-    
-    public static string GetWidgetSourcePath(Ulid widgetId) => Path.Combine(GetWidgetPath(widgetId), "source");
-    
-    public static string GetWidgetDistPath(Ulid widgetId) => Path.Combine(GetWidgetPath(widgetId), "dist");
-    
-    public static string GetWidgetConfigFile(Ulid widgetId) => Path.Combine(GetWidgetPath(widgetId), "widget.json");
-    
-    public static string GetWidgetIndexFile(Ulid widgetId) => Path.Combine(GetWidgetDistPath(widgetId), "index.html");
+
+    public static string GetWidgetPath(Ulid widgetId)
+    {
+        return Path.Combine(WidgetsPath, widgetId.ToString());
+    }
+
+    public static string GetWidgetSourcePath(Ulid widgetId)
+    {
+        return Path.Combine(GetWidgetPath(widgetId), "source");
+    }
+
+    public static string GetWidgetDistPath(Ulid widgetId)
+    {
+        return Path.Combine(GetWidgetPath(widgetId), "dist");
+    }
+
+    public static string GetWidgetConfigFile(Ulid widgetId)
+    {
+        return Path.Combine(GetWidgetPath(widgetId), "widget.json");
+    }
+
+    public static string GetWidgetIndexFile(Ulid widgetId)
+    {
+        return Path.Combine(GetWidgetDistPath(widgetId), "index.html");
+    }
 
     public static void EnsureWidgetDirectoryExists(Ulid widgetId)
     {
@@ -28,7 +43,7 @@ public static class WidgetFiles
     public static void CreateBasicTestWidget(Ulid widgetId, string widgetName)
     {
         EnsureWidgetDirectoryExists(widgetId);
-        
+
         string indexPath = GetWidgetIndexFile(widgetId);
         string basicHtml = $@"<!DOCTYPE html>
 <html lang=""en"">
@@ -162,10 +177,7 @@ public static class WidgetFiles
     public static void DeleteWidgetDirectory(Ulid widgetId)
     {
         string widgetPath = GetWidgetPath(widgetId);
-        if (Directory.Exists(widgetPath))
-        {
-            Directory.Delete(widgetPath, true);
-        }
+        if (Directory.Exists(widgetPath)) Directory.Delete(widgetPath, true);
     }
 
     public static IEnumerable<string> GetAllWidgetPaths()

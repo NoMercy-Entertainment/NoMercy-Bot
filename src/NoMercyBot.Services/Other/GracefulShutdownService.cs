@@ -39,13 +39,13 @@ public class GracefulShutdownService : IHostedService
         try
         {
             _logger.LogInformation("Application is stopping - notifying all widgets");
-            
+
             // Notify all connected widgets about server shutdown
             await _widgetHubContext.Clients.All.SendAsync("ServerShutdown");
-            
+
             // Give widgets a moment to process the notification
             await Task.Delay(1000);
-            
+
             _logger.LogInformation("Widget shutdown notifications sent");
         }
         catch (Exception ex)

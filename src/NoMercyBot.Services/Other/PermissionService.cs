@@ -5,12 +5,12 @@ using NoMercyBot.Services.Interfaces;
 
 namespace NoMercyBot.Services.Other;
 
-public class PermissionService: IService
+public class PermissionService : IService
 {
     private readonly IServiceScope _scope;
     private readonly AppDbContext _dbContext;
     private readonly ILogger<PermissionService> _logger;
-    
+
     public PermissionService(IServiceScopeFactory serviceScopeFactory, ILogger<PermissionService> logger)
     {
         _scope = serviceScopeFactory.CreateScope();

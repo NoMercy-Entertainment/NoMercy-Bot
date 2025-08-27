@@ -4,60 +4,60 @@
 
 /* Custom widget styles based on your chat overlay */
 @layer base {
-  * {
-    box-sizing: border-box;
-  }
-  
-  body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    background: transparent;
-    overflow: hidden;
-  }
+    * {
+        box-sizing: border-box;
+    }
 
-  #app {
-    width: 100vw;
-    height: 100vh;
-    position: relative;
-  }
+    body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background: transparent;
+        overflow: hidden;
+    }
+
+    #app {
+        width: 100vw;
+        height: 100vh;
+        position: relative;
+    }
 }
 
 @layer components {
-  .widget-container {
-    @apply w-full h-full p-4 bg-transparent text-white relative overflow-hidden;
-  }
-  
-  .message-container {
-    @apply opacity-100 transition-all duration-500 ease-in-out;
-  }
-  
-  .shine-wrapper::after {
-    content: '';
-    @apply absolute inset-0 w-full h-full pointer-events-none z-10;
-    transform: translateX(100%);
-    background: linear-gradient(
-      65deg,
-      rgba(255, 255, 255, 0) 0%,
-      rgba(255, 255, 255, 0) 35%,
-      rgba(255, 255, 255, 0.2) 50%,
-      rgba(128, 186, 232, 0) 65%,
-      rgba(128, 186, 232, 0) 99%,
-      rgba(125, 185, 232, 0) 100%
-    );
-  }
-  
-  .shine-wrapper div {
-    background-image: linear-gradient(45deg, var(--color-300), var(--color-500) 23%, var(--color-700));
-  }
-  
-  .scrollbar-none {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-  
-  .scrollbar-none::-webkit-scrollbar {
-    display: none;
-  }
+    .widget-container {
+        @apply w-full h-full p-4 bg-transparent text-white relative overflow-hidden;
+    }
+
+    .message-container {
+        @apply opacity-100 transition-all duration-500 ease-in-out;
+    }
+
+    .shine-wrapper::after {
+        content: '';
+        @apply absolute inset-0 w-full h-full pointer-events-none z-10;
+        transform: translateX(100%);
+        background: linear-gradient(
+                65deg,
+                rgba(255, 255, 255, 0) 0%,
+                rgba(255, 255, 255, 0) 35%,
+                rgba(255, 255, 255, 0.2) 50%,
+                rgba(128, 186, 232, 0) 65%,
+                rgba(128, 186, 232, 0) 99%,
+                rgba(125, 185, 232, 0) 100%
+        );
+    }
+
+    .shine-wrapper div {
+        background-image: linear-gradient(45deg, var(--color-300), var(--color-500) 23%, var(--color-700));
+    }
+
+    .scrollbar-none {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .scrollbar-none::-webkit-scrollbar {
+        display: none;
+    }
 }

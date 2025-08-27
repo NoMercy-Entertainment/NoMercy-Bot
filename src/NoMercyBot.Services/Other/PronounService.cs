@@ -10,7 +10,7 @@ using RestSharp;
 
 namespace NoMercyBot.Services.Other;
 
-public class PronounService: IService
+public class PronounService : IService
 {
     private readonly RestClient _client;
     private readonly IServiceScope _scope;
@@ -18,7 +18,7 @@ public class PronounService: IService
     private readonly ILogger<PronounService> _logger;
     private static readonly Dictionary<string, Pronoun> Pronouns = new();
 
-    public PronounService(IServiceScopeFactory serviceScopeFactory,  ILogger<PronounService> logger)
+    public PronounService(IServiceScopeFactory serviceScopeFactory, ILogger<PronounService> logger)
     {
         _scope = serviceScopeFactory.CreateScope();
         _dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -31,7 +31,7 @@ public class PronounService: IService
         try
         {
             if (Pronouns.Any()) return;
-            
+
             RestRequest request = new("pronouns");
             RestResponse response = await _client.ExecuteAsync(request);
 

@@ -1,3 +1,5 @@
+using System.Text;
+using System.Text.RegularExpressions;
 using TwitchLib.Client;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
@@ -7,184 +9,254 @@ using Microsoft.Extensions.DependencyInjection;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
 
-namespace NoMercyBot.Services.Twitch
+namespace NoMercyBot.Services.Twitch;
+
+public class TwitchChatService : IDisposable
 {
-    public class TwitchChatService : IDisposable
+    private readonly TwitchApiService _twitchApiService;
+    private readonly ILogger<TwitchChatService> _logger;
+    private readonly IConfiguration _config;
+    private readonly IServiceScope _scope;
+    
+    public static string _userId;
+    public static string _userName;
+    private static string _accessToken;
+    
+    public static string _botUserId;
+    public static string _botUserName;
+    private static string _botAccessToken;
+
+    public TwitchChatService(ILogger<TwitchChatService> logger, IConfiguration config,
+        IServiceScopeFactory scopeFactory, TwitchApiService twitchApiService)
     {
-        private readonly TwitchClient _userClient;
-        private readonly TwitchClient _botClient;
-        private readonly ILogger<TwitchChatService> _logger;
-        private readonly IConfiguration _config;
-        private readonly IServiceScope _scope;
+        _logger = logger;
+        _config = config;
+        _twitchApiService = twitchApiService;
+        _scope = scopeFactory.CreateScope();
+        AppDbContext dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        public TwitchChatService(ILogger<TwitchChatService> logger, IConfiguration config, IServiceScopeFactory scopeFactory)
-        {
-            _logger = logger;
-            _config = config;
-            _scope = scopeFactory.CreateScope();
-            AppDbContext dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        BotAccount? botAccount = dbContext.BotAccounts.FirstOrDefault();
+        Service? twitchService = dbContext.Services.FirstOrDefault(s => s.Name == "Twitch");
+        if (twitchService == null || string.IsNullOrEmpty(twitchService.AccessToken))
+            throw new InvalidOperationException("No Twitch service found or missing access token.");
 
-            Service? twitchService = dbContext.Services.FirstOrDefault(s => s.Name == "Twitch");
-            if (twitchService == null || string.IsNullOrEmpty(twitchService.AccessToken))
-                throw new InvalidOperationException("No Twitch service found or missing access token.");
+        if (botAccount == null || string.IsNullOrEmpty(botAccount.AccessToken))
+            throw new InvalidOperationException("No bot account found or missing access token.");
 
-            BotAccount? botAccount = dbContext.BotAccounts.FirstOrDefault();
-            bool hasBotAccount = botAccount != null;
-
-            ConnectionCredentials userCredentials = new(twitchService.UserName, twitchService.AccessToken);
-            
-            _userClient = new();
-            _userClient.Initialize(userCredentials, twitchService.UserName);
-            _userClient.OnConnected += OnConnected;
-            _userClient.OnDisconnected += OnDisconnected;
-            _userClient.ConnectAsync();
-
-            ConnectionCredentials botCredentials = hasBotAccount 
-                ? new(botAccount!.Username, botAccount.AccessToken) 
-                : userCredentials;
-            _botClient = new();
-            _botClient.Initialize(botCredentials, twitchService.UserName);
-            _botClient.OnConnected += OnConnected;
-            _botClient.OnDisconnected += OnDisconnected;
-            _botClient.ConnectAsync();
-        }
-
-        private void RefreshClients()
-        {
-            using IServiceScope scope = _scope.ServiceProvider.GetRequiredService<IServiceScopeFactory>().CreateScope();
-            AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-            Service? twitchService = dbContext.Services.FirstOrDefault(s => s.Name == "Twitch");
-            if (twitchService == null || string.IsNullOrEmpty(twitchService.AccessToken))
-                throw new InvalidOperationException("No Twitch service found or missing access token.");
-
-            BotAccount? botAccount = dbContext.BotAccounts.FirstOrDefault();
-            ConnectionCredentials connectionCredentials = new(
-                twitchService.UserName,
-                twitchService.AccessToken);
-            ConnectionCredentials botCredentials = botAccount != null
-                ? new(botAccount.Username, botAccount.AccessToken)
-                : connectionCredentials;
-
-            _userClient.Initialize(connectionCredentials);
-            _botClient.Initialize(botCredentials);
-        }
-
-        public async Task SendMessageAsUser(string channel, string message)
-        {
-            try
-            {
-                await _userClient.SendMessageAsync(channel, message);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Failed to send message as user. Attempting to refresh clients.");
-                RefreshClients();
-                await _userClient.SendMessageAsync(channel, message);
-            }
-        }
+        User botUser = _twitchApiService.GetOrFetchUser(name: botAccount.Username).Result;
         
-        public async Task SendReplyAsUser(string channel, string message, string replyToMessageId)
-        {
-            try
-            {
-                await _userClient.SendReplyAsync(channel, replyToMessageId, message);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Failed to send reply as user. Attempting to refresh clients.");
-                RefreshClients();
-                await _userClient.SendReplyAsync(channel, replyToMessageId, message);
-            }
-        }
+        _userId = twitchService.UserId;
+        _userName = twitchService.UserName;
+        _accessToken = twitchService.AccessToken;
+        _botUserId = botUser.Id;
+        _botUserName = botUser.Username;
+        _botAccessToken = botAccount.AccessToken;
+    }
 
-        public async Task SendMessageAsBot(string channel, string message)
-        {
-            try
-            {
-                await _botClient.SendMessageAsync(channel, message);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Failed to send message as bot. Attempting to refresh clients.");
-                RefreshClients();
-                await _botClient.SendMessageAsync(channel, message);
-            }
-        }
+    private void RefreshClients()
+    {
+        using IServiceScope scope = _scope.ServiceProvider.GetRequiredService<IServiceScopeFactory>().CreateScope();
+        AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        BotAccount? botAccount = dbContext.BotAccounts.FirstOrDefault();
+        Service? twitchService = dbContext.Services.FirstOrDefault(s => s.Name == "Twitch");
+        if (twitchService == null || string.IsNullOrEmpty(twitchService.AccessToken))
+            throw new InvalidOperationException("No Twitch service found or missing access token.");
+
+        if (botAccount == null || string.IsNullOrEmpty(botAccount.AccessToken))
+            throw new InvalidOperationException("No bot account found or missing access token.");
+
+        User botUser = _twitchApiService.GetOrFetchUser(name: botAccount.Username).Result;
         
-        public async Task SendReplyAsBot(string channel, string message, string replyToMessageId)
+        _userId = twitchService.UserId;
+        _userName = twitchService.UserName;
+        _accessToken = twitchService.AccessToken;
+        _botUserId = botUser.Id;
+        _botUserName = botUser.Username;
+        _botAccessToken = botAccount.AccessToken;
+    }
+
+    public async Task SendMessageAsUser(string channel, string message)
+    {
+        try
         {
-            try
-            {
-                await _botClient.SendReplyAsync(channel, replyToMessageId, message);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Failed to send reply as bot. Attempting to refresh clients.");
-                RefreshClients();
-                await _botClient.SendReplyAsync(channel, replyToMessageId, message);
-            }
+            await _twitchApiService.SendMessage(_userId, message, _userId, _accessToken);
         }
-
-        public async Task SendOneOffMessage(string channel, string message, string? oauthToken = null)
+        catch (Exception e)
         {
-            using IServiceScope scope = _scope.ServiceProvider.GetRequiredService<IServiceScopeFactory>().CreateScope();
-            AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-            BotAccount? botAccount = dbContext.BotAccounts.FirstOrDefault();
-            Service? twitchService = dbContext.Services.FirstOrDefault(s => s.Name == "Twitch");
-            if (twitchService == null || string.IsNullOrEmpty(twitchService.AccessToken))
-                throw new InvalidOperationException("No Twitch service found or missing access token.");
-
-            string username = botAccount?.Username ?? twitchService.UserName;
-            string token = oauthToken ?? botAccount?.AccessToken ?? twitchService.AccessToken;
-
-            TwitchClient tempClient = new();
-            tempClient.Initialize(new(username, token));
-            await tempClient.ConnectAsync();
-            await Task.Delay(1000);
-            await tempClient.SendMessageAsync(channel, message);
-            await Task.Delay(500);
-            await tempClient.DisconnectAsync();
-        }
-
-        public async Task<string[]> GetChatters(string channel)
-        {
+            _logger.LogError(e, "Failed to send message as user. Attempting to refresh clients.");
             RefreshClients();
-            // await _botClient.OnExistingUsersDetected
-            //     += (sender, e) => _logger.LogInformation($"Existing users detected in channel {channel}: {string.Join(", ", e.Users)}");
-            return [];
+            await _twitchApiService.SendMessage(_userId, message, _userId, _accessToken);
+        }
+    }
+
+    public async Task SendReplyAsUser(string channel, string message, string replyToMessageId)
+    {
+        try
+        {
+            await _twitchApiService.SendMessage(_userId, message, _userId, _accessToken, replyToMessageId);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to send reply as user. Attempting to refresh clients.");
+            RefreshClients();
+            await _twitchApiService.SendMessage(_userId, message, _userId, _accessToken, replyToMessageId);
+        }
+    }
+
+    public async Task SendMessageAsBot(string channel, string message)
+    {
+        try
+        {
+            foreach (string text in SplitMessageIntoChunks(message, 450))
+            {
+                await _twitchApiService.SendMessage(_userId, text, _botUserId, _botAccessToken);
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to send message as bot. Attempting to refresh clients.");
+            RefreshClients();
+            await _twitchApiService.SendMessage(_userId, message, _botUserId, _botAccessToken);
+        }
+    }
+
+    public async Task SendReplyAsBot(string channel, string message, string replyToMessageId)
+    {
+        try
+        {
+            foreach (string text in SplitMessageIntoChunks(message, 450))
+            {
+                await _twitchApiService.SendMessage(_userId, text, _botUserId, _botAccessToken, replyToMessageId);
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to send reply as bot. Attempting to refresh clients.");
+            RefreshClients();
+            await _twitchApiService.SendMessage(_userId, message, _botUserId, _botAccessToken, replyToMessageId);
+        }
+    }
+
+    public async Task SendOneOffMessage(string channelId, string message)
+    {
+        await _twitchApiService.SendMessage(channelId, message + " #NMBot", _userId, _accessToken);
+    }
+
+    public async Task SendOneOffMessageAsBot(string channel, string message)
+    {
+        User channelUser = await _twitchApiService.GetOrFetchUser(name: channel);
+
+        await _twitchApiService.SendMessage(channelUser.Id, message + " #NMBot", _botUserId, _botAccessToken);
+    }
+
+    public async Task<string[]> GetChatters(string channel)
+    {
+        RefreshClients();
+        // await _twitchApiService.OnExistingUsersDetected
+        //     += (sender, e) => _logger.LogInformation($"Existing users detected in channel {channel}: {string.Join(", ", e.Users)}");
+        return [];
+    }
+    
+    public List<string> SplitMessageIntoChunks(string message, int chunkLength)
+    {
+        List<string> chunks = [];
+        if (string.IsNullOrEmpty(message) || chunkLength <= 0)
+            return chunks;
+
+        string[] sentences = Regex.Split(message, @"(?<=[.!?])\s+");
+        StringBuilder currentChunk = new();
+
+        foreach (string? sentence in sentences)
+        {
+            if (currentChunk.Length + sentence.Length + 1 <= chunkLength)
+            {
+                if (0 < currentChunk.Length)
+                    currentChunk.Append(" ");
+                currentChunk.Append(sentence);
+            }
+            else
+            {
+                if (0 < currentChunk.Length)
+                {
+                    chunks.Add(currentChunk.ToString().Trim());
+                    currentChunk.Clear();
+                }
+
+                if (sentence.Length <= chunkLength)
+                    currentChunk.Append(sentence);
+                else
+                    SplitSentenceIntoChunks(sentence, chunkLength, chunks);
+            }
         }
 
-        public async Task SendThankYouAfterShoutout(string channel, string user)
+        if (0 < currentChunk.Length)
+            chunks.Add(currentChunk.ToString().Trim());
+
+        return chunks;
+    }
+
+    private void SplitSentenceIntoChunks(string sentence, int chunkLength, List<string> chunks)
+    {
+        string[] words = sentence.Split(' ');
+        StringBuilder currentChunk = new();
+
+        foreach (string? word in words)
         {
-            string message = $"Thanks for the follow, {user}! Welcome to the channel!";
-            await SendMessageAsBot(channel, message);
-        }
-        
-        private Task OnConnected(object? sender, OnConnectedEventArgs e)
-        {
-            _logger.LogInformation($"Connected to Twitch as {e.BotUsername}");
-            return Task.CompletedTask;
+            if (chunkLength < word.Length)
+            {
+                if (0 < currentChunk.Length)
+                {
+                    chunks.Add(currentChunk.ToString().Trim());
+                    currentChunk.Clear();
+                }
+                SplitWordIntoChunks(word, chunkLength, chunks);
+            }
+            else
+            {
+                if (currentChunk.Length + word.Length + 1 <= chunkLength)
+                {
+                    if (0 < currentChunk.Length)
+                        currentChunk.Append(" ");
+                    currentChunk.Append(word);
+                }
+                else
+                {
+                    chunks.Add(currentChunk.ToString().Trim());
+                    currentChunk.Clear();
+                    currentChunk.Append(word);
+                }
+            }
         }
 
-        private Task OnDisconnected(object? sender, OnDisconnectedArgs e)
-        {
-            _logger.LogWarning($"Disconnected from Twitch: {e.BotUsername}");
-        
-            // _logger.LogInformation("Reconnecting to Twitch...");
-            // RefreshClients();
-            // _userClient.ConnectAsync();
-            // _botClient.ConnectAsync();
-                
-            return Task.CompletedTask;
-        }
+        if (0 < currentChunk.Length)
+            chunks.Add(currentChunk.ToString().Trim());
+    }
 
-        public void Dispose()
+    private void SplitWordIntoChunks(string word, int chunkLength, List<string> chunks)
+    {
+        for (int i = 0; i < word.Length; i += chunkLength)
         {
-            _userClient?.DisconnectAsync();
-            _botClient?.DisconnectAsync();
-            _scope?.Dispose();
+            int length = Math.Min(chunkLength, word.Length - i);
+            chunks.Add(word.Substring(i, length));
         }
+    }
+
+    private Task OnConnected(object? sender, OnConnectedEventArgs e)
+    {
+        _logger.LogInformation($"Connected to Twitch as {e.BotUsername}");
+        return Task.CompletedTask;
+    }
+
+    private Task OnDisconnected(object? sender, OnDisconnectedArgs e)
+    {
+        _logger.LogWarning($"Disconnected from Twitch: {e.BotUsername}");
+
+        return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        _scope?.Dispose();
     }
 }

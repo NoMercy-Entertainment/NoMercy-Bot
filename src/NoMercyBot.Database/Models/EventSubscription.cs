@@ -6,25 +6,28 @@ namespace NoMercyBot.Database.Models;
 
 [PrimaryKey(nameof(Id))]
 [Index(nameof(Provider), nameof(EventType), IsUnique = true)]
-public class EventSubscription: Timestamps
+public class EventSubscription : Timestamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    [JsonProperty("id")] public string Id { get; set; } = null!;
-    
+    [JsonProperty("id")]
+    public string Id { get; set; } = null!;
+
     [JsonProperty("provider")] public string Provider { get; set; } = null!;
     [JsonProperty("event_type")] public string EventType { get; set; } = null!;
     [JsonProperty("description")] public string Description { get; set; } = null!;
     [JsonProperty("enabled")] public bool Enabled { get; set; } = true;
     [JsonProperty("version")] public string? Version { get; set; }
-    
+
     [JsonProperty("subscription_id")] public string? SubscriptionId { get; set; }
     [JsonProperty("session_id")] public string? SessionId { get; set; }
     [JsonProperty("expires_at")] public DateTime? ExpiresAt { get; set; }
-    
+
     [JsonProperty("metadata")] public Dictionary<string, string> Metadata { get; set; } = new();
     [JsonProperty("condition")] public string[] Condition { get; set; } = [];
-    
-    public EventSubscription() {}
+
+    public EventSubscription()
+    {
+    }
 
     public EventSubscription(string provider, string eventType, bool enabled = true, string? version = null)
     {

@@ -20,7 +20,7 @@ public static class TwitchServiceExtensions
         services.AddTransient<TwitchCommandService>();
         services.AddTransient<TwitchRewardService>();
         services.AddTransient<RewardScriptLoader>();
-        
+
         services.AddSingletonHostedService<TwitchBadgeService>();
     }
 }

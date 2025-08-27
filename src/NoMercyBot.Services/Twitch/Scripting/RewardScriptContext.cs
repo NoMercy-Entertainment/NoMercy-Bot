@@ -23,7 +23,7 @@ public class RewardScriptContext
     public Func<Task> RefundAsync { get; init; } = null!;
     public Func<Task> FulfillAsync { get; init; } = null!;
     public required AppDbContext DatabaseContext { get; init; } = null!;
-    public required TwitchChatService ChatService { get; init; }
+    public required TwitchChatService TwitchChatService { get; init; }
     public required TwitchApiService TwitchApiService { get; set; } = null!;
     public required IServiceProvider ServiceProvider { get; init; }
     public CancellationToken CancellationToken { get; init; }

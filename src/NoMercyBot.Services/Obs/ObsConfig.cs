@@ -4,7 +4,7 @@ using NoMercyBot.Services.Interfaces;
 
 namespace NoMercyBot.Services.Obs;
 
-public class ObsConfig: IConfig
+public class ObsConfig : IConfig
 {
     internal static Service? _service;
 
@@ -12,14 +12,14 @@ public class ObsConfig: IConfig
     {
         return _service ??= new();
     }
-    
+
     public bool IsEnabled => Service().Enabled;
-    
+
     public string ApiUrl { get; } = "http://localhost:4455";
     public string AuthUrl { get; } = $"http://localhost:4455/oauth2/token";
-    
+
     public string RedirectUri => $"http://localhost:{Config.InternalClientPort}/oauth/obs/callback";
-    
+
     public static readonly Dictionary<string, string> AvailableScopes = new()
     {
         { "obs:read", "Read OBS data" },

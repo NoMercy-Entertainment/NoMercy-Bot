@@ -1,183 +1,303 @@
 using System.Text;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using NoMercyBot.Database;
+using NoMercyBot.Database.Models;
 using NoMercyBot.Database.Models.ChatMessage;
 using NoMercyBot.Globals.Information;
-using NoMercyBot.Globals.SystemCalls;
 using NoMercyBot.Services.Widgets;
-using RestSharp;
-using Serilog.Events;
+using NoMercyBot.Services.TTS.Interfaces;
+using NoMercyBot.Services.TTS.Services;
+using DatabaseTtsVoice = NoMercyBot.Database.Models.TtsVoice;
 
-namespace NoMercyBot.Services.Other
+namespace NoMercyBot.Services.Other;
+
+public class TtsService : IDisposable
 {
-	public class TtsService
-	{
-		private readonly RestClient _client;
-		private readonly IWidgetEventService _widgetEventService;
-		private readonly IServiceScope _scope;
-		private readonly AppDbContext _dbContext;
+    private readonly IWidgetEventService _widgetEventService;
+    private readonly AppDbContext _dbContext;
+    private readonly ITtsProviderService _providerService;
+    private readonly ITtsUsageService _usageService;
+    private readonly TtsCacheService _cacheService;
 
-		public TtsService(IServiceScopeFactory serviceScopeFactory, IWidgetEventService widgetEventService)
-		{
-			_scope = serviceScopeFactory.CreateScope();
-			_dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
-			_widgetEventService = widgetEventService;
-			_client = new("http://localhost:6040");
-		}
-		
-		public async Task SendTts(string chatMessage, string userId, CancellationToken ctsToken)
-		{
-			if (!Config.UseTts) return;
-			
-			try
-			{
-				if (string.IsNullOrWhiteSpace(chatMessage)) return;
-				
-				// Get the user's selected TTS voice (implement this as needed)
-				string speakerId = await GetSpeakerIdForUserAsync(userId, ctsToken);
-				if (string.IsNullOrWhiteSpace(speakerId)) return;
-			
-				byte[] audioBytes = await SynthesizeAsync(chatMessage, speakerId, ctsToken);
-				if (audioBytes == null || audioBytes.Length == 0) return;
+    private readonly LocalAudioPlaybackService _audioPlaybackService;
 
-				string audioBase64 = $"data:audio/wav;base64,{Convert.ToBase64String(audioBytes)}";
-				
-				// save tts as wav file
-				if (Config.SaveTtsToDisk)
-				{
-					string filePath = Path.Combine(AppFiles.CachePath, "tts", $"{userId}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.wav");
-					Directory.CreateDirectory(Path.GetDirectoryName(filePath) ?? string.Empty);
-					await File.WriteAllBytesAsync(filePath, audioBytes, ctsToken);
-				}
+    // logger
+    private readonly ILogger _logger;
 
-				var ttsEvent = new
-				{
-					text = chatMessage,
-					user = new { id = userId },
-					audioBase64 = audioBase64
-				};
+    public TtsService(AppDbContext dbContext, IWidgetEventService widgetEventService, ILogger<TtsService> logger,
+        ITtsProviderService providerService, ITtsUsageService usageService, TtsCacheService cacheService,
+        LocalAudioPlaybackService audioPlaybackService)
+    {
+        _dbContext = dbContext;
+        _logger = logger;
+        _widgetEventService = widgetEventService;
+        _providerService = providerService;
+        _usageService = usageService;
+        _cacheService = cacheService;
+        _audioPlaybackService = audioPlaybackService;
+    }
 
-				await _widgetEventService.PublishEventAsync("channel.chat.message.tts", ttsEvent);
-			}
-			catch (Exception e)
-			{
-				Logger.Twitch(e.Message, LogEventLevel.Error);
-			}
-		}
-		
-		
-		public async Task SendTts(List<ChatMessageFragment> chatMessageFragments, string chatMessageUserId, CancellationToken ctsToken)
-		{
-			if (!Config.UseTts) return;
-			
-			try
-			{
-				StringBuilder textBuilder = new();
-				foreach (ChatMessageFragment fragment in chatMessageFragments.Where(fragment => fragment.Type == "text"))
-				{
-					textBuilder.Append(fragment.Text);
-				}
+    /// <summary>
+    /// Sends TTS for normal chat messages with character limit enforcement
+    /// </summary>
+    public async Task<TtsUsageRecord?> SendTts(List<ChatMessageFragment> chatMessageFragments, string userId,
+        CancellationToken cancellationToken)
+    {
+        StringBuilder textBuilder = new();
+        foreach (ChatMessageFragment fragment in chatMessageFragments.Where(fragment => fragment.Type == "text"))
+            textBuilder.Append(fragment.Text);
 
-				string text = textBuilder.ToString();
-				if (string.IsNullOrWhiteSpace(text)) return;
-				
-				// Get the user's selected TTS voice (implement this as needed)
-				string speakerId = await GetSpeakerIdForUserAsync(chatMessageUserId, ctsToken);
-				if (string.IsNullOrWhiteSpace(speakerId)) return;
-			
-				byte[] audioBytes = await SynthesizeAsync(text, speakerId, ctsToken);
-				if (audioBytes == null || audioBytes.Length == 0) return;
+        string text = textBuilder.ToString();
 
-				string audioBase64 = $"data:audio/wav;base64,{Convert.ToBase64String(audioBytes)}";
-				
-				// save tts as wav file
-				if (Config.SaveTtsToDisk)
-				{
-					string filePath = Path.Combine(AppFiles.CachePath, "tts", $"{chatMessageUserId}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.wav");
-					Directory.CreateDirectory(Path.GetDirectoryName(filePath) ?? string.Empty);
-					await File.WriteAllBytesAsync(filePath, audioBytes, ctsToken);
-				}
+        return await SendTts(text, userId, cancellationToken);
+    }
 
-				var ttsEvent = new
-				{
-					text = text,
-					user = new { id = chatMessageUserId },
-					audioBase64 = audioBase64
-				};
+    /// <summary>
+    /// Sends TTS for normal text with character limit enforcement
+    /// </summary>
+    public async Task<TtsUsageRecord?> SendTts(string text, string userId, CancellationToken cancellationToken)
+    {
+        if (!Config.UseTts || string.IsNullOrWhiteSpace(text)) return null;
+        
+        bool hasWidgetSubscription = await _widgetEventService.HasWidgetSubscriptionsAsync("channel.chat.message.tts");
+        if (!hasWidgetSubscription)
+        {
+            _logger.LogInformation("No widgets subscribed to TTS events, skipping SendCachedTts");
+            return null;
+        }
 
-				await _widgetEventService.PublishEventAsync("channel.chat.message.tts", ttsEvent);
-			}
-			catch (Exception e)
-			{
-				Logger.Twitch(e.Message, LogEventLevel.Error);
-			}
-		}
+        try
+        {
+            // Get provider and check character limits for new synthesis
+            ITtsProvider? provider = await _providerService.GetBestAvailableProviderAsync(text.Length);
+            if (provider == null)
+            {
+                _logger.LogInformation("No TTS provider available or character limit exceeded");
+                return null;
+            }
 
-		private async Task<string> GetSpeakerIdForUserAsync(string chatMessageUserId, CancellationToken ctsToken)
-		{
-			string? id = await _dbContext.UserTtsVoices
-				.AsNoTracking()
-				.Where(u => u.UserId == chatMessageUserId)
-				.Select(u => u.TtsVoiceId)
-				.FirstOrDefaultAsync(ctsToken);
-			
-			if (id is not null) return id;
-			
-			id = await _dbContext.TtsVoices
-				.AsNoTracking()
-				.Select(u => u.Id)
-				.OrderBy(tv => EF.Functions.Random())
-				.FirstOrDefaultAsync(cancellationToken: ctsToken);
-			
-			await _dbContext.UserTtsVoices.Upsert(new()
-			{
-				UserId = chatMessageUserId,
-				TtsVoiceId = id ?? "ED\n"
-			})
-				.On(u => u.UserId)
-				.WhenMatched((e, incoming) => new()
-				{
-					TtsVoiceId = incoming.TtsVoiceId,
-					SetAt = DateTime.UtcNow
-				})
-				.RunAsync(ctsToken);
-			
-			return id ?? "ED\n";
-		}
-		
-		private async Task<byte[]> SynthesizeAsync(string text, string speakerId, CancellationToken cancellationToken = default)
-		{
-			if (string.IsNullOrWhiteSpace(text))
-				throw new ArgumentException("Text cannot be empty.", nameof(text));
-			if (string.IsNullOrWhiteSpace(speakerId))
-				throw new ArgumentException("SpeakerId cannot be empty.", nameof(speakerId));
+            string speakerId = await GetSpeakerIdForUserAsync(userId, provider, cancellationToken);
+            if (string.IsNullOrWhiteSpace(speakerId)) return null;
 
-			text = text.Replace("\"", "&quot;")
-				.Replace("&", "&amp;")
-				.Replace("'", "&apos;")
-				.Replace("<", "&lt;")
-				.Replace(">", "&gt;");
-			
-			RestRequest request = new("api/tts");
-			request.AddParameter("text", text, ParameterType.QueryString);
-			request.AddParameter("speaker_id", speakerId, ParameterType.QueryString);
-			request.AddParameter("style_wav", null, ParameterType.QueryString);
-			request.AddParameter("language_id", null, ParameterType.QueryString);
-			
-			RestResponse response = await _client.ExecuteAsync(request, cancellationToken);
-			
-			if (!response.IsSuccessful || response.Content == null)
-				throw new($"Failed to synthesize TTS: {speakerId} {response.ErrorMessage}");
-			
-			// Assuming the response content is the audio data in byte array format
-			return response.RawBytes ?? [];
-		}
+            byte[] audioBytes = await provider.SynthesizeAsync(text, speakerId, cancellationToken);
+            decimal cost = await provider.CalculateCostAsync(text, speakerId);
 
-		public void Dispose()
-		{
-			_client.Dispose();
-		}
+            TtsUsageRecord usageRecord = await _usageService.RecordUsageAsync(provider.Name, text.Length, cost);
+            
+            _logger.LogInformation("TTS synthesis created (provider: {Provider}, characters: {Length}, cost: ${Cost})",
+                provider.Name, text.Length, cost.ToString("F6"));
 
-	}
+            if (audioBytes.Length > 0)
+                await PublishTtsEventAsync(text, userId, audioBytes, provider.Name, cost, text.Length, false);
+
+            return usageRecord;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "SendTts error: {Message}", e.Message);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Sends TTS with caching for repetitive content like shoutouts - NO character limits for cached content
+    /// </summary>
+    public async Task<TtsUsageRecord?> SendCachedTts(List<ChatMessageFragment> chatMessageFragments, string userId,
+        CancellationToken cancellationToken)
+    {
+        StringBuilder textBuilder = new();
+        foreach (ChatMessageFragment fragment in chatMessageFragments.Where(fragment => fragment.Type == "text"))
+            textBuilder.Append(fragment.Text);
+
+        string text = textBuilder.ToString();
+
+        return await SendCachedTts(text, userId, cancellationToken);
+    }
+
+    /// <summary>
+    /// Sends TTS with caching for repetitive content - NO character limits for cached content
+    /// </summary>
+    public async Task<TtsUsageRecord?> SendCachedTts(string text, string userId, CancellationToken cancellationToken)
+    {
+        if (!Config.UseTts || string.IsNullOrWhiteSpace(text)) return null;
+        
+        bool hasWidgetSubscription = await _widgetEventService.HasWidgetSubscriptionsAsync("channel.chat.message.tts");
+        if (!hasWidgetSubscription)
+        {
+            _logger.LogInformation("No widgets subscribed to TTS events");
+            return null;
+        }
+
+        try
+        {
+            ITtsProvider? provider = await _providerService.GetBestAvailableProviderIgnoringLimitsAsync();
+            if (provider == null)
+            {
+                _logger.LogInformation("No TTS provider available");
+                return null;
+            }
+
+            string speakerId = await GetSpeakerIdForUserAsync(userId, provider, cancellationToken);
+            if (string.IsNullOrWhiteSpace(speakerId)) return null;
+
+            TtsCacheEntry? cachedEntry =
+                await _cacheService.GetCachedEntryAsync(text, speakerId, cancellationToken);
+
+            if (cachedEntry != null)
+            {
+                byte[] cachedAudioBytes = await File.ReadAllBytesAsync(cachedEntry.FilePath, cancellationToken);
+                await PublishTtsEventAsync(text, userId, cachedAudioBytes, cachedEntry.Provider, cachedEntry.Cost,
+                    text.Length, true);
+
+                _logger.LogInformation("Using cached TTS (saved ${Cost})", cachedEntry.Cost.ToString("F6"));
+
+                return new()
+                {
+                    ProviderId = $"{cachedEntry.Provider}_cached",
+                    CharactersUsed = 0,
+                    Cost = 0,
+                    CreatedAt = DateTime.UtcNow
+                };
+            }
+
+            int currentUsage = await _usageService.GetCurrentUsageAsync(provider.Name);
+            int remainingCharacters = await _usageService.GetRemainingCharactersAsync(provider.Name);
+
+            if (remainingCharacters <= 0 || remainingCharacters - text.Length < 0)
+            {
+                _logger.LogInformation(
+                    "TTS spend limit exceeded! Current usage: {CurrentUsage}, Remaining: {RemainingCharacters}, Requested: {Length}.",
+                    currentUsage, remainingCharacters, text.Length);
+                
+                return new()
+                {
+                    ProviderId = $"{provider.Name}_HARD_BLOCKED",
+                    CharactersUsed = 0,
+                    Cost = 0,
+                    CreatedAt = DateTime.UtcNow
+                };
+            }
+
+            _logger.LogInformation("Creating new TTS synthesis (provider: {Provider}, characters: {Length})", provider.Name, text.Length);
+            
+            byte[] audioBytes = await provider.SynthesizeAsync(text, speakerId, cancellationToken);
+            decimal cost = await provider.CalculateCostAsync(text, speakerId);
+
+            TtsUsageRecord usageRecord = await _usageService.RecordUsageAsync(provider.Name, text.Length, cost);
+
+            if (audioBytes.Length > 0)
+            {
+                // Cache for future use
+                await _cacheService.CreateCacheEntryAsync(text, speakerId, provider.Name, audioBytes, cost, cancellationToken);
+                await PublishTtsEventAsync(text, userId, audioBytes, provider.Name, cost, text.Length, false);
+
+                _logger.LogInformation("Created new TTS synthesis (cost ${Cost})", cost.ToString("F6"));
+            }
+
+            return usageRecord;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "SendCachedTts error: {Message}", e.Message);
+            return null;
+        }
+    }
+
+    private async Task PublishTtsEventAsync(string text, string userId, byte[] audioBytes, string providerName,
+        decimal cost, int characterCount, bool cached)
+    {
+        string audioBase64 = $"data:audio/wav;base64,{Convert.ToBase64String(audioBytes)}";
+
+        // Save to disk if configured
+        if (Config.SaveTtsToDisk)
+        {
+            string filePath = Path.Combine(AppFiles.CachePath, "tts", $"{userId}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.wav");
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath) ?? string.Empty);
+            await File.WriteAllBytesAsync(filePath, audioBytes);
+        }
+
+        var ttsEvent = new
+        {
+            text = text,
+            user = new { id = userId },
+            audioBase64 = audioBase64,
+            provider = providerName,
+            cost = cost,
+            characterCount = characterCount,
+            cached = cached
+        };
+
+        await _widgetEventService.PublishEventAsync("channel.chat.message.tts", ttsEvent);
+
+        // Play locally if configured
+        if (Config.PlayTtsLocally)
+            _ = Task.Run(async () =>
+                await _audioPlaybackService.PlayAudioAsync(audioBytes, CancellationToken.None));
+    }
+
+    private async Task<string> GetSpeakerIdForUserAsync(string userId, ITtsProvider provider,
+        CancellationToken cancellationToken)
+    {
+        // Try to get user's voice preference
+        string? userVoiceId = await _dbContext.UserTtsVoices
+            .AsNoTracking()
+            .Where(u => u.UserId == userId)
+            .Select(u => u.TtsVoiceId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (!string.IsNullOrEmpty(userVoiceId))
+        {
+            // Check if user has a provider-specific voice preference (format: "provider:voiceId")
+            if (userVoiceId.Contains(':'))
+            {
+                string[] parts = userVoiceId.Split(':', 2);
+                string preferredProvider = parts[0];
+
+                if (string.Equals(preferredProvider, provider.Name, StringComparison.OrdinalIgnoreCase))
+                {
+                    DatabaseTtsVoice? voice = await _dbContext.TtsVoices
+                        .AsNoTracking()
+                        .Where(v => v.Id == userVoiceId && v.IsActive && v.Provider == provider.Name)
+                        .FirstOrDefaultAsync(cancellationToken);
+
+                    if (voice != null) return voice.SpeakerId;
+                }
+            }
+            else if (string.Equals(provider.Name, "Legacy", StringComparison.OrdinalIgnoreCase))
+            {
+                // Legacy voice format
+                DatabaseTtsVoice? voice = await _dbContext.TtsVoices
+                    .AsNoTracking()
+                    .Where(v => v.Id == userVoiceId && v.IsActive && v.Provider == "Legacy")
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                if (voice != null) return voice.SpeakerId;
+            }
+        }
+
+        // Use provider's default voice
+        string defaultVoiceId = await provider.GetDefaultVoiceIdAsync();
+
+        // Save as user's preference
+        string providerVoiceId = $"{provider.Name}:{defaultVoiceId}";
+        await _dbContext.UserTtsVoices.Upsert(new()
+            {
+                UserId = userId,
+                TtsVoiceId = providerVoiceId
+            })
+            .On(u => u.UserId)
+            .WhenMatched((existing, incoming) => new()
+            {
+                TtsVoiceId = incoming.TtsVoiceId,
+                SetAt = DateTime.UtcNow
+            })
+            .RunAsync(cancellationToken);
+
+        return defaultVoiceId;
+    }
+
+    public void Dispose()
+    {
+    }
 }

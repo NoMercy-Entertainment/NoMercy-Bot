@@ -22,11 +22,9 @@ public class CreateWidgetRequest
     [StringLength(100, MinimumLength = 1)]
     public string Name { get; set; } = string.Empty;
 
-    [StringLength(500)]
-    public string Description { get; set; } = string.Empty;
+    [StringLength(500)] public string Description { get; set; } = string.Empty;
 
-    [StringLength(20)]
-    public string Version { get; set; } = "1.0.0";
+    [StringLength(20)] public string Version { get; set; } = "1.0.0";
 
     [Required]
     [StringLength(20)]
@@ -41,17 +39,13 @@ public class CreateWidgetRequest
 
 public class UpdateWidgetRequest
 {
-    [StringLength(100, MinimumLength = 1)]
-    public string? Name { get; set; }
+    [StringLength(100, MinimumLength = 1)] public string? Name { get; set; }
 
-    [StringLength(500)]
-    public string? Description { get; set; }
+    [StringLength(500)] public string? Description { get; set; }
 
-    [StringLength(20)]
-    public string? Version { get; set; }
+    [StringLength(20)] public string? Version { get; set; }
 
-    [StringLength(20)]
-    public string? Framework { get; set; }
+    [StringLength(20)] public string? Framework { get; set; }
 
     public bool? IsEnabled { get; set; }
 
@@ -62,6 +56,5 @@ public class UpdateWidgetRequest
 
 public class SubscribeEventsRequest
 {
-    [Required]
-    public List<string> Events { get; set; } = [];
+    [Required] public List<string> Events { get; set; } = [];
 }

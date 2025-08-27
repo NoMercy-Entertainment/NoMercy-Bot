@@ -9,7 +9,7 @@ namespace NoMercyBot.Services.Widgets;
 public class WidgetScaffoldService : IWidgetScaffoldService
 {
     private readonly ILogger<WidgetScaffoldService> _logger;
-    
+
     private readonly Dictionary<string, string> _supportedFrameworks = new()
     {
         { "vanilla", "Vanilla HTML/CSS/JavaScript" },
@@ -24,13 +24,14 @@ public class WidgetScaffoldService : IWidgetScaffoldService
         _logger = logger;
     }
 
-    public async Task<bool> CreateWidgetScaffoldAsync(Ulid widgetId, string widgetName, string framework, Dictionary<string, object> settings)
+    public async Task<bool> CreateWidgetScaffoldAsync(Ulid widgetId, string widgetName, string framework,
+        Dictionary<string, object> settings)
     {
         try
         {
             string sourcePath = WidgetFiles.GetWidgetSourcePath(widgetId);
             string distPath = WidgetFiles.GetWidgetDistPath(widgetId);
-            
+
             // Ensure directories exist
             Directory.CreateDirectory(sourcePath);
             Directory.CreateDirectory(distPath);
@@ -62,13 +63,14 @@ public class WidgetScaffoldService : IWidgetScaffoldService
         return _supportedFrameworks.Keys.ToList();
     }
 
-    private async Task<bool> CreateFromStubs(string targetPath, string framework, Ulid widgetId, string widgetName, Dictionary<string, object> settings)
+    private async Task<bool> CreateFromStubs(string targetPath, string framework, Ulid widgetId, string widgetName,
+        Dictionary<string, object> settings)
     {
         try
         {
             // Get the path to the stub files
             string stubsPath = GetStubsPath(framework);
-            
+
             if (!Directory.Exists(stubsPath))
             {
                 _logger.LogError("Stub directory not found for framework {Framework}: {Path}", framework, stubsPath);
@@ -102,8 +104,9 @@ public class WidgetScaffoldService : IWidgetScaffoldService
     {
         string readmeContent = $"# {widgetName}\n\n{frameworkDisplayName} scaffolding coming soon!";
         await File.WriteAllTextAsync(Path.Combine(targetPath, "README.md"), readmeContent);
-        
-        _logger.LogInformation("Created placeholder {Framework} scaffold for widget {WidgetName}", frameworkDisplayName, widgetName);
+
+        _logger.LogInformation("Created placeholder {Framework} scaffold for widget {WidgetName}", frameworkDisplayName,
+            widgetName);
         return true;
     }
 
@@ -112,7 +115,7 @@ public class WidgetScaffoldService : IWidgetScaffoldService
         // Get the directory where this assembly is located
         string assemblyLocation = Assembly.GetExecutingAssembly().Location;
         string assemblyDirectory = Path.GetDirectoryName(assemblyLocation) ?? string.Empty;
-        
+
         // Navigate to the Stubs directory relative to the assembly
         return Path.Combine(assemblyDirectory, "Widgets", "Stubs", framework);
     }
@@ -131,19 +134,14 @@ public class WidgetScaffoldService : IWidgetScaffoldService
 
             // Create target subdirectories if needed
             string? targetFileDir = Path.GetDirectoryName(targetFilePath);
-            if (!string.IsNullOrEmpty(targetFileDir))
-            {
-                Directory.CreateDirectory(targetFileDir);
-            }
+            if (!string.IsNullOrEmpty(targetFileDir)) Directory.CreateDirectory(targetFileDir);
 
             // Read source file content
             string content = await File.ReadAllTextAsync(filePath);
 
             // Apply template replacements
             foreach (KeyValuePair<string, string> replacement in replacements)
-            {
                 content = content.Replace(replacement.Key, replacement.Value);
-            }
 
             // Write processed content to target file
             await File.WriteAllTextAsync(targetFilePath, content);
@@ -163,7 +161,8 @@ public class WidgetScaffoldService : IWidgetScaffoldService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to save configuration for widget {WidgetId}: {Message}", widget.Id, ex.Message);
+            _logger.LogError(ex, "Failed to save configuration for widget {WidgetId}: {Message}", widget.Id,
+                ex.Message);
             throw;
         }
     }

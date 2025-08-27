@@ -54,7 +54,7 @@ public static class ApplicationConfiguration
         app.UseMiddleware<TokenParamAuthMiddleware>();
         app.UseAuthentication();
         app.UseAuthorization();
-        
+
         app.UseForwardedHeaders(new()
         {
             ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
@@ -64,7 +64,7 @@ public static class ApplicationConfiguration
         {
             string path = HttpUtility.UrlDecode(context.Request.Path);
             Logger.Http($"Request: {context.Request.Method} {path}");
-            
+
             if (!Config.Swagger && (context.Request.Path.StartsWithSegments("/swagger") ||
                                     context.Request.Path.StartsWithSegments("/index.html")))
             {
@@ -129,5 +129,4 @@ public static class ApplicationConfiguration
         //     RequestPath = new("/transcode")
         // });
     }
-
 }

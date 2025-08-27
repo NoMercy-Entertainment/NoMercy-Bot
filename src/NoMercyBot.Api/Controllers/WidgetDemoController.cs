@@ -110,12 +110,14 @@ public class WidgetDemoController : ControllerBase
                 break;
 
             default:
-                return BadRequest(new { 
-                    message = $"Unknown event type: {eventType}", 
-                    supportedTypes = new[] { 
-                        "message", "message.create", 
-                        "delete", "message.delete", 
-                        "edit", "message.edit", 
+                return BadRequest(new
+                {
+                    message = $"Unknown event type: {eventType}",
+                    supportedTypes = new[]
+                    {
+                        "message", "message.create",
+                        "delete", "message.delete",
+                        "edit", "message.edit",
                         "follow", "new_follower",
                         "subscribe", "new_subscriber",
                         "donation", "new_donation"
@@ -124,10 +126,11 @@ public class WidgetDemoController : ControllerBase
         }
 
         _logger.LogInformation(logMessage);
-        return Ok(new { 
-            message = $"Test {eventType} event sent to subscribed widgets", 
+        return Ok(new
+        {
+            message = $"Test {eventType} event sent to subscribed widgets",
             eventType = eventType,
-            data = eventData 
+            data = eventData
         });
     }
 
@@ -164,7 +167,7 @@ public class WidgetDemoController : ControllerBase
         };
 
         await _widgetEventService.PublishEventAsync("message.delete", deleteData);
-        
+
         _logger.LogInformation("Message delete event published: {MessageId}", request.MessageId);
         return Ok(new { message = "Message delete event sent", data = deleteData });
     }
@@ -183,7 +186,7 @@ public class WidgetDemoController : ControllerBase
         };
 
         await _widgetEventService.PublishEventAsync("message.edit", editData);
-        
+
         _logger.LogInformation("Message edit event published: {MessageId}", request.MessageId);
         return Ok(new { message = "Message edit event sent", data = editData });
     }
@@ -192,7 +195,7 @@ public class WidgetDemoController : ControllerBase
     public async Task<IActionResult> ReloadWidget(Ulid widgetId)
     {
         await _widgetEventService.NotifyWidgetReloadAsync(widgetId);
-        
+
         _logger.LogInformation("Reload notification sent to widget {WidgetId}", widgetId);
         return Ok(new { message = $"Reload notification sent to widget {widgetId}" });
     }

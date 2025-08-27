@@ -21,17 +21,24 @@ public class DiscordAuthService : IAuthService
     private readonly IConfiguration _conf;
     private readonly ILogger<DiscordAuthService> _logger;
     private readonly DiscordApiService _api;
-    
+
     public Service Service => DiscordConfig.Service();
-    
+
     public string ClientId => Service.ClientId ?? throw new InvalidOperationException("Discord ClientId is not set.");
-    private string ClientSecret => Service.ClientSecret ?? throw new InvalidOperationException("Discord ClientSecret is not set.");
+
+    private string ClientSecret =>
+        Service.ClientSecret ?? throw new InvalidOperationException("Discord ClientSecret is not set.");
+
     private string[] Scopes => Service.Scopes ?? throw new InvalidOperationException("Discord Scopes are not set.");
     public string UserId => Service.UserId ?? throw new InvalidOperationException("Twitch UserId is not set.");
     public string UserName => Service.UserName ?? throw new InvalidOperationException("Twitch UserName is not set.");
-    public Dictionary<string, string> AvailableScopes => DiscordConfig.AvailableScopes ?? throw new InvalidOperationException("Discord Scopes are not set.");
-    
-    public DiscordAuthService(IServiceScopeFactory serviceScopeFactory, IConfiguration conf, ILogger<DiscordAuthService> logger, DiscordApiService api)
+
+    public Dictionary<string, string> AvailableScopes => DiscordConfig.AvailableScopes ??
+                                                         throw new InvalidOperationException(
+                                                             "Discord Scopes are not set.");
+
+    public DiscordAuthService(IServiceScopeFactory serviceScopeFactory, IConfiguration conf,
+        ILogger<DiscordAuthService> logger, DiscordApiService api)
     {
         _scope = serviceScopeFactory.CreateScope();
         _dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -59,7 +66,7 @@ public class DiscordAuthService : IAuthService
     public async Task<(User, TokenResponse)> Callback(string code)
     {
         RestClient client = new(DiscordConfig.ApiUrl);
-        
+
         RestRequest request = new("oauth2/token", Method.Post);
         request.AddHeader("Content-Type", "application/x-www-form-urlencoded");
         request.AddParameter("client_id", DiscordConfig.Service().ClientId);
@@ -76,28 +83,28 @@ public class DiscordAuthService : IAuthService
         TokenResponse? tokenResponse = response.Content.FromJson<TokenResponse>();
         if (tokenResponse == null)
             throw new("Invalid response from Discord.");
-        
+
         await StoreTokens(tokenResponse, new()
         {
             Id = "",
-            Username = "",
+            Username = ""
         });
 
         return (new(), tokenResponse);
     }
-    
+
     public Task<(User, TokenResponse)> ValidateToken(HttpRequest request)
     {
         string authorizationHeader = request.Headers["Authorization"].First() ?? throw new InvalidOperationException();
         string accessToken = authorizationHeader["Bearer ".Length..];
-        
+
         return ValidateToken(accessToken);
     }
-    
+
     public async Task<(User, TokenResponse)> ValidateToken(string accessToken)
     {
         RestClient client = new(DiscordConfig.ApiUrl);
-        
+
         RestRequest request = new("users/@me");
         request.AddHeader("Authorization", $"Bearer {accessToken}");
 
@@ -107,7 +114,7 @@ public class DiscordAuthService : IAuthService
             throw new("Invalid access token");
 
         // Discord doesn't have a dedicated validate endpoint, so we just check if we can access the user's info
-        
+
         return (new(), new()
         {
             AccessToken = accessToken,
@@ -119,7 +126,7 @@ public class DiscordAuthService : IAuthService
     public async Task<(User, TokenResponse)> RefreshToken(string refreshToken)
     {
         RestClient client = new(DiscordConfig.ApiUrl);
-        
+
         RestRequest request = new("oauth2/token", Method.Post);
         request.AddHeader("Content-Type", "application/x-www-form-urlencoded");
         request.AddParameter("client_id", DiscordConfig.Service().ClientId);
@@ -142,7 +149,7 @@ public class DiscordAuthService : IAuthService
     public async Task RevokeToken(string accessToken)
     {
         RestClient client = new(DiscordConfig.ApiUrl);
-        
+
         RestRequest request = new("oauth2/token/revoke", Method.Post);
         request.AddHeader("Content-Type", "application/x-www-form-urlencoded");
         request.AddParameter("client_id", DiscordConfig.Service().ClientId);
@@ -161,7 +168,7 @@ public class DiscordAuthService : IAuthService
         // Discord doesn't support device code flow
         throw new NotImplementedException("Discord doesn't support device code flow");
     }
-    
+
     public async Task StoreTokens(TokenResponse tokenResponse, User user)
     {
         Service updateService = new()
@@ -184,10 +191,10 @@ public class DiscordAuthService : IAuthService
                 TokenExpiry = newUser.TokenExpiry,
                 UserId = newUser.UserId,
                 UserName = newUser.UserName,
-                UpdatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
             })
             .RunAsync();
-    
+
         Service.AccessToken = updateService.AccessToken;
         Service.RefreshToken = updateService.RefreshToken;
         Service.TokenExpiry = updateService.TokenExpiry;

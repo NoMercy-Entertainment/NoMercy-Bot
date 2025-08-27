@@ -18,7 +18,8 @@ public class BttvService : IHostedService
     private readonly TwitchAuthService _twitchAuthService;
     public List<BttvEmote> BttvEmotes { get; private set; } = [];
 
-    public BttvService(IServiceScopeFactory serviceScopeFactory,  ILogger<BttvService> logger, TwitchAuthService twitchAuthService)
+    public BttvService(IServiceScopeFactory serviceScopeFactory, ILogger<BttvService> logger,
+        TwitchAuthService twitchAuthService)
     {
         _scope = serviceScopeFactory.CreateScope();
         _dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -73,7 +74,7 @@ public class BttvService : IHostedService
                 throw new("Failed to fetch global BTTV emotes");
 
             BttvEmotes = JsonConvert.DeserializeObject<List<BttvEmote>>(response.Content) ?? [];
-            
+
             _logger.LogInformation($"Loaded {BttvEmotes.Count} global BTTV emotes");
         }
         catch (Exception ex)
@@ -92,13 +93,15 @@ public class BttvService : IHostedService
             if (!response.IsSuccessful || response.Content == null)
                 return;
 
-            ChannelBttvEmotesResponse? result = JsonConvert.DeserializeObject<ChannelBttvEmotesResponse>(response.Content);
+            ChannelBttvEmotesResponse? result =
+                JsonConvert.DeserializeObject<ChannelBttvEmotesResponse>(response.Content);
             if (result != null)
             {
                 BttvEmotes.AddRange(result.ChannelEmotes);
                 BttvEmotes.AddRange(result.SharedEmotes);
-                    
-                _logger.LogInformation($"Loaded {result.ChannelEmotes.Length + result.SharedEmotes.Length} channel BTTV emotes for {broadcasterId}");
+
+                _logger.LogInformation(
+                    $"Loaded {result.ChannelEmotes.Length + result.SharedEmotes.Length} channel BTTV emotes for {broadcasterId}");
             }
         }
         catch (Exception ex)

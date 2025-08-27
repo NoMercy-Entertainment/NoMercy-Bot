@@ -10,7 +10,7 @@ public static class ServiceSeed
     {
         if (!await dbContext.Services.AnyAsync())
         {
-            List<Service> services = 
+            List<Service> services =
             [
                 new()
                 {

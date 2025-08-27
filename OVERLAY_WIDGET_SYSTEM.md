@@ -3,31 +3,6 @@
 ## Project Overview
 Building a comprehensive overlay widget system for NoMercyBot that allows users to create, manage, and use custom stream overlay widgets with various web frameworks (Vue, React, Svelte, Angular, or vanilla HTML/CSS/JS).
 
-## Coding Style Rules
-- Use explicit types throughout the codebase
-- Follow target-typed new expressions pattern (e.g., `List<TaskDelegate> startupTasks = [];`)
-- Maintain proper async/await patterns
-- Use clear namespace organization
-- Implement dependency injection consistently
-- Follow existing constructor parameters and explicit parameter types
-- **ALWAYS ask before making drastic file changes**
-- **Use PowerShell commands for all terminal operations**
-- **Never change directory when working with C# code (only for widget/dashboard work)**
-- **Automatically add rules/preferences to this document when user mentions them (without being asked)**
-- **Globals project is the top-most project and cannot depend on any other projects - only used for things that are used (or potentially used) by other projects**
-- **Convert into 'using' declaration when creating disposable resources for cleaner code**
-- **Properly check for required using statements - ensure all necessary imports are included**
-
-### Frontend/Widget Coding Style (Vue/TypeScript)
-- **Use tabs for indentation** (not spaces)
-- **Import organization**: Group imports with blank lines between categories (Vue imports, lib imports, store imports, component imports)
-- **Vue Composition API**: Always use `<script setup lang="ts">` syntax
-- **TypeScript**: Explicit typing with interfaces, use `ref<Type>()` syntax for reactive references
-- **Template structure**: Clean indentation, logical element grouping, use v-if conditions inline
-- **Naming conventions**: camelCase for variables/functions, PascalCase for components, kebab-case for custom CSS classes
-- **CSS**: Prefer Tailwind utility classes, use custom spacing values like `w-available` when needed
-- **Comments**: Use `<!-- comment -->` for template comments, `// comment` for script comments
-
 ## Database Migration Commands
 - **Create Migration**: `dotnet ef migrations add --project src\NoMercyBot.Database\NoMercyBot.Database.csproj --context NoMercyBot.Database.AppDbContext <migration name>`
 - **Apply Migration**: `dotnet ef database update --project src\NoMercyBot.Database\NoMercyBot.Database.csproj --context NoMercyBot.Database.AppDbContext --configuration Debug`
@@ -164,3 +139,4 @@ Building a comprehensive overlay widget system for NoMercyBot that allows users 
 - Context window limitations require this document for reference
 - All major architectural decisions must be confirmed before implementation
 - System should integrate seamlessly with existing NoMercyBot infrastructure
+- **For coding style rules and conventions, refer to MASTER_CODING_PRACTICES.md**

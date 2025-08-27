@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import {onMounted} from 'vue';
 
-import { useWidgetSocket } from './hooks/useWidgetSocket';
+import {useWidgetSocket} from './hooks/useWidgetSocket';
 import StatusIndicator from './components/StatusIndicator.vue';
 import {updateWidgetSettings, widgetId, widgetName} from "@/stores/config";
 
@@ -29,7 +29,7 @@ onMounted(() => {
     <!-- Widget Header -->
     <header class="flex items-center justify-between mb-6 p-4 bg-neutral-800/50 rounded-lg backdrop-blur-sm">
       <h1 class="text-2xl font-bold text-white">{{ widgetName }}</h1>
-      <StatusIndicator :is-connected="socket.state.isConnected" />
+      <StatusIndicator :is-connected="socket.state.isConnected"/>
     </header>
 
     <!-- Main Content Area -->
@@ -47,7 +47,7 @@ onMounted(() => {
 
     <!-- Debug Info (remove in production) -->
     <div class="absolute top-2 right-2 text-xs text-neutral-500 bg-black/20 p-2 rounded">
-      Widget ID: {{ widgetId }}<br />
+      Widget ID: {{ widgetId }}<br/>
     </div>
   </div>
 </template>

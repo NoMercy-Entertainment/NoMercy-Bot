@@ -122,7 +122,7 @@ public static partial class Str
     {
         return Convert.ToInt32(value);
     }
-    
+
 
     public static double ToDouble(this string value)
     {
@@ -140,7 +140,7 @@ public static partial class Str
         if (string.IsNullOrEmpty(value)) return false;
         return bool.Parse(value);
     }
-    
+
     public static string ToHexString(this Color color)
     {
         return $"#{color.R:X2}{color.G:X2}{color.B:X2}";
@@ -178,7 +178,7 @@ public static partial class Str
             ? "?" + string.Join("&", parameters.Select(pair => $"{pair.Key}={pair.Value}"))
             : string.Empty);
     }
-    
+
     private static string _parseTitleSort(string? value = null, DateTime? date = null)
     {
         if (string.IsNullOrWhiteSpace(value)) return "";

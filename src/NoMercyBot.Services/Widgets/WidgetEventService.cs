@@ -15,8 +15,8 @@ public class WidgetEventService : IWidgetEventService
     private readonly ILogger<WidgetEventService> _logger;
 
     public WidgetEventService(
-        IServiceScopeFactory serviceScopeFactory, 
-        IHubContext<WidgetHub> hubContext, 
+        IServiceScopeFactory serviceScopeFactory,
+        IHubContext<WidgetHub> hubContext,
         ILogger<WidgetEventService> logger)
     {
         _scope = serviceScopeFactory.CreateScope();
@@ -32,7 +32,7 @@ public class WidgetEventService : IWidgetEventService
 
         List<string> currentSubscriptions = widget.EventSubscriptions;
         List<string> newSubscriptions = currentSubscriptions.Union(events).ToList();
-        
+
         widget.EventSubscriptions = newSubscriptions;
         await _dbContext.SaveChangesAsync();
 
@@ -46,18 +46,19 @@ public class WidgetEventService : IWidgetEventService
 
         List<string> currentSubscriptions = widget.EventSubscriptions;
         List<string> newSubscriptions = currentSubscriptions.Except(events).ToList();
-        
+
         widget.EventSubscriptions = newSubscriptions;
         await _dbContext.SaveChangesAsync();
 
-        _logger.LogInformation("Widget {WidgetId} unsubscribed from events: {Events}", widgetId, string.Join(", ", events));
+        _logger.LogInformation("Widget {WidgetId} unsubscribed from events: {Events}", widgetId,
+            string.Join(", ", events));
     }
 
     public async Task PublishEventAsync(string eventType, object eventData)
     {
         // Get all widgets subscribed to this event type
         List<Ulid> subscribedWidgets = await _dbContext.Widgets
-            .Where(w => w.IsEnabled && w.EventSubscriptionsJson.Contains($"\"{eventType}\""))
+            .Where(w => w.IsEnabled && w.EventSubscriptionsJson.Contains(eventType))
             .Select(w => w.Id)
             .ToListAsync();
 
@@ -76,10 +77,8 @@ public class WidgetEventService : IWidgetEventService
 
         // Send to all subscribed widgets
         foreach (Ulid widgetId in subscribedWidgets)
-        {
             await _hubContext.Clients.Group($"widget-{widgetId}")
                 .SendAsync("WidgetEvent", eventPayload);
-        }
 
         _logger.LogDebug("Published event {EventType} to {Count} widgets", eventType, subscribedWidgets.Count);
     }
@@ -111,5 +110,19 @@ public class WidgetEventService : IWidgetEventService
     {
         Widget? widget = await _dbContext.Widgets.FirstOrDefaultAsync(w => w.Id == widgetId);
         return widget?.EventSubscriptions ?? [];
+    }
+
+    public async Task<bool> HasWidgetSubscriptionsAsync(string eventType)
+    {
+        List<Ulid> subscribedWidgets = await _dbContext.Widgets
+            .Where(w => w.IsEnabled && w.EventSubscriptionsJson.Contains(eventType))
+            .Select(w => w.Id)
+            .ToListAsync();
+
+        if (subscribedWidgets.Count != 0) return true;
+        
+        _logger.LogDebug("No widgets subscribed to event: {EventType}", eventType);
+        return false;
+
     }
 }

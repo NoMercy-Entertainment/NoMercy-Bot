@@ -14,7 +14,7 @@ namespace NoMercyBot.Api.Controllers;
 public class EventSubscriptionController : BaseController
 {
     private readonly Dictionary<string, IEventSubService> _eventSubServices;
-    
+
     public EventSubscriptionController(
         [FromServices] TwitchEventSubService twitchEventSubService,
         [FromServices] DiscordEventSubService discordEventSubService,
@@ -34,9 +34,7 @@ public class EventSubscriptionController : BaseController
         service = null;
 
         if (!_eventSubServices.TryGetValue(provider.ToLower(), out IEventSubService? foundService))
-        {
             return NotFoundResponse($"Provider '{provider}' not found");
-        }
 
         service = foundService;
         return Ok();
@@ -110,7 +108,8 @@ public class EventSubscriptionController : BaseController
     }
 
     [HttpPut("{provider}/{id}")]
-    public async Task<IActionResult> UpdateSubscription(string provider, string id, [FromBody] EventSubscriptionUpdateDto request)
+    public async Task<IActionResult> UpdateSubscription(string provider, string id,
+        [FromBody] EventSubscriptionUpdateDto request)
     {
         IActionResult serviceResult = GetEventSubService(provider, out IEventSubService? service);
         if (serviceResult is not OkResult) return serviceResult;
@@ -119,10 +118,10 @@ public class EventSubscriptionController : BaseController
         {
             await service!.UpdateSubscriptionAsync(id, request.Enabled);
             EventSubscription? updated = await service.GetSubscriptionAsync(id);
-            
+
             if (updated == null)
                 return NotFoundResponse($"Subscription with ID '{id}' not found");
-                
+
             return Ok(updated);
         }
         catch (KeyNotFoundException ex)
@@ -153,7 +152,8 @@ public class EventSubscriptionController : BaseController
     }
 
     [HttpPut("{provider}")]
-    public async Task<IActionResult> UpdateAllSubscriptions(string provider, [FromBody] EventSubscriptionUpdateDto[] subscriptionUpdates)
+    public async Task<IActionResult> UpdateAllSubscriptions(string provider,
+        [FromBody] EventSubscriptionUpdateDto[] subscriptionUpdates)
     {
         IActionResult serviceResult = GetEventSubService(provider, out IEventSubService? service);
         if (serviceResult is not OkResult) return serviceResult;
@@ -162,7 +162,7 @@ public class EventSubscriptionController : BaseController
         {
             // Get existing subscriptions
             List<EventSubscription> existingSubscriptions = await service!.GetAllSubscriptionsAsync();
-            
+
             // Map the partial updates to full EventSubscription objects
             List<EventSubscription> subscriptionsToUpdate = [];
             foreach (EventSubscriptionUpdateDto update in subscriptionUpdates)
@@ -170,7 +170,7 @@ public class EventSubscriptionController : BaseController
                 // Find the existing subscription by ID
                 EventSubscription? existing = existingSubscriptions.FirstOrDefault(s => s.Id == update.Id);
                 if (existing == null) continue;
-                
+
                 // Apply the update to the existing subscription
                 // The issue was here - we only applied updates when enabled was true
                 existing.Enabled = update.Enabled; // Apply the enabled status unconditionally
@@ -185,8 +185,8 @@ public class EventSubscriptionController : BaseController
             return InternalServerErrorResponse($"Failed to update subscriptions: {ex.Message}");
         }
     }
-    
-    
+
+
     [HttpDelete("{provider}")]
     public async Task<IActionResult> DeleteAllSubscriptions(string provider)
     {

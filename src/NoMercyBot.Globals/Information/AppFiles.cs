@@ -23,7 +23,7 @@ public static class AppFiles
 
     public static string CachePath => Path.Combine(AppPath, "cache");
     public static string ServerExePath => Path.Combine(AppPath, "NoMercyBot" + Info.ExecSuffix);
-    
+
     public static string AppIcon => Path.Combine(Directory.GetCurrentDirectory(), "Assets/icon" + Info.IconSuffix);
 
     public static string DatabaseFile => Path.Combine(DataPath, "database.sqlite");
@@ -40,7 +40,7 @@ public static class AppFiles
             LogPath,
             CommandsPath,
             RewardsPath,
-            WidgetsPath,
+            WidgetsPath
         ];
     }
 

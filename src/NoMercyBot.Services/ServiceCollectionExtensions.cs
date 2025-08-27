@@ -7,6 +7,9 @@ using NoMercyBot.Services.Spotify;
 using NoMercyBot.Services.Twitch;
 using NoMercyBot.Services.Emotes;
 using NoMercyBot.Services.Widgets;
+using NoMercyBot.Services.TTS.Interfaces;
+using NoMercyBot.Services.TTS.Services;
+using NoMercyBot.Services.TTS.Providers;
 using Microsoft.Extensions.Hosting;
 
 namespace NoMercyBot.Services;
@@ -16,9 +19,9 @@ public static class ServiceCollectionExtensions
     public static void AddBotServices(this IServiceCollection services)
     {
         services.AddSingleton<SeedService>();
-        
+
         services.AddTokenRefreshService();
-        
+
         services.AddTwitchServices();
         services.AddSpotifyServices();
         services.AddDiscordServices();
@@ -26,6 +29,7 @@ public static class ServiceCollectionExtensions
         services.AddOtherServices();
         services.AddEmoteServices();
         services.AddWidgetServices();
+        services.AddTtsServices();
     }
 
     private static void AddOtherServices(this IServiceCollection services)
@@ -33,10 +37,29 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<PronounService>();
         services.AddSingleton<PermissionService>();
         services.AddHostedService<GracefulShutdownService>();
+        services.AddSingleton<LocalAudioPlaybackService>(); // Add local audio playback service
 
         services.AddSingleton<TtsService>();
     }
-    
+
+    private static void AddTtsServices(this IServiceCollection services)
+    {
+        // Core TTS services
+        services.AddSingleton<ITtsUsageService, TtsUsageService>();
+        services.AddSingleton<ITtsProviderService, TtsProviderService>();
+        services.AddSingleton<TtsCacheService>(); // Add cache service registration
+
+        // TTS Providers
+        services.AddSingleton<ITtsProvider, AzureTtsProvider>();
+        services.AddSingleton<ITtsProvider, LegacyTtsProvider>();
+
+        // Provider initialization service
+        services.AddSingleton<TtsProviderInitializationService>();
+
+        // Cache cleanup service
+        services.AddHostedService<TtsCacheCleanupService>();
+    }
+
     private static void AddEmoteServices(this IServiceCollection services)
     {
         services.AddSingletonHostedService<BttvService>();
@@ -56,7 +79,7 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<TokenRefreshService>();
         services.AddHostedService<SpotifyWebsocketService>();
     }
-    
+
     // Extension method to add a service as both a singleton and a hosted service
     internal static IServiceCollection AddSingletonHostedService<TService>(this IServiceCollection services)
         where TService : class, IHostedService

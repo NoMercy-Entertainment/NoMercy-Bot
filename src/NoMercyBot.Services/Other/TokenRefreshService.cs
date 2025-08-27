@@ -52,25 +52,25 @@ public class TokenRefreshService : BackgroundService
     private async Task RefreshTokensIfNeeded(CancellationToken cancellationToken)
     {
         List<Service> services = await _dbContext.Services.ToListAsync(cancellationToken);
-        
+
         foreach (Service authService in services)
         {
             if (string.IsNullOrEmpty(authService.RefreshToken))
                 continue;
-                
+
             if (authService.TokenExpiry == null)
                 continue;
-                
+
             DateTime expiryTime = authService.TokenExpiry.Value;
             DateTime refreshTime = expiryTime.AddMinutes(-_refreshThreshold.TotalMinutes);
 
             if (DateTime.UtcNow < refreshTime) continue;
-            
+
             Logger.System(DateTime.UtcNow.ToLongTimeString(), LogEventLevel.Verbose);
             Logger.System(refreshTime.ToLongTimeString(), LogEventLevel.Verbose);
             await RefreshServiceToken(authService, _scope, cancellationToken);
         }
-        
+
         List<BotAccount> botAccounts = await _dbContext.BotAccounts
             .Where(b => b.TokenExpiry != null)
             .ToListAsync(cancellationToken);
@@ -79,15 +79,15 @@ public class TokenRefreshService : BackgroundService
         {
             if (string.IsNullOrEmpty(botAccount.RefreshToken))
                 continue;
-                
+
             if (botAccount.TokenExpiry == null)
                 continue;
-            
+
             DateTime expiryTime = botAccount.TokenExpiry!.Value;
             DateTime refreshTime = expiryTime.AddMinutes(-_refreshThreshold.TotalMinutes);
 
             if (DateTime.UtcNow < refreshTime) continue;
-            
+
             Logger.System(DateTime.UtcNow.ToLongTimeString(), LogEventLevel.Verbose);
             Logger.System(refreshTime.ToLongTimeString(), LogEventLevel.Verbose);
 
@@ -126,17 +126,17 @@ public class TokenRefreshService : BackgroundService
                     TokenExpiry = newService.TokenExpiry,
                     UserId = newService.UserId,
                     UserName = newService.UserName,
-                    UpdatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
                 })
                 .RunAsync(cancellationToken);
-            
+
             service.AccessToken = authService.Service.AccessToken;
             service.RefreshToken = authService.Service.RefreshToken;
             service.TokenExpiry = authService.Service.TokenExpiry;
             service.UserId = authService.Service.UserId;
             service.UserName = authService.Service.UserName;
             service.UpdatedAt = authService.Service.UpdatedAt;
-                
+
             _logger.LogDebug("Successfully refreshed token for {ServiceName}", service.Name);
         }
         catch (Exception ex)
@@ -144,8 +144,9 @@ public class TokenRefreshService : BackgroundService
             _logger.LogError(ex, "Failed to refresh token for service {ServiceName}", service.Name);
         }
     }
-    
-    internal async Task RefreshBotToken(BotAccount botAccount, IServiceScope scope, CancellationToken cancellationToken = new())
+
+    internal async Task RefreshBotToken(BotAccount botAccount, IServiceScope scope,
+        CancellationToken cancellationToken = new())
     {
         try
         {
@@ -160,7 +161,7 @@ public class TokenRefreshService : BackgroundService
             botAccount.AccessToken = response.AccessToken;
             botAccount.RefreshToken = response.RefreshToken;
             botAccount.TokenExpiry = DateTime.UtcNow.AddSeconds(response.ExpiresIn);
-            
+
             botAccount.Username = string.IsNullOrWhiteSpace(user.Username)
                 ? botAccount.Username
                 : user.Username;
@@ -172,10 +173,10 @@ public class TokenRefreshService : BackgroundService
                     AccessToken = newBot.AccessToken,
                     RefreshToken = newBot.RefreshToken,
                     TokenExpiry = newBot.TokenExpiry,
-                    Username = newBot.Username,
+                    Username = newBot.Username
                 })
                 .RunAsync(cancellationToken);
-                
+
             _logger.LogDebug("Successfully refreshed token for bot account {BotName}", botAccount.Username);
         }
         catch (Exception ex)
@@ -183,7 +184,7 @@ public class TokenRefreshService : BackgroundService
             _logger.LogError(ex, "Failed to refresh token for bot account {BotName}", botAccount.Username);
         }
     }
-    
+
     private IAuthService? GetAuthServiceForProvider(string provider, IServiceScope scope)
     {
         return provider.ToLower() switch

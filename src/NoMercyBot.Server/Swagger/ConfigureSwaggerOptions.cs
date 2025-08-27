@@ -19,7 +19,7 @@ public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
         foreach (ApiVersionDescription description in _provider.ApiVersionDescriptions)
         {
             options.SwaggerDoc(description.GroupName, CreateInfoForApiVersion(description));
-            
+
             options.AddSecurityDefinition("twitch_auth", new()
             {
                 Type = SecuritySchemeType.OAuth2,
@@ -49,9 +49,9 @@ public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
                 Name = "Authorization",
                 Type = SecuritySchemeType.OAuth2,
                 Description = "Twitch OAuth2 Bearer Token",
-                Scheme = "Bearer",
+                Scheme = "Bearer"
             };
-            
+
             options.AddSecurityRequirement(new()
             {
                 { twitchSecurityScheme, [] },

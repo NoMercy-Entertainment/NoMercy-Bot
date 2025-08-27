@@ -8,4 +8,5 @@ public interface IWidgetEventService
     Task PublishEventToWidgetAsync(Ulid widgetId, string eventType, object eventData);
     Task NotifyWidgetReloadAsync(Ulid widgetId);
     Task<List<string>> GetWidgetSubscriptionsAsync(Ulid widgetId);
+    Task<bool> HasWidgetSubscriptionsAsync(string widgetType);
 }

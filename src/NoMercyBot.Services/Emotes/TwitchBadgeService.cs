@@ -19,7 +19,8 @@ public class TwitchBadgeService : IHostedService
     private readonly TwitchAuthService _twitchAuthService;
     public List<ChatBadge> TwitchBadges { get; private set; } = [];
 
-    public TwitchBadgeService(IServiceScopeFactory serviceScopeFactory, ILogger<TwitchBadgeService> logger, TwitchAuthService twitchAuthService)
+    public TwitchBadgeService(IServiceScopeFactory serviceScopeFactory, ILogger<TwitchBadgeService> logger,
+        TwitchAuthService twitchAuthService)
     {
         _scope = serviceScopeFactory.CreateScope();
         _dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -76,28 +77,25 @@ public class TwitchBadgeService : IHostedService
             if (!response.IsSuccessful || response.Content == null)
                 throw new("Failed to fetch global Twitch badges");
 
-            TwitchGlobalBadgesResponse? result = JsonConvert.DeserializeObject<TwitchGlobalBadgesResponse>(response.Content);
+            TwitchGlobalBadgesResponse? result =
+                JsonConvert.DeserializeObject<TwitchGlobalBadgesResponse>(response.Content);
             if (result?.Data == null)
                 throw new("No global Twitch badges found");
-            
+
             foreach (TwitchGlobalBadgesResponseData badge in result.Data)
-            {
-                foreach (TwitchGlobalBadgesVersion version in badge.Versions)
+            foreach (TwitchGlobalBadgesVersion version in badge.Versions)
+                TwitchBadges.Add(new()
                 {
-                    TwitchBadges.Add(new()
+                    SetId = badge.SetId,
+                    Id = version.Id,
+                    Info = version.Description,
+                    Urls = new()
                     {
-                        SetId = badge.SetId,
-                        Id = version.Id,
-                        Info = version.Description,
-                        Urls = new()
-                        {
-                            { "1", version.ImageUrl1X },
-                            { "2", version.ImageUrl2X },
-                            { "4", version.ImageUrl4X }
-                        }
-                    });
-                }
-            }
+                        { "1", version.ImageUrl1X },
+                        { "2", version.ImageUrl2X },
+                        { "4", version.ImageUrl4X }
+                    }
+                });
 
             _logger.LogInformation($"Loaded {TwitchBadges.Count} global Twitch badges");
         }
@@ -120,27 +118,25 @@ public class TwitchBadgeService : IHostedService
             if (!response.IsSuccessful || response.Content == null)
                 return;
 
-            TwitchGlobalBadgesResponse? channelBadges = JsonConvert.DeserializeObject<TwitchGlobalBadgesResponse>(response.Content);
+            TwitchGlobalBadgesResponse? channelBadges =
+                JsonConvert.DeserializeObject<TwitchGlobalBadgesResponse>(response.Content);
             if (channelBadges != null)
             {
                 foreach (TwitchGlobalBadgesResponseData badge in channelBadges.Data)
-                {
-                    foreach (TwitchGlobalBadgesVersion version in badge.Versions)
+                foreach (TwitchGlobalBadgesVersion version in badge.Versions)
+                    TwitchBadges.Add(new()
                     {
-                        TwitchBadges.Add(new()
+                        SetId = badge.SetId,
+                        Id = version.Id,
+                        Info = version.Title,
+                        Urls = new()
                         {
-                            SetId = badge.SetId,
-                            Id = version.Id,
-                            Info = version.Title,
-                            Urls = new()
-                            {
-                                { "1", version.ImageUrl1X },
-                                { "2", version.ImageUrl2X },
-                                { "4", version.ImageUrl4X }
-                            }
-                        });
-                    }
-                }
+                            { "1", version.ImageUrl1X },
+                            { "2", version.ImageUrl2X },
+                            { "4", version.ImageUrl4X }
+                        }
+                    });
+
                 _logger.LogInformation($"Loaded {channelBadges.Data.Length} channel Twitch badges for {broadcasterId}");
             }
         }

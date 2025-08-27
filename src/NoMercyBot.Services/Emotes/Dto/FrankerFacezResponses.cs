@@ -15,7 +15,7 @@ public class FrankerFacezSet
     [JsonProperty("_type")] public int Type { get; set; }
     [JsonProperty("icon")] public object? Icon { get; set; }
     [JsonProperty("title")] public string Title { get; set; } = string.Empty;
-    [JsonProperty("css")] public object? Css { get; set; } 
+    [JsonProperty("css")] public object? Css { get; set; }
     [JsonProperty("emoticons")] public Emoticon[] Emoticons { get; set; } = [];
 }
 

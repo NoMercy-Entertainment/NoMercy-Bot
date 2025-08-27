@@ -19,13 +19,13 @@ public class PronounSeeder : IHostedService
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Starting PronounSeeder");
-        
+
         try
         {
             // Get the PronounService to load pronouns from the API
             PronounService pronounService = _scope.ServiceProvider.GetRequiredService<PronounService>();
             await pronounService.LoadPronouns();
-            
+
             _logger.LogInformation("Successfully seeded pronouns");
         }
         catch (Exception ex)

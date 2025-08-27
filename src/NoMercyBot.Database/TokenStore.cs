@@ -11,7 +11,8 @@ public static class TokenStore
     {
         if (Protector == null)
         {
-            IDataProtectionProvider dataProtectionProvider = serviceProvider.GetRequiredService<IDataProtectionProvider>();
+            IDataProtectionProvider dataProtectionProvider =
+                serviceProvider.GetRequiredService<IDataProtectionProvider>();
             Protector = dataProtectionProvider.CreateProtector("NoMercyBot.TokenProtection");
         }
     }

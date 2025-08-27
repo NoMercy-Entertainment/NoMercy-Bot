@@ -36,10 +36,8 @@ public class RewardScriptLoader
 
     public async Task LoadAllAsync()
     {
-        foreach (string file in Directory.GetFiles(AppFiles.RewardsPath, "*.cs"))
-        {
-            await LoadScriptAsync(file);
-        }
+        await Parallel.ForEachAsync(Directory.GetFiles(AppFiles.RewardsPath, "*.cs"),
+            async (file, _) => { await LoadScriptAsync(file); });
     }
 
     private async Task LoadScriptAsync(string filePath)
@@ -49,15 +47,15 @@ public class RewardScriptLoader
         try
         {
             ScriptOptions options = ScriptOptions.Default;
-            
+
             IEnumerable<string> assemblies = AppDomain.CurrentDomain.GetAssemblies()
                 .Where(a => !a.IsDynamic && !string.IsNullOrEmpty(a.Location))
                 .Select(a => a.Location);
 
             options = options.AddReferences(assemblies);
-            
+
             IReward reward = await CSharpScript.EvaluateAsync<IReward>(scriptCode, options);
-            
+
             TwitchReward twitchReward = new()
             {
                 RewardId = reward.RewardId,
@@ -86,26 +84,26 @@ public class RewardScriptLoader
                         CancellationToken = ctx.CancellationToken,
                         DatabaseContext = _appDbContext,
                         ServiceProvider = _serviceProvider,
-                        ChatService = _twitchChatService,
-                        TwitchApiService = _twitchApiService,
+                        TwitchChatService = _twitchChatService,
+                        TwitchApiService = _twitchApiService
                     };
 
                     await reward.Callback(scriptCtx);
                 }
             };
-            
+
             RewardScriptContext scriptCtx = new()
             {
                 DatabaseContext = _appDbContext,
                 ServiceProvider = _serviceProvider,
-                ChatService = _twitchChatService,
-                TwitchApiService = _twitchApiService,
+                TwitchChatService = _twitchChatService,
+                TwitchApiService = _twitchApiService
             };
-            
+
             await reward.Init(scriptCtx);
-                
+
             _rewardService.RegisterReward(twitchReward);
-            
+
             _logger.LogInformation("Loaded reward script: {RewardName}", rewardName);
         }
         catch (Exception ex)

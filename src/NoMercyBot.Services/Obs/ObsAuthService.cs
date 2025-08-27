@@ -19,15 +19,21 @@ public class ObsAuthService : IAuthService
     private readonly ObsApiService _api;
 
     public Service Service => ObsConfig.Service();
-    
+
     public string ClientId => Service.ClientId ?? throw new InvalidOperationException("OBS ClientId is not set.");
-    private string ClientSecret => Service.ClientSecret ?? throw new InvalidOperationException("OBS ClientSecret is not set.");
+
+    private string ClientSecret =>
+        Service.ClientSecret ?? throw new InvalidOperationException("OBS ClientSecret is not set.");
+
     private string[] Scopes => Service.Scopes ?? throw new InvalidOperationException("OBS Scopes are not set.");
     public string UserId => Service.UserId ?? throw new InvalidOperationException("Twitch UserId is not set.");
     public string UserName => Service.UserName ?? throw new InvalidOperationException("Twitch UserName is not set.");
-    public Dictionary<string, string> AvailableScopes => ObsConfig.AvailableScopes ?? throw new InvalidOperationException("OBS Scopes are not set.");
 
-    public ObsAuthService(IServiceScopeFactory serviceScopeFactory, IConfiguration conf, ILogger<ObsAuthService> logger, ObsApiService api)
+    public Dictionary<string, string> AvailableScopes =>
+        ObsConfig.AvailableScopes ?? throw new InvalidOperationException("OBS Scopes are not set.");
+
+    public ObsAuthService(IServiceScopeFactory serviceScopeFactory, IConfiguration conf, ILogger<ObsAuthService> logger,
+        ObsApiService api)
     {
         _scope = serviceScopeFactory.CreateScope();
         _db = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -45,9 +51,9 @@ public class ObsAuthService : IAuthService
     {
         string authorizationHeader = request.Headers["Authorization"].First() ?? throw new InvalidOperationException();
         string accessToken = authorizationHeader["Bearer ".Length..];
-        
+
         await ValidateToken(accessToken);
-        
+
         return (new(), new()
         {
             AccessToken = accessToken,
@@ -55,7 +61,7 @@ public class ObsAuthService : IAuthService
             RefreshToken = null
         });
     }
-    
+
     public Task<(User, TokenResponse)> ValidateToken(string accessToken)
     {
         throw new NotImplementedException();
@@ -80,7 +86,7 @@ public class ObsAuthService : IAuthService
     {
         throw new NotImplementedException();
     }
-    
+
     public async Task StoreTokens(TokenResponse tokenResponse, User user)
     {
         Service updateService = new()
@@ -101,10 +107,10 @@ public class ObsAuthService : IAuthService
                 AccessToken = newUser.AccessToken,
                 RefreshToken = newUser.RefreshToken,
                 TokenExpiry = newUser.TokenExpiry,
-                UpdatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
             })
             .RunAsync();
-    
+
         Service.AccessToken = updateService.AccessToken;
         Service.RefreshToken = updateService.RefreshToken;
         Service.TokenExpiry = updateService.TokenExpiry;

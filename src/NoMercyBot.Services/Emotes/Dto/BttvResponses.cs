@@ -16,6 +16,10 @@ public class BttvEmote
     [JsonProperty("animated")] public bool Animated { get; set; }
     [JsonProperty("userId")] public string UserId { get; set; } = string.Empty;
     [JsonProperty("modifier")] public bool Modifier { get; set; }
-    [JsonProperty("width", NullValueHandling = NullValueHandling.Ignore)] public long? Width { get; set; }
-    [JsonProperty("height", NullValueHandling = NullValueHandling.Ignore)] public long? Height { get; set; }
+
+    [JsonProperty("width", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Width { get; set; }
+
+    [JsonProperty("height", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Height { get; set; }
 }

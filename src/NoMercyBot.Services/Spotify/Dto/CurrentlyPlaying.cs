@@ -9,7 +9,10 @@ public class CurrentlyPlaying
     [JsonProperty("context")] public Context Context { get; set; } = new();
     [JsonProperty("progress_ms")] public long ProgressMs { get; set; }
     [JsonProperty("item")] public Item Item { get; set; } = new();
-    [JsonProperty("currently_playing_type")] public string CurrentlyPlayingType { get; set; } = null!;
+
+    [JsonProperty("currently_playing_type")]
+    public string CurrentlyPlayingType { get; set; } = null!;
+
     [JsonProperty("actions")] public Actions Actions { get; set; } = new();
 }
 
@@ -75,7 +78,10 @@ public class Album
     [JsonProperty("images")] public Image[] Images { get; set; } = [];
     [JsonProperty("name")] public string Name { get; set; } = null!;
     [JsonProperty("release_date")] public DateTimeOffset ReleaseDate { get; set; } = new();
-    [JsonProperty("release_date_precision")] public string ReleaseDatePrecision { get; set; } = null!;
+
+    [JsonProperty("release_date_precision")]
+    public string ReleaseDatePrecision { get; set; } = null!;
+
     [JsonProperty("total_tracks")] public long TotalTracks { get; set; }
     [JsonProperty("type")] public string Type { get; set; } = null!;
     [JsonProperty("uri")] public Uri Uri { get; set; } = null!;

@@ -225,14 +225,14 @@ public class BaseController : Controller
             statusCode: StatusCodes.Status451UnavailableForLegalReasons,
             type: "/docs/errors/unavailable-for-legal-reasons");
     }
-    
+
     public record PaginatedResponse<T>
     {
         [JsonProperty("data")] public IEnumerable<T> Data { get; set; } = [];
         [JsonProperty("next_page")] public int? NextPage { get; set; }
         [JsonProperty("has_more")] public bool HasMore { get; set; }
     }
-    
+
     public class PageRequestDto
     {
         [FromQuery(Name = "page")] public int Page { get; set; }

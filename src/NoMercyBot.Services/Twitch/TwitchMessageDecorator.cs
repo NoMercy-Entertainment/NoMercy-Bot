@@ -9,7 +9,7 @@ using NoMercyBot.Services.Other;
 
 namespace NoMercyBot.Services.Twitch;
 
-public class TwitchMessageDecorator: IService
+public class TwitchMessageDecorator : IService
 {
     private readonly FrankerFacezService _frankerFacezService;
     private readonly BttvService _bttvService;
@@ -18,23 +18,23 @@ public class TwitchMessageDecorator: IService
     private readonly ParallelOptions _parallelOptions;
     private readonly TwitchBadgeService _twitchBadgeService;
     private readonly PermissionService _permissionService;
-    
+
     private ChatMessage ChatMessage { get; set; }
     private List<ChatMessageFragment> _fragments = [];
-    
-    private bool HasDecoratorServices => 
-        Config.UseBttvEmotes 
-        || Config.UseFrankerfacezEmotes 
-        || Config.UseSevenTvEmotes 
-        || Config.UseChatHtmlParser 
+
+    private bool HasDecoratorServices =>
+        Config.UseBttvEmotes
+        || Config.UseFrankerfacezEmotes
+        || Config.UseSevenTvEmotes
+        || Config.UseChatHtmlParser
         || Config.UseChatOgParser;
 
     public TwitchMessageDecorator(
         FrankerFacezService frankerFacezService,
         BttvService bttvService,
-        SevenTvService sevenTvService, 
+        SevenTvService sevenTvService,
         TwitchBadgeService twitchBadgeService,
-        HtmlMetadataService htmlMetadataService, 
+        HtmlMetadataService htmlMetadataService,
         PermissionService permissionService,
         CancellationToken cancellationToken = default)
     {
@@ -44,9 +44,9 @@ public class TwitchMessageDecorator: IService
         _twitchBadgeService = twitchBadgeService;
         _htmlMetadataService = htmlMetadataService;
         _permissionService = permissionService;
-        
+
         ChatMessage = new();
-        
+
         _parallelOptions = new()
         {
             CancellationToken = cancellationToken,
@@ -59,35 +59,35 @@ public class TwitchMessageDecorator: IService
         ChatMessage = chatMessage;
         // Copy the fragments to a new list to avoid modifying the original message
         _fragments = chatMessage.Fragments.ToList();
-        
+
         DecorateBadges();
         DecorateTwitchEmotes();
-        
+
         DecrateHtml();
-        
+
         // Split up all text fragments into individual word fragments so that we can decorate them with emotes
         ExplodeTextFragments();
-        
+
         DecorateBttvEmotes();
         DecorateFrankerFaceEmotes();
         DecorateSevenTvEmotes();
-        
+
         await DecorateUrlFragments();
-        
+
         // Merge all consecutive text fragments back together to avoid having too many text fragments
         ImplodeTextFragments();
-        
+
         DecorateCodeSnippet();
-        
+
         // Overwrite the original fragments with the modified ones
         ChatMessage.Fragments = _fragments;
     }
 
     private void ExplodeTextFragments()
     {
-        if(DecorateCommand()) return;
+        if (DecorateCommand()) return;
         if (!HasDecoratorServices) return;
-        
+
         List<ChatMessageFragment> newFragments = [];
 
         foreach (ChatMessageFragment fragment in _fragments)
@@ -97,74 +97,61 @@ public class TwitchMessageDecorator: IService
             if (fragment.Type != "text")
             {
                 newFragments.Add(fragment);
-                
+
                 if (_fragments.ElementAtOrDefault(index - 0)?.Text != " ")
-                {
                     newFragments.Add(new()
                     {
                         Type = "text",
-                        Text = " ",
+                        Text = " "
                     });
-                }
-                
+
                 continue;
             }
 
             string[] words = fragment.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            
+
             foreach (string word in words)
             {
                 if (newFragments.Count > 0 || _fragments.ElementAtOrDefault(index - 0)?.Text != " ")
-                {
                     newFragments.Add(new()
                     {
                         Type = "text",
-                        Text = " ",
+                        Text = " "
                     });
-                }
-                
+
                 newFragments.Add(new()
                 {
                     Type = "text",
-                    Text = string.IsNullOrEmpty(word) 
-                    // replace all versions of whitespace with a single space
+                    Text = string.IsNullOrEmpty(word)
+                        // replace all versions of whitespace with a single space
                         ? $"{word}"
-                        : word,
+                        : word
                 });
-                
-                if(newFragments.LastOrDefault()?.Text != " ")
-                {
+
+                if (newFragments.LastOrDefault()?.Text != " ")
                     newFragments.Add(new()
                     {
                         Type = "text",
-                        Text = " ",
+                        Text = " "
                     });
-                }
             }
         }
-        
-        if(newFragments.FirstOrDefault()?.Text == " ")
-        {
-            newFragments.RemoveAt(0);
-        }
-        
-        if(newFragments.LastOrDefault()?.Text == " ")
-        {
-            newFragments.RemoveAt(newFragments.Count - 1);
-        }
+
+        if (newFragments.FirstOrDefault()?.Text == " ") newFragments.RemoveAt(0);
+
+        if (newFragments.LastOrDefault()?.Text == " ") newFragments.RemoveAt(newFragments.Count - 1);
 
         _fragments = newFragments;
     }
-    
+
     private void ImplodeTextFragments()
     {
         if (!HasDecoratorServices) return;
-        
+
         List<ChatMessageFragment> newFragments = [];
         StringBuilder currentText = new();
 
         foreach (ChatMessageFragment fragment in _fragments)
-        {
             if (fragment.Type == "text")
             {
                 currentText.Append(fragment.Text);
@@ -180,36 +167,33 @@ public class TwitchMessageDecorator: IService
                     });
                     currentText.Clear();
                 }
-                
+
                 newFragments.Add(fragment);
             }
-        }
 
         if (currentText.Length > 0)
-        {
             newFragments.Add(new()
             {
                 Type = "text",
                 Text = currentText.ToString()
             });
-        }
 
         _fragments = newFragments
             .Where(fragment => fragment.Text != " ")
             .ToList();
     }
-    
+
     private bool DecorateCommand()
     {
         ChatMessageFragment? firstFragment = _fragments.FirstOrDefault();
-        
+
         if (firstFragment is null || firstFragment.Type != "text" || !firstFragment.Text.StartsWith("!"))
             return false;
 
         ChatMessage.IsCommand = true;
 
         string text = string.Join("", _fragments.Select(x => x.Text));
-    
+
         string[] parts = text
             .Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Where(x => !string.IsNullOrWhiteSpace(x))
@@ -217,11 +201,12 @@ public class TwitchMessageDecorator: IService
 
         if (parts.Length == 0)
             return false;
-        
+
         string commandName = parts[0].TrimStart('!').ToLowerInvariant();
         string[] args = parts.Skip(1).ToArray();
-        
-        _fragments = [
+
+        _fragments =
+        [
             new()
             {
                 Type = "command",
@@ -233,7 +218,7 @@ public class TwitchMessageDecorator: IService
 
         return true;
     }
-    
+
     private void DecorateTwitchEmotes()
     {
         Parallel.ForEach(_fragments.ToList(), _parallelOptions, (fragment) =>
@@ -251,8 +236,8 @@ public class TwitchMessageDecorator: IService
                 {
                     Id = fragment.Emote.Id,
                     Format = fragment.Emote.Format,
-                    OwnerId =  fragment.Emote.OwnerId,
-                    EmoteSetId =  fragment.Emote.EmoteSetId,
+                    OwnerId = fragment.Emote.OwnerId,
+                    EmoteSetId = fragment.Emote.EmoteSetId,
                     Provider = "twitch",
                     Urls = new()
                     {
@@ -267,30 +252,24 @@ public class TwitchMessageDecorator: IService
 
     private void DecorateBadges()
     {
-        if (ChatMessage.Badges.Count == 0)
-        {
-            ChatMessage.Badges = [];
-        }
+        if (ChatMessage.Badges.Count == 0) ChatMessage.Badges = [];
 
         List<ChatBadge> badges = [];
         foreach (ChatBadge badge in ChatMessage.Badges)
         {
             ChatBadge? badgeResult = _twitchBadgeService.TwitchBadges
                 .LastOrDefault(b => b.SetId == badge.SetId && b.Id == badge.Id);
-            
-            if (badgeResult != null)
-            {
-                badges.Add(badgeResult);
-            }
+
+            if (badgeResult != null) badges.Add(badgeResult);
         }
-        
+
         ChatMessage.Badges = badges;
     }
-    
+
     private void DecorateFrankerFaceEmotes()
     {
         if (!Config.UseFrankerfacezEmotes) return;
-        
+
         Parallel.ForEach(_fragments.ToList(), _parallelOptions, fragment =>
         {
             if (fragment.Type != "text" || string.IsNullOrWhiteSpace(fragment.Text)) return;
@@ -308,7 +287,7 @@ public class TwitchMessageDecorator: IService
                 {
                     Id = emote.Id.ToString(),
                     Provider = "frankerfacez",
-                    Urls = emote.Urls,
+                    Urls = emote.Urls
                 }
             };
         });
@@ -317,7 +296,7 @@ public class TwitchMessageDecorator: IService
     private void DecorateBttvEmotes()
     {
         if (!Config.UseBttvEmotes) return;
-        
+
         Parallel.ForEach(_fragments.ToList(), _parallelOptions, fragment =>
         {
             if (fragment.Type != "text" || string.IsNullOrWhiteSpace(fragment.Text)) return;
@@ -349,7 +328,7 @@ public class TwitchMessageDecorator: IService
     private void DecorateSevenTvEmotes()
     {
         if (!Config.UseSevenTvEmotes) return;
-        
+
         Parallel.ForEach(_fragments.ToList(), _parallelOptions, fragment =>
         {
             if (fragment.Type != "text" || string.IsNullOrWhiteSpace(fragment.Text)) return;
@@ -372,42 +351,42 @@ public class TwitchMessageDecorator: IService
                         { "1", new($"https://cdn.7tv.app/emote/{emote.Id}/1x") },
                         { "2", new($"https://cdn.7tv.app/emote/{emote.Id}/2x") },
                         { "3", new($"https://cdn.7tv.app/emote/{emote.Id}/3x") },
-                        { "4", new($"https://cdn.7tv.app/emote/{emote.Id}/4x") },
+                        { "4", new($"https://cdn.7tv.app/emote/{emote.Id}/4x") }
                     }
                 }
             };
         });
     }
-    
+
     private void DecorateCodeSnippet()
     {
         if (!Config.UseChatCodeSnippets) return;
         // throw new NotImplementedException();
     }
-    
+
     private void DecrateHtml()
     {
         if (!Config.UseChatHtmlParser) return;
         if (!_permissionService.HasMinLevel(ChatMessage.UserType, "vip")) return;
-        
+
         // turn all text fragments containing valid html into html fragments
         Parallel.ForEach(_fragments.ToList(), _parallelOptions, fragment =>
         {
             if (fragment.Type != "text" || string.IsNullOrWhiteSpace(fragment.Text)) return;
-            
+
             if (!fragment.Text.Contains("<") || !fragment.Text.Contains(">")) return;
-            
+
             if (!_htmlMetadataService.ValidateHtml(fragment.Text, out HtmlDocument document)) return;
-            
+
             int index = _fragments.IndexOf(fragment);
             _fragments[index] = new()
             {
                 Type = "html",
-                Text = document.DocumentNode.OuterHtml,
+                Text = document.DocumentNode.OuterHtml
             };
         });
     }
-    
+
     private async Task DecorateUrlFragments()
     {
         foreach (ChatMessageFragment fragment in _fragments.ToList())
@@ -417,15 +396,16 @@ public class TwitchMessageDecorator: IService
             // Check if the text is a URL
             if (!Uri.TryCreate(fragment.Text, UriKind.Absolute, out Uri? uri) ||
                 (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)) continue;
-            
+
             int index = _fragments.IndexOf(fragment);
             _fragments[index] = new()
             {
                 Type = "url",
                 Text = fragment.Text,
                 HtmlContent = Config.UseChatOgParser && _permissionService.HasMinLevel(ChatMessage.UserType, "vip")
-                    ? await _htmlMetadataService.MakeComponent(uri, ChatMessage.UserType is "Vip" or "Moderator" or "Broadcaster") 
-                    : null,
+                    ? await _htmlMetadataService.MakeComponent(uri,
+                        ChatMessage.UserType is "Vip" or "Moderator" or "Broadcaster")
+                    : null
             };
         }
     }

@@ -4,7 +4,7 @@ namespace NoMercyBot.Services.Twitch.Dto;
 
 public class TwitchAuthResponse
 {
-    [JsonProperty("access_token")] public string AccessToken { get; set; } 
+    [JsonProperty("access_token")] public string AccessToken { get; set; }
     [JsonProperty("expires_in")] public long ExpiresIn { get; set; }
     [JsonProperty("refresh_token")] public string RefreshToken { get; set; }
     [JsonProperty("scope")] public string[] Scope { get; set; }
@@ -69,6 +69,7 @@ public class ChannelInfoResponse
 {
     [JsonProperty("data")] public List<ChannelInfoDto> Data { get; set; } = [];
 }
+
 public class ChannelInfoDto
 {
     [JsonProperty("broadcaster_id")] public string BroadcasterId { get; set; } = string.Empty;
@@ -80,10 +81,12 @@ public class ChannelInfoDto
     [JsonProperty("title")] public string Title { get; set; } = string.Empty;
     [JsonProperty("delay")] public int Delay { get; set; }
     [JsonProperty("tags")] public List<string> Tags { get; set; } = [];
-    [JsonProperty("content_classification_labels")] public List<string> ContentLabels { get; set; } = [];
+
+    [JsonProperty("content_classification_labels")]
+    public List<string> ContentLabels { get; set; } = [];
+
     [JsonProperty("is_branded_content")] public bool IsBrandedContent { get; set; }
 }
-
 
 public class StreamInfoResponse
 {

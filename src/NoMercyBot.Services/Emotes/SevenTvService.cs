@@ -18,7 +18,8 @@ public class SevenTvService : IHostedService
     private readonly TwitchAuthService _twitchAuthService;
     public List<SevenTvEmote> SevenTvEmotes { get; private set; } = [];
 
-    public SevenTvService(IServiceScopeFactory serviceScopeFactory,  ILogger<SevenTvService> logger, TwitchAuthService twitchAuthService)
+    public SevenTvService(IServiceScopeFactory serviceScopeFactory, ILogger<SevenTvService> logger,
+        TwitchAuthService twitchAuthService)
     {
         _scope = serviceScopeFactory.CreateScope();
         _dbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -71,10 +72,10 @@ public class SevenTvService : IHostedService
                 throw new("Failed to fetch global 7TV emotes");
 
             SevenTvGlobalResponse? obj = JsonConvert.DeserializeObject<SevenTvGlobalResponse>(response.Content);
-            
+
             foreach (SevenTvEmote emote in obj?.Emotes ?? [])
                 SevenTvEmotes.Add(emote);
-                
+
             _logger.LogInformation($"Loaded {SevenTvEmotes.Count} global 7TV emotes");
         }
         catch (Exception ex)
@@ -93,17 +94,14 @@ public class SevenTvService : IHostedService
             if (!response.IsSuccessful || response.Content == null)
                 return;
 
-            SevenTvChannelEmotesResponse? obj = JsonConvert.DeserializeObject<SevenTvChannelEmotesResponse>(response.Content);
-            
+            SevenTvChannelEmotesResponse? obj =
+                JsonConvert.DeserializeObject<SevenTvChannelEmotesResponse>(response.Content);
+
             List<SevenTvEmote> list = [];
             if (obj?.EmoteSet is not null)
-            {
                 foreach (SevenTvEmote emote in obj.EmoteSet.Emotes)
-                {
                     list.Add(emote);
-                }
-            }
-            
+
             SevenTvEmotes.AddRange(list);
             _logger.LogInformation($"Loaded {list.Count} channel 7TV emotes for {broadcasterId}");
         }

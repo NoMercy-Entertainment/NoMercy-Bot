@@ -38,7 +38,7 @@ public class BotAuthController : BaseController
         {
             // Use device code flow
             DeviceCodeResponse deviceCodeResponse = await _botAuthService.Authorize();
-            
+
             return Ok(deviceCodeResponse);
         }
         catch (Exception ex)
@@ -57,10 +57,10 @@ public class BotAuthController : BaseController
 
             // Use the TwitchAuthService to poll for the token
             TokenResponse tokenResponse = await _botAuthService.PollForToken(request.DeviceCode);
-            
+
             // Get user information using the token
             User? user;
-            try 
+            try
             {
                 user = await _twitchApiService.FetchUser();
                 _logger.LogInformation("Successfully fetched user: {Username}", user.DisplayName);
@@ -70,7 +70,7 @@ public class BotAuthController : BaseController
                 _logger.LogError(ex, "Error fetching user information");
                 return BadRequestResponse($"Error fetching user information: {ex.Message}");
             }
-            
+
             // Store the bot account
             BotAccount? botAccount = await _dbContext.BotAccounts.FirstOrDefaultAsync();
             if (botAccount == null)
@@ -95,13 +95,13 @@ public class BotAuthController : BaseController
                 botAccount.RefreshToken = tokenResponse.RefreshToken;
                 botAccount.TokenExpiry = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn);
             }
-            
+
             await _dbContext.SaveChangesAsync();
             _logger.LogInformation("Bot account saved successfully");
 
             return Ok(new
             {
-                success = true, 
+                success = true,
                 username = user.DisplayName
             });
         }
@@ -118,40 +118,37 @@ public class BotAuthController : BaseController
         try
         {
             BotAccount? botAccount = await _dbContext.BotAccounts.FirstOrDefaultAsync();
-            
-            if (botAccount == null)
-            {
-                return Ok(new { authenticated = false });
-            }
+
+            if (botAccount == null) return Ok(new { authenticated = false });
 
             bool isValid = true;
             string username = botAccount.Username;
-            
+
             // Check if token is expired
             if (botAccount.TokenExpiry.HasValue && botAccount.TokenExpiry < DateTime.UtcNow)
-            {
                 try
                 {
                     // Try refreshing the token
-                    (User user, TokenResponse tokenResponse) = await _botAuthService.RefreshToken(botAccount.RefreshToken);
-                    
+                    (User user, TokenResponse tokenResponse) =
+                        await _botAuthService.RefreshToken(botAccount.RefreshToken);
+
                     // Update the bot account
                     botAccount.AccessToken = tokenResponse.AccessToken;
                     botAccount.RefreshToken = tokenResponse.RefreshToken;
                     botAccount.TokenExpiry = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn);
-                    
+
                     await _dbContext.SaveChangesAsync();
-                    
+
                     username = user.DisplayName;
                 }
                 catch
                 {
                     isValid = false;
                 }
-            }
-            
-            return Ok(new { 
-                authenticated = isValid, 
+
+            return Ok(new
+            {
+                authenticated = isValid,
                 username = username,
                 tokenExpiry = botAccount.TokenExpiry
             });

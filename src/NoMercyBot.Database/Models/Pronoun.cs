@@ -11,7 +11,9 @@ public class Pronoun
 {
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     [MaxLength(50)]
-    [JsonProperty("id")] public int Id { get; set; }
+    [JsonProperty("id")]
+    public int Id { get; set; }
+
     [JsonProperty("name")] public string Name { get; set; } = string.Empty;
     [JsonProperty("subject")] public string Subject { get; set; } = string.Empty;
     [JsonProperty("object")] public string Object { get; set; } = string.Empty;

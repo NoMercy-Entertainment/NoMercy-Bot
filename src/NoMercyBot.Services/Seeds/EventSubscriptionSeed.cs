@@ -14,13 +14,13 @@ public static class EventSubscriptionSeed
             return;
 
         List<EventSubscription> subscriptions = [];
-        
+
         // Add Twitch events
         AddTwitchEvents(subscriptions);
-        
+
         // Add Discord events
         AddDiscordEvents(subscriptions);
-        
+
         // Add OBS events
         AddObsEvents(subscriptions);
 
@@ -28,28 +28,25 @@ public static class EventSubscriptionSeed
         await dbContext.EventSubscriptions.AddRangeAsync(subscriptions);
         await dbContext.SaveChangesAsync();
     }
-    
+
     private static void AddTwitchEvents(List<EventSubscription> subscriptions)
     {
-        foreach (KeyValuePair<string, (string Description, string Version, string[] Condition)> eventItem in TwitchEventSubService.AvailableEventTypes)
-        {
+        foreach (KeyValuePair<string, (string Description, string Version, string[] Condition)> eventItem in
+                 TwitchEventSubService.AvailableEventTypes)
             subscriptions.Add(new("twitch", eventItem.Key, false, eventItem.Value.Version)
             {
                 Description = eventItem.Value.Description,
-                Condition = eventItem.Value.Condition,
+                Condition = eventItem.Value.Condition
             });
-        }
     }
 
     private static void AddDiscordEvents(List<EventSubscription> subscriptions)
     {
         foreach (KeyValuePair<string, string> eventItem in DiscordEventSubService.AvailableEventTypes)
-        {
             subscriptions.Add(new("discord", eventItem.Key, false)
             {
                 Description = eventItem.Value
             });
-        }
     }
 
     private static void AddObsEvents(List<EventSubscription> subscriptions)
@@ -76,13 +73,11 @@ public static class EventSubscriptionSeed
             { "virtual.cam.started", "When the virtual camera is started in OBS" },
             { "virtual.cam.stopped", "When the virtual camera is stopped in OBS" }
         };
-        
+
         foreach (KeyValuePair<string, string> eventItem in obsEvents)
-        {
             subscriptions.Add(new("obs", eventItem.Key, false)
             {
-                Description = eventItem.Value,
+                Description = eventItem.Value
             });
-        }
     }
 }

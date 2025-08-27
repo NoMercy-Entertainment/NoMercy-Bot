@@ -15,14 +15,14 @@ public class DiscordApiService
     private readonly AppDbContext _dbContext;
     private readonly IConfiguration _conf;
     private readonly ILogger<DiscordApiService> _logger;
-    
+
     private Service Service => DiscordConfig.Service();
 
     public string ClientId => Service.ClientId ?? throw new InvalidOperationException("Discord ClientId is not set.");
 
     public DiscordApiService(
-        IServiceScopeFactory serviceScopeFactory, 
-        IConfiguration conf, 
+        IServiceScopeFactory serviceScopeFactory,
+        IConfiguration conf,
         ILogger<DiscordApiService> logger)
     {
         _scope = serviceScopeFactory.CreateScope();
@@ -38,7 +38,7 @@ public class DiscordApiService
             _logger.LogWarning("Discord session token is not set. Cannot retrieve Spotify token.");
             return null;
         }
-        
+
         try
         {
             RestClient client = new(DiscordConfig.ApiUrl);
@@ -57,7 +57,8 @@ public class DiscordApiService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get Spotify token for user {SpotifyUserId}", SpotifyConfig.Service().UserName);
+            _logger.LogError(ex, "Failed to get Spotify token for user {SpotifyUserId}",
+                SpotifyConfig.Service().UserName);
             return null;
         }
     }

@@ -27,7 +27,7 @@ public class SpotifyController : ControllerBase
     public async Task<IActionResult> SetVolume([FromQuery] int volume)
     {
         try
-        { 
+        {
             bool result = await _spotifyApiService.SetVolume(new(volume));
             return Ok(result);
         }
@@ -134,8 +134,8 @@ public class SpotifyController : ControllerBase
         try
         {
             SpotifyState? result = await _spotifyApiService.GetPlayerState();
-            return result is not null 
-                ? Ok(result) 
+            return result is not null
+                ? Ok(result)
                 : NotFound("No player state found");
         }
         catch (Exception ex)

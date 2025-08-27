@@ -60,13 +60,11 @@ public class Start
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
             OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362))
-        {
             // Logger.App(
             //     "Your server is ready and we will hide the console window in 10 seconds you can show it again by right-clicking the tray icon");
             // Task.Delay(10000)
             //     .ContinueWith(_ => VsConsoleWindow(0));
             VsConsoleWindow(0);
-        }
     }
 
     private static async Task RunStartup(List<TaskDelegate> startupTasks)

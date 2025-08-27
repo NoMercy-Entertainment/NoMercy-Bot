@@ -25,21 +25,15 @@ public class BotAccountController : ControllerBase
     {
         BotAccount? botAccount = await _dbContext.BotAccounts
             .FirstOrDefaultAsync();
-        
-        if (botAccount == null)
-        {
-            return NotFound(new { message = "Bot account not found" });
-        }
-        
+
+        if (botAccount == null) return NotFound(new { message = "Bot account not found" });
+
         User? user = await _dbContext.Users
             .Include(user => user.Channel)
             .FirstOrDefaultAsync(u => u.Username == botAccount.Username);
-        
-        if (user == null)
-        {
-            return NotFound(new { message = "User not found" });
-        }
-        
+
+        if (user == null) return NotFound(new { message = "User not found" });
+
         return Ok(new BotUser(botAccount, user));
     }
 
@@ -47,10 +41,7 @@ public class BotAccountController : ControllerBase
     public async Task<IActionResult> DeleteBotAccount()
     {
         BotAccount? botAccount = await _dbContext.BotAccounts.FirstOrDefaultAsync();
-        if (botAccount == null)
-        {
-            return NotFound(new { message = "Bot account not found" });
-        }
+        if (botAccount == null) return NotFound(new { message = "Bot account not found" });
 
         _dbContext.BotAccounts.Remove(botAccount);
         await _dbContext.SaveChangesAsync();
@@ -61,10 +52,7 @@ public class BotAccountController : ControllerBase
     public async Task<IActionResult> GetAuthStatus()
     {
         BotAccount? botAccount = await _dbContext.BotAccounts.FirstOrDefaultAsync();
-        if (botAccount == null)
-        {
-            return Ok(new { authenticated = false });
-        }
+        if (botAccount == null) return Ok(new { authenticated = false });
 
         // Check if token is expired
         bool isValid = botAccount.TokenExpiry.HasValue && botAccount.TokenExpiry > DateTime.UtcNow;
@@ -81,15 +69,15 @@ public class BotAccountController : ControllerBase
 public class BotUser : SimpleUser
 {
     public string? ClientId { get; set; }
-    
+
     public string? ClientSecret { get; set; }
-    
+
     public string[] Scopes { get; set; } = [];
-    
+
     public string? AccessToken { get; set; }
 
     public string? RefreshToken { get; set; }
-    
+
     public DateTime? TokenExpiry { get; set; }
 
     public BotUser(BotAccount service, User user) : base(user)
@@ -100,5 +88,4 @@ public class BotUser : SimpleUser
         RefreshToken = service.RefreshToken;
         TokenExpiry = service.TokenExpiry;
     }
-    
 }

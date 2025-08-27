@@ -23,7 +23,7 @@ public class TwitchEventSubService : IEventSubService
     public event EventSubscriptionChangedHandler? OnEventSubscriptionChanged;
 
     public string ProviderName => "twitch";
-    
+
     public TwitchEventSubService(
         IServiceScopeFactory serviceScopeFactory,
         ILogger<TwitchEventSubService> logger)
@@ -46,7 +46,8 @@ public class TwitchEventSubService : IEventSubService
                     ["broadcaster_user_id", "moderator_user_id"])
             },
             {
-                "automod.settings.update", ("A notification is sent when a broadcaster's automod settings are updated", "2",
+                "automod.settings.update", ("A notification is sent when a broadcaster's automod settings are updated",
+                    "1",
                     ["broadcaster_user_id", "moderator_user_id"])
             },
             {
@@ -55,11 +56,17 @@ public class TwitchEventSubService : IEventSubService
             },
 
             // Channel events
-            { "channel.update", ("A broadcaster updates their channel properties", "2", ["broadcaster_user_id", "user_id"]) },
-            { "channel.follow", ("A specified channel receives a follow", "2", ["broadcaster_user_id", "moderator_user_id"]) },
+            {
+                "channel.update",
+                ("A broadcaster updates their channel properties", "2", ["broadcaster_user_id", "user_id"])
+            },
+            {
+                "channel.follow",
+                ("A specified channel receives a follow", "2", ["broadcaster_user_id", "moderator_user_id"])
+            },
             {
                 "channel.ad_break.begin",
-                ("A midroll commercial break has started running", "1", ["broadcaster_user_id", "user_id"])
+                ("A midroll commercial break has started running", "1", ["broadcaster_user_id"])
             },
             {
                 "channel.chat.clear", ("A moderator or bot has cleared all messages from the chat room", "1",
@@ -143,44 +150,54 @@ public class TwitchEventSubService : IEventSubService
             { "channel.raid", ("A broadcaster raids another broadcaster's channel", "1", ["to_broadcaster_user_id"]) },
             { "channel.ban", ("A viewer is banned from the specified channel", "1", ["broadcaster_user_id"]) },
             { "channel.unban", ("A viewer is unbanned from the specified channel", "1", ["broadcaster_user_id"]) },
-            { "channel.unban_request.create", ("A user creates an unban request", "1", ["broadcaster_user_id"]) },
-            { "channel.unban_request.resolve", ("An unban request has been resolved", "1", ["broadcaster_user_id"]) },
+            {
+                "channel.unban_request.create",
+                ("A user creates an unban request", "1", ["broadcaster_user_id", "moderator_user_id"])
+            },
+            {
+                "channel.unban_request.resolve",
+                ("An unban request has been resolved", "1", ["broadcaster_user_id", "moderator_user_id"])
+            },
             {
                 "channel.moderate",
-                ("A moderator performs a moderation action in a channel", "2", ["broadcaster_user_id"])
+                ("A moderator performs a moderation action in a channel", "2",
+                    ["broadcaster_user_id", "moderator_user_id"])
             },
             {
                 "channel.moderator.add", ("Moderator privileges were added to a user on a specified channel", "1",
-                    ["broadcaster_user_id"])
+                    ["broadcaster_user_id", "moderator_user_id"])
             },
             {
                 "channel.moderator.remove", ("Moderator privileges were removed from a user on a specified channel",
                     "1",
-                    ["broadcaster_user_id"])
+                    ["broadcaster_user_id", "moderator_user_id"])
             },
             { "channel.vip.add", ("A VIP is added to the channel", "1", ["broadcaster_user_id"]) },
             { "channel.vip.remove", ("A VIP is removed from the channel", "1", ["broadcaster_user_id"]) },
-            { "channel.warning.acknowledge", ("A user acknowledges a warning", "1", ["broadcaster_user_id"]) },
-            { "channel.warning.send", ("A user is sent a warning", "1", ["broadcaster_user_id"]) },
+            {
+                "channel.warning.acknowledge",
+                ("A user acknowledges a warning", "1", ["broadcaster_user_id", "moderator_user_id"])
+            },
+            { "channel.warning.send", ("A user is sent a warning", "1", ["broadcaster_user_id", "moderator_user_id"]) },
 
             // Guest Star events
             {
                 "channel.guest_star_session.begin", ("The host began a new Guest Star session", "beta", [
-                    "broadcaster_user_id"
+                    "broadcaster_user_id", "moderator_user_id"
                 ])
             },
             {
                 "channel.guest_star_session.end",
-                ("A running Guest Star session has ended", "beta", ["broadcaster_user_id"])
+                ("A running Guest Star session has ended", "beta", ["broadcaster_user_id", "moderator_user_id"])
             },
             {
                 "channel.guest_star_guest.update", ("A guest or a slot is updated in an active Guest Star session",
                     "beta",
-                    ["broadcaster_user_id"])
+                    ["broadcaster_user_id", "moderator_user_id"])
             },
             {
                 "channel.guest_star_settings.update", ("The host preferences for Guest Star have been updated", "beta",
-                    ["broadcaster_user_id"])
+                    ["broadcaster_user_id", "moderator_user_id"])
             },
 
             // Channel points events
@@ -238,9 +255,12 @@ public class TwitchEventSubService : IEventSubService
             // Suspicious user events
             {
                 "channel.suspicious_user.message", ("A chat message has been sent by a suspicious user", "1",
-                    ["broadcaster_user_id"])
+                    ["broadcaster_user_id", "moderator_user_id"])
             },
-            { "channel.suspicious_user.update", ("A suspicious user has been updated", "1", ["broadcaster_user_id"]) },
+            {
+                "channel.suspicious_user.update",
+                ("A suspicious user has been updated", "1", ["broadcaster_user_id", "moderator_user_id"])
+            },
 
             // Charity events
             {
@@ -261,21 +281,21 @@ public class TwitchEventSubService : IEventSubService
             },
 
             // Conduit events
-            {
-                "conduit.shard.disabled", ("EventSub disables a shard due to transport status changing", "1",
-                    ["broadcaster_user_id"])
-            },
+            // {
+            //     "conduit.shard.disabled", ("EventSub disables a shard due to transport status changing", "1",
+            //         ["client_id"])
+            // },
 
-            // Drop events
-            {
-                "drop.entitlement.grant",
-                ("An entitlement for a Drop is granted to a user", "1", ["broadcaster_user_id"])
-            },
+            // Drop events (not supported by websockets yet, but kept for IEventSubService implementation)
+            // {
+            //     "drop.entitlement.grant",
+            //     ("An entitlement for a Drop is granted to a user", "1", ["broadcaster_user_id", "moderator_user_id"])
+            // },
 
             // Extension events
             {
                 "extension.bits_transaction.create", ("A Bits transaction occurred for a Twitch Extension", "1",
-                    ["broadcaster_user_id"])
+                    ["extension_client_id"])
             },
 
             // Goal events
@@ -297,35 +317,39 @@ public class TwitchEventSubService : IEventSubService
             { "channel.hype_train.end", ("A Hype Train ends on the specified channel", "2", ["broadcaster_user_id"]) },
 
             // Shield Mode events
-            { "channel.shield_mode.begin", ("The broadcaster activates Shield Mode", "1", ["broadcaster_user_id"]) },
-            { "channel.shield_mode.end", ("The broadcaster deactivates Shield Mode", "1", ["broadcaster_user_id"]) },
+            {
+                "channel.shield_mode.begin",
+                ("The broadcaster activates Shield Mode", "1", ["broadcaster_user_id", "moderator_user_id"])
+            },
+            {
+                "channel.shield_mode.end",
+                ("The broadcaster deactivates Shield Mode", "1", ["broadcaster_user_id", "moderator_user_id"])
+            },
 
             // Shoutout events
-            { "channel.shoutout.create", ("The specified broadcaster sends a Shoutout", "1", ["broadcaster_user_id"]) },
+            {
+                "channel.shoutout.create",
+                ("The specified broadcaster sends a Shoutout", "1", ["broadcaster_user_id", "moderator_user_id"])
+            },
             {
                 "channel.shoutout.receive",
-                ("The specified broadcaster receives a Shoutout", "1", ["broadcaster_user_id"])
+                ("The specified broadcaster receives a Shoutout", "1", ["broadcaster_user_id", "moderator_user_id"])
             },
 
             // Stream events
             { "stream.online", ("The specified broadcaster starts a stream", "1", ["broadcaster_user_id"]) },
             { "stream.offline", ("The specified broadcaster stops a stream", "1", ["broadcaster_user_id"]) },
-            {
-                "stream.quality_update", ("The specified broadcaster's stream quality is updated", "1", [
-                    "broadcaster_user_id"
-                ])
-            },
 
             // User events
-            {
-                "user.authorization.grant",
-                ("A user's authorization has been granted to your client id", "1", ["client_id"])
-            },
-            {
-                "user.authorization.revoke", ("A user's authorization has been revoked for your client id", "1", [
-                    "client_id"
-                ])
-            },
+            // {
+            //     "user.authorization.grant",
+            //     ("A user's authorization has been granted to your client id", "1", ["client_id"])
+            // },
+            // {
+            //     "user.authorization.revoke", ("A user's authorization has been revoked for your client id", "1", [
+            //         "client_id"
+            //     ])
+            // },
             { "user.update", ("A user has updated their account", "1", ["user_id"]) },
             { "user.whisper.message", ("A user receives a whisper", "1", ["user_id"]) }
         };
@@ -467,10 +491,7 @@ public class TwitchEventSubService : IEventSubService
         }
 
         // Second pass - apply the updates to the database
-        foreach (EventSubscription sub in subscriptions)
-        {
-            _dbContext.EventSubscriptions.Update(sub);
-        }
+        foreach (EventSubscription sub in subscriptions) _dbContext.EventSubscriptions.Update(sub);
 
         await _dbContext.SaveChangesAsync();
 
@@ -520,14 +541,12 @@ public class TwitchEventSubService : IEventSubService
 
             // For each enabled subscription, notify that it's being disabled
             foreach (EventSubscription sub in subscriptions.Where(s => s.Enabled))
-            {
                 if (OnEventSubscriptionChanged != null)
                 {
                     _logger.LogInformation("Notifying about bulk deleted subscription: {EventType} is now disabled",
                         sub.EventType);
                     await OnEventSubscriptionChanged(sub.EventType, false);
                 }
-            }
 
             // Delete from our database
             _dbContext.EventSubscriptions.RemoveRange(subscriptions);

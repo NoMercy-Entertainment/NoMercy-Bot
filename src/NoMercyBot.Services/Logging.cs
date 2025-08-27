@@ -7,6 +7,7 @@ namespace NoMercyBot.Services;
 public class CustomLogger<T> : ILogger<T>
 {
     private readonly string _categoryName;
+
     // Add a list of message fragments to filter out
     private static readonly string[] _filteredPhrases =
     [
@@ -26,18 +27,16 @@ public class CustomLogger<T> : ILogger<T>
         _categoryName = typeof(T).Name;
     }
 
-    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+        Func<TState, Exception?, string> formatter)
     {
         string message = formatter(state, exception);
-        
+
         // Filter out specific ASP.NET Core middleware messages
-        if (ShouldFilterMessage(message))
-        {
-            return; // Skip logging this message
-        }
-        
+        if (ShouldFilterMessage(message)) return; // Skip logging this message
+
         LogEventLevel level = ConvertLogLevel(logLevel);
-        
+
         // Route logs to appropriate category based on the class name
         if (_categoryName.Contains("Discord"))
             Logger.Discord($"{message}", level);
@@ -59,18 +58,27 @@ public class CustomLogger<T> : ILogger<T>
         return _filteredPhrases.Any(message.Contains);
     }
 
-    public bool IsEnabled(LogLevel logLevel) => true;
-
-    public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-    
-    private LogEventLevel ConvertLogLevel(LogLevel logLevel) => logLevel switch
+    public bool IsEnabled(LogLevel logLevel)
     {
-        LogLevel.Trace => LogEventLevel.Verbose,
-        LogLevel.Debug => LogEventLevel.Debug,
-        LogLevel.Information => LogEventLevel.Information,
-        LogLevel.Warning => LogEventLevel.Warning,
-        LogLevel.Error => LogEventLevel.Error,
-        LogLevel.Critical => LogEventLevel.Fatal,
-        _ => LogEventLevel.Information
-    };
+        return true;
+    }
+
+    public IDisposable? BeginScope<TState>(TState state) where TState : notnull
+    {
+        return null;
+    }
+
+    private LogEventLevel ConvertLogLevel(LogLevel logLevel)
+    {
+        return logLevel switch
+        {
+            LogLevel.Trace => LogEventLevel.Verbose,
+            LogLevel.Debug => LogEventLevel.Debug,
+            LogLevel.Information => LogEventLevel.Information,
+            LogLevel.Warning => LogEventLevel.Warning,
+            LogLevel.Error => LogEventLevel.Error,
+            LogLevel.Critical => LogEventLevel.Fatal,
+            _ => LogEventLevel.Information
+        };
+    }
 }

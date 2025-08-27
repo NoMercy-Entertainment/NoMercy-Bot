@@ -6,7 +6,7 @@ namespace NoMercyBot.Database.Models;
 [PrimaryKey(nameof(ChannelId), nameof(UserId))]
 [Index(nameof(UserId))]
 [Index(nameof(ChannelId))]
-public class ChannelModerator: Timestamps
+public class ChannelModerator : Timestamps
 {
     [JsonProperty("channel_id")] public string ChannelId { get; set; }
     public Channel Channel { get; set; } = null!;
@@ -18,7 +18,7 @@ public class ChannelModerator: Timestamps
     {
         //
     }
-    
+
     public ChannelModerator(string channelId, string userId)
     {
         ChannelId = channelId;

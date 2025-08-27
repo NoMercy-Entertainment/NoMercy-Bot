@@ -19,15 +19,29 @@ public class ChannelPointsCustomRewardsResponseData
     [JsonProperty("cost")] public long Cost { get; set; }
     [JsonProperty("title")] public string Title { get; set; }
     [JsonProperty("prompt")] public string Prompt { get; set; }
-    [JsonProperty("is_user_input_required")] public bool IsUserInputRequired { get; set; }
-    [JsonProperty("max_per_stream_setting")] public ChannelPointsCustomRewardsResponseMaxPerStreamSetting MaxPerStreamSetting { get; set; }
-    [JsonProperty("max_per_user_per_stream_setting")] public MaxPerUserPerStreamSetting MaxPerUserPerStreamSetting { get; set; }
-    [JsonProperty("global_cooldown_setting")] public ChannelPointsCustomRewardsResponseGlobalCooldownSetting GlobalCooldownSetting { get; set; }
+
+    [JsonProperty("is_user_input_required")]
+    public bool IsUserInputRequired { get; set; }
+
+    [JsonProperty("max_per_stream_setting")]
+    public ChannelPointsCustomRewardsResponseMaxPerStreamSetting MaxPerStreamSetting { get; set; }
+
+    [JsonProperty("max_per_user_per_stream_setting")]
+    public MaxPerUserPerStreamSetting MaxPerUserPerStreamSetting { get; set; }
+
+    [JsonProperty("global_cooldown_setting")]
+    public ChannelPointsCustomRewardsResponseGlobalCooldownSetting GlobalCooldownSetting { get; set; }
+
     [JsonProperty("is_paused")] public bool IsPaused { get; set; }
     [JsonProperty("is_in_stock")] public bool IsInStock { get; set; }
     [JsonProperty("default_image")] public ChannelPointsCustomRewardsResponseDefaultImage DefaultImage { get; set; }
-    [JsonProperty("should_redemptions_skip_request_queue")] public bool ShouldRedemptionsSkipRequestQueue { get; set; }
-    [JsonProperty("redemptions_redeemed_current_stream")] public object RedemptionsRedeemedCurrentStream { get; set; }
+
+    [JsonProperty("should_redemptions_skip_request_queue")]
+    public bool ShouldRedemptionsSkipRequestQueue { get; set; }
+
+    [JsonProperty("redemptions_redeemed_current_stream")]
+    public object RedemptionsRedeemedCurrentStream { get; set; }
+
     [JsonProperty("cooldown_expires_at")] public object CooldownExpiresAt { get; set; }
 }
 
@@ -41,7 +55,9 @@ public class ChannelPointsCustomRewardsResponseDefaultImage
 public class ChannelPointsCustomRewardsResponseGlobalCooldownSetting
 {
     [JsonProperty("is_enabled")] public bool IsEnabled { get; set; }
-    [JsonProperty("global_cooldown_seconds")] public long GlobalCooldownSeconds { get; set; }
+
+    [JsonProperty("global_cooldown_seconds")]
+    public long GlobalCooldownSeconds { get; set; }
 }
 
 public class ChannelPointsCustomRewardsResponseMaxPerStreamSetting
@@ -53,5 +69,7 @@ public class ChannelPointsCustomRewardsResponseMaxPerStreamSetting
 public class MaxPerUserPerStreamSetting
 {
     [JsonProperty("is_enabled")] public bool IsEnabled { get; set; }
-    [JsonProperty("max_per_user_per_stream")] public long MaxPerUserPerStream { get; set; }
+
+    [JsonProperty("max_per_user_per_stream")]
+    public long MaxPerUserPerStream { get; set; }
 }
