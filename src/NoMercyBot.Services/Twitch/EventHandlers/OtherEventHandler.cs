@@ -94,11 +94,11 @@ public class OtherEventHandler : TwitchEventHandlerBase
             args.Notification.Payload.Event.FromBroadcasterUserId
         );
 
-        _ = await TwitchApiService.GetOrFetchUser(args.Notification.Payload.Event.FromBroadcasterUserId);
+        // _ = await TwitchApiService.GetOrFetchUser(args.Notification.Payload.Event.FromBroadcasterUserId);
 
-        await _twitchChatService.SendOneOffMessage(
-            args.Notification.Payload.Event.FromBroadcasterUserId,
-            $"Thank you @{args.Notification.Payload.Event.FromBroadcasterUserName} for the shoutout, I appreciate it!"
-        );
+        // await _twitchChatService.SendOneOffMessage(
+        //     args.Notification.Payload.Event.FromBroadcasterUserId,
+        //     $"Thank you @{args.Notification.Payload.Event.FromBroadcasterUserName} for the shoutout, I appreciate it!"
+        // );
     }
 }

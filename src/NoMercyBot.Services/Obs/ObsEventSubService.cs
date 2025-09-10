@@ -19,17 +19,27 @@ public class ObsEventSubService : IEventSubService
     private readonly ObsApiService _obsApiService;
 
     public string ProviderName => "obs";
-
-    private readonly Dictionary<string, string> _availableEventTypes = new()
+    
+    internal static readonly Dictionary<string, string> AvailableEventTypes = new()
     {
-        { "scene.changed", "When the active scene changes" },
-        { "stream.started", "When streaming starts" },
-        { "stream.stopped", "When streaming stops" },
-        { "recording.started", "When recording starts" },
-        { "recording.stopped", "When recording stops" },
-        { "source.visibility.changed", "When a source's visibility changes" },
-        { "media.started", "When media playback starts" },
-        { "media.ended", "When media playback ends" }
+        { "scene.changed", "When the active scene in OBS is changed" },
+        { "stream.started", "When streaming begins in OBS" },
+        { "stream.stopped", "When streaming ends in OBS" },
+        { "recording.started", "When recording begins in OBS" },
+        { "recording.stopped", "When recording ends in OBS" },
+        { "source.visibility.changed", "When a source's visibility is toggled in OBS" },
+        { "media.started", "When media playback begins in OBS" },
+        { "media.ended", "When media playback ends in OBS" },
+        { "scene.item.added", "When an item is added to a scene in OBS" },
+        { "scene.item.removed", "When an item is removed from a scene in OBS" },
+        { "scene.item.visibility.changed", "When an item's visibility is toggled in a scene" },
+        { "scene.collection.changed", "When the scene collection is changed in OBS" },
+        { "exit.started", "When OBS begins to shut down" },
+        { "recording.paused", "When recording is paused in OBS" },
+        { "recording.resumed", "When recording is resumed in OBS" },
+        { "streaming.status", "When the streaming status changes in OBS" },
+        { "virtual.cam.started", "When the virtual camera is started in OBS" },
+        { "virtual.cam.stopped", "When the virtual camera is stopped in OBS" }
     };
 
     public ObsEventSubService(
@@ -138,7 +148,7 @@ public class ObsEventSubService : IEventSubService
     public async Task<EventSubscription> CreateSubscriptionAsync(string eventType, bool enabled = true)
     {
         // Check if event type is valid
-        if (!_availableEventTypes.ContainsKey(eventType))
+        if (!AvailableEventTypes.ContainsKey(eventType))
             throw new ArgumentException($"Invalid event type: {eventType}");
 
         // Check if subscription already exists
@@ -279,6 +289,6 @@ public class ObsEventSubService : IEventSubService
 
     public IEnumerable<string> GetAvailableEventTypes()
     {
-        return _availableEventTypes.Keys;
+        return AvailableEventTypes.Keys;
     }
 }

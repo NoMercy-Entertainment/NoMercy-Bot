@@ -85,14 +85,12 @@ public class AzureTtsProvider : TtsProviderBase, IDisposable
             {
                 return await response.Content.ReadAsByteArrayAsync(cancellationToken);
             }
-            
-            string errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-            throw new($"Azure TTS synthesis failed: {errorContent}");
         }
         catch (Exception ex)
         {
             throw new($"Azure TTS synthesis error: {ex.Message}", ex);
         }
+        throw new("Azure TTS synthesis failed: No valid response from API");
     }
 
     public override async Task<List<TtsVoice>> GetAvailableVoicesAsync()

@@ -33,325 +33,411 @@ public class TwitchEventSubService : IEventSubService
         _logger = logger;
     }
 
-    internal static readonly Dictionary<string, (string Description, string Version, string[] Condition)>
+    internal static readonly Dictionary<string, (string Description, string Version, string[][] Conditions)>
         AvailableEventTypes = new()
         {
             // Automod events
             {
-                "automod.message.hold", ("A user is notified if a message is caught by automod for review", "2",
-                    ["broadcaster_user_id", "moderator_user_id"])
+                "automod.message.hold", 
+                    ("A user is notified if a message is caught by automod for review", "2",
+                    [["broadcaster_user_id", "moderator_user_id"]])
             },
             {
-                "automod.message.update", ("A message in the automod queue had its status changed", "2",
-                    ["broadcaster_user_id", "moderator_user_id"])
+                "automod.message.update", 
+                    ("A message in the automod queue had its status changed", "2",
+                    [["broadcaster_user_id", "moderator_user_id"]])
             },
             {
-                "automod.settings.update", ("A notification is sent when a broadcaster's automod settings are updated",
-                    "1",
-                    ["broadcaster_user_id", "moderator_user_id"])
+                "automod.settings.update", 
+                    ("A notification is sent when a broadcaster's automod settings are updated", "1",
+                    [["broadcaster_user_id", "moderator_user_id"]])
             },
             {
-                "automod.terms.update", ("A notification is sent when a broadcaster's automod terms are updated", "1",
-                    ["broadcaster_user_id", "moderator_user_id"])
+                "automod.terms.update", 
+                    ("A notification is sent when a broadcaster's automod terms are updated", "1",
+                    [["broadcaster_user_id", "moderator_user_id"]])
             },
 
             // Channel events
             {
                 "channel.update",
-                ("A broadcaster updates their channel properties", "2", ["broadcaster_user_id", "user_id"])
+                ("A broadcaster updates their channel properties", "2", 
+                    [["broadcaster_user_id", "user_id"]])
             },
             {
                 "channel.follow",
-                ("A specified channel receives a follow", "2", ["broadcaster_user_id", "moderator_user_id"])
+                ("A specified channel receives a follow", "2", 
+                    [["broadcaster_user_id", "moderator_user_id"]])
             },
             {
                 "channel.ad_break.begin",
-                ("A midroll commercial break has started running", "1", ["broadcaster_user_id"])
+                ("A midroll commercial break has started running", "1", 
+                    [["broadcaster_user_id"]])
             },
             {
-                "channel.chat.clear", ("A moderator or bot has cleared all messages from the chat room", "1",
-                    ["broadcaster_user_id", "user_id"])
+                "channel.chat.clear", 
+                    ("A moderator or bot has cleared all messages from the chat room", "1",
+                    [["broadcaster_user_id", "user_id"]])
             },
             {
-                "channel.chat.clear_user_messages", ("A moderator or bot has cleared all messages from a specific user",
+                "channel.chat.clear_user_messages", 
+                    ("A moderator or bot has cleared all messages from a specific user",
                     "1",
-                    ["broadcaster_user_id", "user_id"])
+                    [["broadcaster_user_id", "user_id"]])
             },
             {
                 "channel.chat.message",
-                ("Any user sends a message to a specific chat room", "1", ["broadcaster_user_id", "user_id"])
+                ("Any user sends a message to a specific chat room", "1", 
+                    [["broadcaster_user_id", "user_id"]])
             },
             {
                 "channel.chat.message_delete",
-                ("A moderator has removed a specific message", "1", ["broadcaster_user_id", "user_id"])
+                ("A moderator has removed a specific message", "1", 
+                    [["broadcaster_user_id", "user_id"]])
             },
             {
-                "channel.chat.notification", ("A notification for when an event that appears in chat has occurred", "1",
-                    ["broadcaster_user_id", "user_id"])
+                "channel.chat.notification", 
+                    ("A notification for when an event that appears in chat has occurred", "1",
+                    [["broadcaster_user_id", "user_id"]])
             },
             {
-                "channel.chat_settings.update", ("A notification for when a broadcaster's chat settings are updated",
-                    "1",
-                    ["broadcaster_user_id", "user_id"])
+                "channel.chat_settings.update", 
+                    ("A notification for when a broadcaster's chat settings are updated", "1",
+                    [["broadcaster_user_id", "user_id"]])
             },
             {
-                "channel.chat.user_message_hold", ("A user is notified if their message is caught by automod", "1",
-                    ["broadcaster_user_id", "user_id"])
+                "channel.chat.user_message_hold", 
+                    ("A user is notified if their message is caught by automod", "1",
+                    [["broadcaster_user_id", "user_id"]])
             },
             {
-                "channel.chat.user_message_update", ("A user is notified if their message's automod status is updated",
-                    "1",
-                    ["broadcaster_user_id", "user_id"])
+                "channel.chat.user_message_update", 
+                    ("A user is notified if their message's automod status is updated", "1",
+                    [["broadcaster_user_id", "user_id"]])
             },
             {
-                "channel.bits.use", ("A notification is sent whenever Bits are used on a channel", "1", [
-                    "broadcaster_user_id", "user_id"
-                ])
+                "channel.bits.use", 
+                    ("A notification is sent whenever Bits are used on a channel", "1",
+                    [["broadcaster_user_id", "user_id"]])
             },
 
             // Shared chat events
             {
-                "channel.shared_chat.begin", (
-                    "A notification when a channel becomes active in an active shared chat session", "1",
-                    ["broadcaster_user_id"])
+                "channel.shared_chat.begin", 
+                    ("A notification when a channel becomes active in an active shared chat session", "1",
+                    [["broadcaster_user_id"]])
             },
             {
-                "channel.shared_chat.update", (
-                    "A notification when the active shared chat session the channel is in changes", "1",
-                    ["broadcaster_user_id"])
+                "channel.shared_chat.update", 
+                    ("A notification when the active shared chat session the channel is in changes", "1",
+                    [["broadcaster_user_id"]])
             },
             {
-                "channel.shared_chat.end", (
-                    "A notification when a channel leaves a shared chat session or the session ends", "1",
-                    ["broadcaster_user_id"])
+                "channel.shared_chat.end", 
+                    ("A notification when a channel leaves a shared chat session or the session ends", "1",
+                    [["broadcaster_user_id"]])
             },
 
             // Subscription events
             {
-                "channel.subscribe", ("A notification is sent when a specified channel receives a subscriber", "1",
-                    ["broadcaster_user_id"])
+                "channel.subscribe", 
+                    ("A notification is sent when a specified channel receives a subscriber", "1",
+                    [["broadcaster_user_id"]])
             },
             {
-                "channel.subscription.end", ("A notification when a subscription to the specified channel ends", "1",
-                    ["broadcaster_user_id"])
+                "channel.subscription.end", 
+                    ("A notification when a subscription to the specified channel ends", "1",
+                    [["broadcaster_user_id"]])
             },
             {
-                "channel.subscription.gift", (
-                    "A notification when a viewer gives a gift subscription to one or more users", "1",
-                    ["broadcaster_user_id"])
+                "channel.subscription.gift", 
+                    ("A notification when a viewer gives a gift subscription to one or more users", "1",
+                    [["broadcaster_user_id"]])
             },
             {
-                "channel.subscription.message", ("A notification when a user sends a resubscription chat message", "1",
-                    ["broadcaster_user_id"])
+                "channel.subscription.message", 
+                    ("A notification when a user sends a resubscription chat message", "1",
+                    [["broadcaster_user_id"]])
             },
-            { "channel.cheer", ("A user cheers on the specified channel", "1", ["broadcaster_user_id"]) },
+            { "channel.cheer", 
+                ("A user cheers on the specified channel", "1", 
+                    [["broadcaster_user_id"]]) },
 
             // Channel moderation events
-            { "channel.raid", ("A broadcaster raids another broadcaster's channel", "1", ["to_broadcaster_user_id"]) },
-            { "channel.ban", ("A viewer is banned from the specified channel", "1", ["broadcaster_user_id"]) },
-            { "channel.unban", ("A viewer is unbanned from the specified channel", "1", ["broadcaster_user_id"]) },
+            {
+                "channel.raid",
+                ("A broadcaster raids another broadcaster's channel", "1",
+                    [["to_broadcaster_user_id"], ["from_broadcaster_user_id"]])
+            },
+            { "channel.ban", 
+                ("A viewer is banned from the specified channel", "1", 
+                    [["broadcaster_user_id"]]) },
+            { "channel.unban", 
+                ("A viewer is unbanned from the specified channel", "1", 
+                    [["broadcaster_user_id"]]) },
             {
                 "channel.unban_request.create",
-                ("A user creates an unban request", "1", ["broadcaster_user_id", "moderator_user_id"])
+                ("A user creates an unban request", "1", 
+                    [["broadcaster_user_id", "moderator_user_id"]])
             },
             {
                 "channel.unban_request.resolve",
-                ("An unban request has been resolved", "1", ["broadcaster_user_id", "moderator_user_id"])
+                ("An unban request has been resolved", "1", 
+                    [["broadcaster_user_id", "moderator_user_id"]])
             },
             {
                 "channel.moderate",
                 ("A moderator performs a moderation action in a channel", "2",
-                    ["broadcaster_user_id", "moderator_user_id"])
+                    [["broadcaster_user_id", "moderator_user_id"]])
             },
             {
-                "channel.moderator.add", ("Moderator privileges were added to a user on a specified channel", "1",
-                    ["broadcaster_user_id", "moderator_user_id"])
+                "channel.moderator.add", 
+                    ("Moderator privileges were added to a user on a specified channel", "1",
+                    [["broadcaster_user_id", "moderator_user_id"]])
             },
             {
-                "channel.moderator.remove", ("Moderator privileges were removed from a user on a specified channel",
-                    "1",
-                    ["broadcaster_user_id", "moderator_user_id"])
+                "channel.moderator.remove", 
+                    ("Moderator privileges were removed from a user on a specified channel", "1",
+                    [["broadcaster_user_id", "moderator_user_id"]])
             },
-            { "channel.vip.add", ("A VIP is added to the channel", "1", ["broadcaster_user_id"]) },
-            { "channel.vip.remove", ("A VIP is removed from the channel", "1", ["broadcaster_user_id"]) },
+            { "channel.vip.add", 
+                ("A VIP is added to the channel", "1", 
+                    [["broadcaster_user_id"]]) },
+            { "channel.vip.remove", 
+                ("A VIP is removed from the channel", "1", 
+                    [["broadcaster_user_id"]]) },
             {
                 "channel.warning.acknowledge",
-                ("A user acknowledges a warning", "1", ["broadcaster_user_id", "moderator_user_id"])
+                ("A user acknowledges a warning", "1", 
+                    [["broadcaster_user_id", "moderator_user_id"]])
             },
-            { "channel.warning.send", ("A user is sent a warning", "1", ["broadcaster_user_id", "moderator_user_id"]) },
+            {
+                "channel.warning.send",
+                ("A user is sent a warning", "1", 
+                    [["broadcaster_user_id", "moderator_user_id"]])
+            },
 
             // Guest Star events
             {
-                "channel.guest_star_session.begin", ("The host began a new Guest Star session", "beta", [
-                    "broadcaster_user_id", "moderator_user_id"
-                ])
+                "channel.guest_star_session.begin", 
+                    ("The host began a new Guest Star session", "beta",
+                    [["broadcaster_user_id", "moderator_user_id"]])
             },
             {
                 "channel.guest_star_session.end",
-                ("A running Guest Star session has ended", "beta", ["broadcaster_user_id", "moderator_user_id"])
+                ("A running Guest Star session has ended", "beta", 
+                    [["broadcaster_user_id", "moderator_user_id"]])
             },
             {
-                "channel.guest_star_guest.update", ("A guest or a slot is updated in an active Guest Star session",
-                    "beta",
-                    ["broadcaster_user_id", "moderator_user_id"])
+                "channel.guest_star_guest.update", 
+                    ("A guest or a slot is updated in an active Guest Star session", "beta",
+                    [["broadcaster_user_id", "moderator_user_id"]])
             },
             {
-                "channel.guest_star_settings.update", ("The host preferences for Guest Star have been updated", "beta",
-                    ["broadcaster_user_id", "moderator_user_id"])
+                "channel.guest_star_settings.update", 
+                    ("The host preferences for Guest Star have been updated", "beta",
+                    [["broadcaster_user_id", "moderator_user_id"]])
             },
 
             // Channel points events
             {
-                "channel.channel_points_automatic_reward_redemption.add", (
-                    "A viewer has redeemed an automatic channel points reward", "2",
-                    ["broadcaster_user_id"])
+                "channel.channel_points_automatic_reward_redemption.add", 
+                    ("A viewer has redeemed an automatic channel points reward", "2",
+                    [["broadcaster_user_id"]])
             },
             {
-                "channel.channel_points_custom_reward.add", ("A custom channel points reward has been created", "1",
-                    ["broadcaster_user_id"])
+                "channel.channel_points_custom_reward.add", 
+                    ("A custom channel points reward has been created", "1",
+                    [["broadcaster_user_id"]])
             },
             {
-                "channel.channel_points_custom_reward.update", ("A custom channel points reward has been updated", "1",
-                    ["broadcaster_user_id"])
+                "channel.channel_points_custom_reward.update", 
+                    ("A custom channel points reward has been updated", "1",
+                    [["broadcaster_user_id"]])
             },
             {
-                "channel.channel_points_custom_reward.remove", ("A custom channel points reward has been removed", "1",
-                    ["broadcaster_user_id"])
+                "channel.channel_points_custom_reward.remove", 
+                    ("A custom channel points reward has been removed", "1",
+                    [["broadcaster_user_id"]])
             },
             {
-                "channel.channel_points_custom_reward_redemption.add", (
-                    "A viewer has redeemed a custom channel points reward", "1",
-                    ["broadcaster_user_id"])
+                "channel.channel_points_custom_reward_redemption.add", 
+                    ("A viewer has redeemed a custom channel points reward", "1",
+                    [["broadcaster_user_id"]])
             },
             {
-                "channel.channel_points_custom_reward_redemption.update", (
-                    "A redemption of a channel points custom reward has been updated", "1",
-                    ["broadcaster_user_id"])
+                "channel.channel_points_custom_reward_redemption.update", 
+                    ("A redemption of a channel points custom reward has been updated", "1",
+                    [["broadcaster_user_id"]])
             },
 
             // Poll events
-            { "channel.poll.begin", ("A poll started on a specified channel", "1", ["broadcaster_user_id"]) },
+            { "channel.poll.begin", 
+                ("A poll started on a specified channel", "1", 
+                    [["broadcaster_user_id"]]) },
             {
                 "channel.poll.progress",
-                ("Users respond to a poll on a specified channel", "1", ["broadcaster_user_id"])
+                ("Users respond to a poll on a specified channel", "1", 
+                    [["broadcaster_user_id"]])
             },
-            { "channel.poll.end", ("A poll ended on a specified channel", "1", ["broadcaster_user_id"]) },
+            { "channel.poll.end", 
+                ("A poll ended on a specified channel", "1", 
+                    [["broadcaster_user_id"]]) },
 
             // Prediction events
             {
                 "channel.prediction.begin",
-                ("A Prediction started on a specified channel", "1", ["broadcaster_user_id"])
+                ("A Prediction started on a specified channel", "1", 
+                    [["broadcaster_user_id"]])
             },
             {
-                "channel.prediction.progress", ("Users participated in a Prediction on a specified channel", "1",
-                    ["broadcaster_user_id"])
+                "channel.prediction.progress", 
+                    ("Users participated in a Prediction on a specified channel", "1",
+                    [["broadcaster_user_id"]])
             },
             {
                 "channel.prediction.lock",
-                ("A Prediction was locked on a specified channel", "1", ["broadcaster_user_id"])
+                ("A Prediction was locked on a specified channel", "1", 
+                    [["broadcaster_user_id"]])
             },
-            { "channel.prediction.end", ("A Prediction ended on a specified channel", "1", ["broadcaster_user_id"]) },
+            { "channel.prediction.end", 
+                ("A Prediction ended on a specified channel", "1", 
+                    [["broadcaster_user_id"]]) },
 
             // Suspicious user events
             {
-                "channel.suspicious_user.message", ("A chat message has been sent by a suspicious user", "1",
-                    ["broadcaster_user_id", "moderator_user_id"])
+                "channel.suspicious_user.message", 
+                    ("A chat message has been sent by a suspicious user", "1",
+                    [["broadcaster_user_id", "moderator_user_id"]])
             },
             {
                 "channel.suspicious_user.update",
-                ("A suspicious user has been updated", "1", ["broadcaster_user_id", "moderator_user_id"])
+                ("A suspicious user has been updated", "1", 
+                    [["broadcaster_user_id", "moderator_user_id"]])
             },
 
             // Charity events
             {
-                "channel.charity_campaign.donate", ("A user donates to the broadcaster's charity campaign", "1",
-                    ["broadcaster_user_id"])
+                "channel.charity_campaign.donate", 
+                    ("A user donates to the broadcaster's charity campaign", "1",
+                    [["broadcaster_user_id"]])
             },
             {
                 "channel.charity_campaign.start",
-                ("The broadcaster starts a charity campaign", "1", ["broadcaster_user_id"])
+                ("The broadcaster starts a charity campaign", "1", 
+                    [["broadcaster_user_id"]])
             },
             {
-                "channel.charity_campaign.progress", ("Progress is made towards the campaign's goal", "1",
-                    ["broadcaster_user_id"])
+                "channel.charity_campaign.progress", 
+                    ("Progress is made towards the campaign's goal", "1",
+                    [["broadcaster_user_id"]])
             },
             {
                 "channel.charity_campaign.stop",
-                ("The broadcaster stops a charity campaign", "1", ["broadcaster_user_id"])
+                ("The broadcaster stops a charity campaign", "1", 
+                    [["broadcaster_user_id"]])
             },
 
             // Conduit events
             // {
-            //     "conduit.shard.disabled", ("EventSub disables a shard due to transport status changing", "1",
-            //         ["client_id"])
+            //     "conduit.shard.disabled", 
+            // ("EventSub disables a shard due to transport status changing", "1",
+            //         [["client_id"]])
             // },
 
             // Drop events (not supported by websockets yet, but kept for IEventSubService implementation)
             // {
             //     "drop.entitlement.grant",
-            //     ("An entitlement for a Drop is granted to a user", "1", ["broadcaster_user_id", "moderator_user_id"])
+            //     ("An entitlement for a Drop is granted to a user", "1", 
+                // [["broadcaster_user_id", "moderator_user_id"]])
             // },
 
             // Extension events
             {
-                "extension.bits_transaction.create", ("A Bits transaction occurred for a Twitch Extension", "1",
-                    ["extension_client_id"])
+                "extension.bits_transaction.create", 
+                    ("A Bits transaction occurred for a Twitch Extension", "1",
+                    [["extension_client_id"]])
             },
 
             // Goal events
-            { "channel.goal.begin", ("A broadcaster begins a goal", "1", ["broadcaster_user_id"]) },
+            { "channel.goal.begin", 
+                ("A broadcaster begins a goal", "1", 
+                    [["broadcaster_user_id"]]) },
             {
-                "channel.goal.progress", ("Progress is made towards a broadcaster's goal", "1", ["broadcaster_user_id"])
+                "channel.goal.progress",
+                ("Progress is made towards a broadcaster's goal", "1", 
+                    [["broadcaster_user_id"]])
             },
-            { "channel.goal.end", ("A broadcaster ends a goal", "1", ["broadcaster_user_id"]) },
+            { "channel.goal.end", 
+                ("A broadcaster ends a goal", "1", 
+                    [["broadcaster_user_id"]]) },
 
             // Hype Train events
             {
                 "channel.hype_train.begin",
-                ("A Hype Train begins on the specified channel", "2", ["broadcaster_user_id"])
+                ("A Hype Train begins on the specified channel", "2", 
+                    [["broadcaster_user_id"]])
             },
             {
-                "channel.hype_train.progress", ("A Hype Train makes progress on the specified channel", "2",
-                    ["broadcaster_user_id"])
+                "channel.hype_train.progress", 
+                    ("A Hype Train makes progress on the specified channel", "2",
+                    [["broadcaster_user_id"]])
             },
-            { "channel.hype_train.end", ("A Hype Train ends on the specified channel", "2", ["broadcaster_user_id"]) },
+            {
+                "channel.hype_train.end", 
+                    ("A Hype Train ends on the specified channel", "2", 
+                        [["broadcaster_user_id"]])
+            },
 
             // Shield Mode events
             {
                 "channel.shield_mode.begin",
-                ("The broadcaster activates Shield Mode", "1", ["broadcaster_user_id", "moderator_user_id"])
+                ("The broadcaster activates Shield Mode", "1", 
+                    [["broadcaster_user_id", "moderator_user_id"]])
             },
             {
                 "channel.shield_mode.end",
-                ("The broadcaster deactivates Shield Mode", "1", ["broadcaster_user_id", "moderator_user_id"])
+                ("The broadcaster deactivates Shield Mode", "1", 
+                    [["broadcaster_user_id", "moderator_user_id"]])
             },
 
             // Shoutout events
             {
                 "channel.shoutout.create",
-                ("The specified broadcaster sends a Shoutout", "1", ["broadcaster_user_id", "moderator_user_id"])
+                ("The specified broadcaster sends a Shoutout", "1", 
+                    [["broadcaster_user_id", "moderator_user_id"]])
             },
             {
                 "channel.shoutout.receive",
-                ("The specified broadcaster receives a Shoutout", "1", ["broadcaster_user_id", "moderator_user_id"])
+                ("The specified broadcaster receives a Shoutout", "1", 
+                    [["broadcaster_user_id", "moderator_user_id"]])
             },
 
             // Stream events
-            { "stream.online", ("The specified broadcaster starts a stream", "1", ["broadcaster_user_id"]) },
-            { "stream.offline", ("The specified broadcaster stops a stream", "1", ["broadcaster_user_id"]) },
+            { "stream.online", 
+                ("The specified broadcaster starts a stream", "1", 
+                    [["broadcaster_user_id"]]) },
+            { "stream.offline", 
+                ("The specified broadcaster stops a stream", "1", 
+                    [["broadcaster_user_id"]]) },
 
             // User events
             // {
             //     "user.authorization.grant",
-            //     ("A user's authorization has been granted to your client id", "1", ["client_id"])
+            //     ("A user's authorization has been granted to your client id", "1", 
+                // [["client_id"]])
             // },
             // {
-            //     "user.authorization.revoke", ("A user's authorization has been revoked for your client id", "1", [
-            //         "client_id"
-            //     ])
+            //     "user.authorization.revoke", 
+            // ("A user's authorization has been revoked for your client id", "1", 
+                // [["client_id"]])
             // },
-            { "user.update", ("A user has updated their account", "1", ["user_id"]) },
-            { "user.whisper.message", ("A user receives a whisper", "1", ["user_id"]) }
+            { "user.update", 
+                ("A user has updated their account", "1", 
+                    [["user_id"]]) },
+            { "user.whisper.message", 
+                ("A user receives a whisper", "1", 
+                    [["user_id"]]) }
         };
 
     // These methods are no longer used for websockets but kept for IEventSubService implementation

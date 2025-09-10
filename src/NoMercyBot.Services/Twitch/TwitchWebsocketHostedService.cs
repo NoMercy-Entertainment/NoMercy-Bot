@@ -183,6 +183,7 @@ public class TwitchWebsocketHostedService : IHostedService
                 // Get all enabled Twitch event subscriptions from the database
                 List<EventSubscription> enabledSubscriptions = await _dbContext.EventSubscriptions
                     .Where(s => s.Provider == "twitch" && s.Enabled)
+                    .OrderBy(s => s.EventType)
                     .ToListAsync(_cts.Token);
 
                 if (enabledSubscriptions.Count == 0)
@@ -387,18 +388,21 @@ public class TwitchWebsocketHostedService : IHostedService
 
         // Use the condition information directly from AvailableEventTypes if available
         if (TwitchEventSubService.AvailableEventTypes.TryGetValue(eventType,
-                out (string, string, string[] Condition) eventTypeInfo))
+                out (string, string, string[][] Conditions) eventTypeInfo))
         {
             // Apply each required condition parameter
-            foreach (string conditionParam in eventTypeInfo.Condition)
+            foreach (string[] conditionParams in eventTypeInfo.Conditions)
+            foreach (string conditionParam in conditionParams)
+            {
                 switch (conditionParam)
                 {
                     case "broadcaster_user_id":
+                    case "to_broadcaster_user_id":
                         condition["broadcaster_user_id"] = broadcasterId;
                         break;
-
-                    case "to_broadcaster_user_id":
-                        condition["to_broadcaster_user_id"] = broadcasterId;
+                    
+                    case "from_broadcaster_user_id":
+                        condition["from_broadcaster_user_id"] = TwitchConfig.Service().UserId;
                         break;
 
                     case "moderator_user_id":
@@ -422,6 +426,7 @@ public class TwitchWebsocketHostedService : IHostedService
                             conditionParam, eventType);
                         break;
                 }
+            }
         }
         else
         {

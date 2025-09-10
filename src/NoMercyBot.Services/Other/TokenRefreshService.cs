@@ -53,11 +53,8 @@ public class TokenRefreshService : BackgroundService
     {
         List<Service> services = await _dbContext.Services.ToListAsync(cancellationToken);
 
-        foreach (Service authService in services)
+        foreach (Service authService in services.Where(authService => !string.IsNullOrEmpty(authService.RefreshToken)))
         {
-            if (string.IsNullOrEmpty(authService.RefreshToken))
-                continue;
-
             if (authService.TokenExpiry == null)
                 continue;
 
@@ -75,11 +72,8 @@ public class TokenRefreshService : BackgroundService
             .Where(b => b.TokenExpiry != null)
             .ToListAsync(cancellationToken);
 
-        foreach (BotAccount botAccount in botAccounts)
+        foreach (BotAccount botAccount in botAccounts.Where(botAccount => !string.IsNullOrEmpty(botAccount.RefreshToken)))
         {
-            if (string.IsNullOrEmpty(botAccount.RefreshToken))
-                continue;
-
             if (botAccount.TokenExpiry == null)
                 continue;
 
@@ -87,9 +81,6 @@ public class TokenRefreshService : BackgroundService
             DateTime refreshTime = expiryTime.AddMinutes(-_refreshThreshold.TotalMinutes);
 
             if (DateTime.UtcNow < refreshTime) continue;
-
-            Logger.System(DateTime.UtcNow.ToLongTimeString(), LogEventLevel.Verbose);
-            Logger.System(refreshTime.ToLongTimeString(), LogEventLevel.Verbose);
 
             await RefreshBotToken(botAccount, _scope, cancellationToken);
         }

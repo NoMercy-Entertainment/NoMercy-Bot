@@ -11,6 +11,7 @@ namespace NoMercyBot.Services.Twitch.EventHandlers;
 public class ChannelEventHandler : TwitchEventHandlerBase
 {
     private readonly TwitchChatService _twitchChatService;
+    private readonly TwitchApiService _twitchApiService;
     private readonly TtsService _ttsService;
     private readonly IWidgetEventService _widgetEventService;
     private readonly CancellationToken _cancellationToken;
@@ -26,6 +27,7 @@ public class ChannelEventHandler : TwitchEventHandlerBase
         : base(dbContext, logger, twitchApiService)
     {
         _twitchChatService = twitchChatService;
+        _twitchApiService = twitchApiService;
         _widgetEventService = widgetEventService;
         _ttsService = ttsService;
         _cancellationToken = cancellationToken;
@@ -125,6 +127,20 @@ public class ChannelEventHandler : TwitchEventHandlerBase
             { "user", args.Notification.Payload.Event.FromBroadcasterUserName },
             { "viewers", args.Notification.Payload.Event.Viewers.ToString() }
         });
+        
+        if(args.Notification.Payload.Event.FromBroadcasterUserId == TwitchConfig.Service().UserId)
+        {
+            Logger.LogInformation("Raided out to {Channel}", args.Notification.Payload.Event.ToBroadcasterUserLogin);
+            
+            // TODO: Stop OBS broadcasting to Twitch.
+            
+            await _twitchApiService.SendAnnouncement(
+                args.Notification.Payload.Event.FromBroadcasterUserId,
+                args.Notification.Payload.Event.FromBroadcasterUserId,
+                $"We have raided out to https://twitch.tv/{args.Notification.Payload.Event.ToBroadcasterUserName}, See you there!");
+            
+            return;
+        }
 
         await _twitchChatService.SendMessageAsBot(
             args.Notification.Payload.Event.ToBroadcasterUserLogin,

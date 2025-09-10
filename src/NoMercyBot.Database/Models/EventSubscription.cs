@@ -5,12 +5,12 @@ using Newtonsoft.Json;
 namespace NoMercyBot.Database.Models;
 
 [PrimaryKey(nameof(Id))]
-[Index(nameof(Provider), nameof(EventType), IsUnique = true)]
+[Index(nameof(Provider), nameof(EventType), nameof(Condition), IsUnique = true)]
 public class EventSubscription : Timestamps
 {
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
     [JsonProperty("id")]
-    public string Id { get; set; } = null!;
+    public string Id { get; set; } = Ulid.NewUlid().ToString();
 
     [JsonProperty("provider")] public string Provider { get; set; } = null!;
     [JsonProperty("event_type")] public string EventType { get; set; } = null!;

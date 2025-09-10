@@ -59,15 +59,14 @@ public class TwitchMessageDecorator : IService
         ChatMessage = chatMessage;
         // Copy the fragments to a new list to avoid modifying the original message
         _fragments = chatMessage.Fragments.ToList();
-
+        
         DecorateBadges();
         DecorateTwitchEmotes();
-
+        
         DecrateHtml();
 
         // Split up all text fragments into individual word fragments so that we can decorate them with emotes
         ExplodeTextFragments();
-
         DecorateBttvEmotes();
         DecorateFrankerFaceEmotes();
         DecorateSevenTvEmotes();
@@ -382,7 +381,7 @@ public class TwitchMessageDecorator : IService
             _fragments[index] = new()
             {
                 Type = "html",
-                Text = document.DocumentNode.OuterHtml
+                Text = fragment.Text.Trim()
             };
         });
     }

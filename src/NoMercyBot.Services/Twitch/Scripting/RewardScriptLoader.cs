@@ -36,8 +36,10 @@ public class RewardScriptLoader
 
     public async Task LoadAllAsync()
     {
-        await Parallel.ForEachAsync(Directory.GetFiles(AppFiles.RewardsPath, "*.cs"),
-            async (file, _) => { await LoadScriptAsync(file); });
+        foreach (string file in Directory.GetFiles(AppFiles.RewardsPath, "*.cs"))
+        {
+            await LoadScriptAsync(file);
+        }
     }
 
     private async Task LoadScriptAsync(string filePath)

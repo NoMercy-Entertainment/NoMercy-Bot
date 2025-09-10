@@ -17,11 +17,11 @@ public class TwitchChatService : IDisposable
     private readonly ILogger<TwitchChatService> _logger;
     private readonly IConfiguration _config;
     private readonly IServiceScope _scope;
-    
+
     public static string _userId;
     public static string _userName;
     private static string _accessToken;
-    
+
     public static string _botUserId;
     public static string _botUserName;
     private static string _botAccessToken;
@@ -44,7 +44,7 @@ public class TwitchChatService : IDisposable
             throw new InvalidOperationException("No bot account found or missing access token.");
 
         User botUser = _twitchApiService.GetOrFetchUser(name: botAccount.Username).Result;
-        
+
         _userId = twitchService.UserId;
         _userName = twitchService.UserName;
         _accessToken = twitchService.AccessToken;
@@ -67,7 +67,7 @@ public class TwitchChatService : IDisposable
             throw new InvalidOperationException("No bot account found or missing access token.");
 
         User botUser = _twitchApiService.GetOrFetchUser(name: botAccount.Username).Result;
-        
+
         _userId = twitchService.UserId;
         _userName = twitchService.UserName;
         _accessToken = twitchService.AccessToken;
@@ -140,14 +140,35 @@ public class TwitchChatService : IDisposable
 
     public async Task SendOneOffMessage(string channelId, string message)
     {
-        await _twitchApiService.SendMessage(channelId, message + " #NMBot", _userId, _accessToken);
+        try
+        {
+            await _twitchApiService.SendMessage(channelId, message + " #NMBot", _userId, _accessToken);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to send reply as bot. Attempting to refresh clients.");
+            RefreshClients();
+            await _twitchApiService.SendMessage(channelId, message + " #NMBot", _userId, _accessToken);
+        }
     }
 
     public async Task SendOneOffMessageAsBot(string channel, string message)
     {
-        User channelUser = await _twitchApiService.GetOrFetchUser(name: channel);
+        try
+        {
+            User channelUser = await _twitchApiService.GetOrFetchUser(name: channel);
 
-        await _twitchApiService.SendMessage(channelUser.Id, message + " #NMBot", _botUserId, _botAccessToken);
+            await _twitchApiService.SendMessage(channelUser.Id, message + " #NMBot", _botUserId, _botAccessToken);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to send reply as bot. Attempting to refresh clients.");
+            RefreshClients();
+
+            User channelUser = await _twitchApiService.GetOrFetchUser(name: channel);
+
+            await _twitchApiService.SendMessage(channelUser.Id, message + " #NMBot", _botUserId, _botAccessToken);
+        }
     }
 
     public async Task<string[]> GetChatters(string channel)
@@ -157,7 +178,7 @@ public class TwitchChatService : IDisposable
         //     += (sender, e) => _logger.LogInformation($"Existing users detected in channel {channel}: {string.Join(", ", e.Users)}");
         return [];
     }
-    
+
     public List<string> SplitMessageIntoChunks(string message, int chunkLength)
     {
         List<string> chunks = [];
@@ -210,6 +231,7 @@ public class TwitchChatService : IDisposable
                     chunks.Add(currentChunk.ToString().Trim());
                     currentChunk.Clear();
                 }
+
                 SplitWordIntoChunks(word, chunkLength, chunks);
             }
             else

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using NoMercyBot.Database;
+using NoMercyBot.Globals.Extensions;
 using NoMercyBot.Services.Other;
 using NoMercyBot.Services.Widgets;
 using TwitchLib.EventSub.Websockets;
@@ -77,13 +78,13 @@ public class MonetizationEventHandler : TwitchEventHandlerBase
 
         await _twitchChatService.SendMessageAsBot(
             args.Notification.Payload.Event.BroadcasterUserLogin,
-            message);
+            message.ReplaceTierNumbers());
         
         bool widgetSubscriptions = await _widgetEventService.HasWidgetSubscriptionsAsync("channel.chat.message.tts");
         if (widgetSubscriptions)
         {
             await _ttsService.SendCachedTts(
-                message,
+                message.ReplaceTierNumbers(),
                 args.Notification.Payload.Event.BroadcasterUserId,
                 _cancellationToken);
         }
@@ -118,13 +119,13 @@ public class MonetizationEventHandler : TwitchEventHandlerBase
 
         await _twitchChatService.SendMessageAsBot(
             args.Notification.Payload.Event.BroadcasterUserLogin,
-            message);
+            message.ReplaceTierNumbers());
         
         bool widgetSubscriptions = await _widgetEventService.HasWidgetSubscriptionsAsync("channel.chat.message.tts");
         if (widgetSubscriptions)
         {
             await _ttsService.SendCachedTts(
-                message,
+                message.ReplaceTierNumbers(),
                 args.Notification.Payload.Event.BroadcasterUserId,
                 _cancellationToken);
         }
@@ -161,13 +162,16 @@ public class MonetizationEventHandler : TwitchEventHandlerBase
 
         await _twitchChatService.SendMessageAsBot(
             args.Notification.Payload.Event.BroadcasterUserLogin,
-            chatMessage);
+            chatMessage.ReplaceTierNumbers());
 
         // Handle TTS for subscription message if widgets are subscribed
         bool widgetSubscriptions = await _widgetEventService.HasWidgetSubscriptionsAsync("channel.chat.message.tts");
         if (widgetSubscriptions && !string.IsNullOrEmpty(eventMessage))
         {
-            await _ttsService.SendCachedTts(eventMessage, args.Notification.Payload.Event.BroadcasterUserId, _cancellationToken);
+            await _ttsService.SendCachedTts(
+                eventMessage.ReplaceTierNumbers(), 
+                args.Notification.Payload.Event.BroadcasterUserId, 
+                _cancellationToken);
         }
     }
 

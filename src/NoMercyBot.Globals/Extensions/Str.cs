@@ -326,4 +326,12 @@ public static partial class Str
 
         return result;
     }
+    
+    public static string ReplaceTierNumbers(this string input)
+    {
+        return input
+            .Replace("1000", "1")
+            .Replace("2000", "2")
+            .Replace("3000", "3");
+    }
 }
