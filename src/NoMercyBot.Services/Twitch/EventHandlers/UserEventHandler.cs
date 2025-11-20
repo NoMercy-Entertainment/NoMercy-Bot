@@ -31,7 +31,7 @@ public class UserEventHandler : TwitchEventHandlerBase
 
     private async Task OnUserUpdate(object sender, UserUpdateArgs args)
     {
-        Logger.LogInformation("User updated: {User}", args.Notification.Payload.Event);
+        Logger.LogInformation("User updated: {User}", args.Notification.Payload.Event.UserName);
         
         await SaveChannelEvent(
             args.Notification.Metadata.MessageId,
@@ -56,6 +56,6 @@ public class UserEventHandler : TwitchEventHandlerBase
             })
             .RunAsync();
 
-        Logger.LogInformation("Updated user info for {User}", args.Notification.Payload.Event.UserLogin);
+        Logger.LogInformation("Updated user info for {User}", args.Notification.Payload.Event.UserName);
     }
 }

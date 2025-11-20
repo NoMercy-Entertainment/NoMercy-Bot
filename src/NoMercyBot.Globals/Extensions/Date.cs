@@ -95,6 +95,11 @@ public static class Date
             : _parseYear(self);
     }
 
+    public static string ToHis(this int time)
+    {
+        return TimeSpan.FromSeconds(time).ToString(@"hh\:mm\:ss\.fff");
+    }
+
     public static string ToHis(this double time)
     {
         return TimeSpan.FromSeconds(time).ToString(@"hh\:mm\:ss\.fff");
@@ -103,5 +108,29 @@ public static class Date
     public static string ToHis(this long time)
     {
         return TimeSpan.FromSeconds(time).ToString(@"hh\:mm\:ss\.fff");
+    }
+
+    public static string ToHumanTime(this int time)
+    {
+        TimeSpan t = TimeSpan.FromSeconds(time);
+        if (t.TotalHours >= 1)
+            return t.ToString(@"hh\:mm\:ss");
+        return t.ToString(@"mm\:ss");
+    }
+    
+    public static string ToHumanTime(this double time)
+    {
+        TimeSpan t = TimeSpan.FromSeconds(time);
+        if (t.TotalHours >= 1)
+            return t.ToString(@"hh\:mm\:ss");
+        return t.ToString(@"mm\:ss");
+    }
+    
+    public static string ToHumanTime(this long time)
+    {
+        TimeSpan t = TimeSpan.FromSeconds(time);
+        if (t.TotalHours >= 1)
+            return t.ToString(@"hh\:mm\:ss");
+        return t.ToString(@"mm\:ss");
     }
 }

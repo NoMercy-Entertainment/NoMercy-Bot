@@ -73,7 +73,7 @@ public class MonetizationEventHandler : TwitchEventHandlerBase
         });
 
         string message = args.Notification.Payload.Event.IsGift 
-            ? $"@{args.Notification.Payload.Event.UserName} been gifted a tier {args.Notification.Payload.Event.Tier} subscription! Thank you!"
+            ? $"@{args.Notification.Payload.Event.UserName} been gifted a tier {args.Notification.Payload.Event.Tier} subscription!"
             : $"@{args.Notification.Payload.Event.UserName} just subscribed at tier {args.Notification.Payload.Event.Tier}! Thank you!";
 
         await _twitchChatService.SendMessageAsBot(
@@ -234,7 +234,7 @@ public class MonetizationEventHandler : TwitchEventHandlerBase
 
         await _twitchChatService.SendMessageAsBot(
             args.Notification.Payload.Event.BroadcasterUserLogin,
-            $"An ad break has started for {args.Notification.Payload.Event.DurationSeconds} seconds. Please stay tuned!");
+            $"An ad break has started for {args.Notification.Payload.Event.DurationSeconds.ToHumanTime()}. Please stay tuned!");
         
         // await _ttsService.SendCachedTts(
         //     "Attention chat: Jeff Bezos just checked his bank account and—surprise—he’s a few billion short for his next rocket. Please enjoy this ad break and help him reach orbit!",

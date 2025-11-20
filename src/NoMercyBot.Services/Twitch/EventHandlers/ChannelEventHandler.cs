@@ -81,7 +81,7 @@ public class ChannelEventHandler : TwitchEventHandlerBase
 
     private async Task OnChannelFollow(object sender, ChannelFollowArgs args)
     {
-        Logger.LogInformation("Follow: {User}", args.Notification.Payload.Event.UserLogin);
+        Logger.LogInformation("Follow: {User}", args.Notification.Payload.Event.UserName);
 
         await SaveChannelEvent(
             args.Notification.Metadata.MessageId,

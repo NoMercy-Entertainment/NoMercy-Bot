@@ -33,6 +33,8 @@ public abstract class TwitchEventHandlerBase : ITwitchEventHandler
             {
                 await TwitchApiService.GetOrFetchUser(id: userId);
             }
+            
+            _ = await TwitchApiService.GetOrFetchUser(id: channelId);
 
             await DbContext.ChannelEvents
                 .Upsert(new()
