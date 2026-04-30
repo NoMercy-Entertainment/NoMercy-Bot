@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
@@ -220,11 +221,63 @@ public class SongRequestCommand : IBotCommand
     private static async Task<FullTrack?> SearchTrack(SpotifyApiService spotifyService, string query)
     {
         SpotifyClient client = new(spotifyService.Service.AccessToken);
-        SearchResponse result = await client.Search.Item(new SearchRequest(SearchRequest.Types.Track, query)
+
+        // Strip "(lyrics)", "[official video]", "{8D}", and similar bracketed annotations.
+        string cleaned = Regex.Replace(query, @"\s*[\(\[\{][^\)\]\}]*[\)\]\}]\s*", " ");
+        // Drop common YouTube/upload annotations that confuse search.
+        // Keep version qualifiers ("remix", "live", "acoustic", "extended", etc.) — those
+        // are usually part of the actual track title the user wants.
+        cleaned = Regex.Replace(
+            cleaned,
+            @"\b(official\s+(music\s+)?video|official\s+audio|lyrics?|hd|hq|4k|8d)\b",
+            " ",
+            RegexOptions.IgnoreCase
+        );
+        cleaned = Regex.Replace(cleaned, @"\s+", " ").Trim(' ', '-', '–', '—', '|', ',', '.');
+        if (cleaned.Length == 0) return null;
+
+        // Try to identify a "<track> by <artist>" or "<track> - <artist>" split.
+        // Logical, not strict: works whether the user types either form (or neither).
+        string? track = null;
+        string? artist = null;
+        Match m = Regex.Match(cleaned, @"^(.+?)\s+by\s+(.+)$", RegexOptions.IgnoreCase);
+        if (!m.Success)
+            m = Regex.Match(cleaned, @"^(.+?)\s*[-–—|]\s*(.+)$");
+        if (m.Success)
         {
-            Limit = 1
-        });
-        return result.Tracks?.Items?.FirstOrDefault();
+            track = m.Groups[1].Value.Trim();
+            artist = m.Groups[2].Value.Trim();
+        }
+
+        // Strategy 1: field-targeted search ("track:foo artist:bar") — Spotify ranks the
+        // intended song highest when both fields match, and is forgiving on typos.
+        if (!string.IsNullOrEmpty(track) && !string.IsNullOrEmpty(artist))
+        {
+            string fieldQuery = $"track:{track.Replace("\"", "")} artist:{artist.Replace("\"", "")}";
+            SearchResponse fieldResult = await client.Search.Item(
+                new SearchRequest(SearchRequest.Types.Track, fieldQuery)
+                {
+                    Limit = 5,
+                    Market = "from_token",
+                }
+            );
+            FullTrack? hit = fieldResult.Tracks?.Items?.FirstOrDefault();
+            if (hit != null) return hit;
+        }
+
+        // Strategy 2: plain words (drop "by" and dashes so they aren't search terms).
+        string plain = Regex.Replace(cleaned, @"\s+by\s+", " ", RegexOptions.IgnoreCase);
+        plain = Regex.Replace(plain, @"\s*[-–—|]\s*", " ");
+        plain = Regex.Replace(plain, @"\s+", " ").Trim();
+
+        SearchResponse plainResult = await client.Search.Item(
+            new SearchRequest(SearchRequest.Types.Track, plain)
+            {
+                Limit = 5,
+                Market = "from_token",
+            }
+        );
+        return plainResult.Tracks?.Items?.FirstOrDefault();
     }
 
     private async Task StoreRecordAsync(CommandScriptContext ctx, string userId, string trackId)
