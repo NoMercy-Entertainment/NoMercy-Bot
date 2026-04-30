@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NoMercyBot.Database;
 using NoMercyBot.Database.Models;
@@ -16,7 +17,19 @@ public static class RewardSeed
             TwitchApiService twitchApiService =
                 scope.ServiceProvider.GetRequiredService<TwitchApiService>();
 
+            // TwitchConfig may not be initialized yet during seeding — load directly from DB
             string broadcasterId = TwitchConfig.Service().UserId;
+            if (string.IsNullOrEmpty(broadcasterId))
+            {
+                Service? twitchService = await dbContext
+                    .Services.AsNoTracking()
+                    .FirstOrDefaultAsync(s => s.Name == "Twitch");
+                if (twitchService != null)
+                {
+                    TwitchConfig._service = twitchService;
+                    broadcasterId = twitchService.UserId ?? string.Empty;
+                }
+            }
 
             if (string.IsNullOrEmpty(broadcasterId))
             {
@@ -36,26 +49,33 @@ public static class RewardSeed
                 return;
             }
 
-            List<Reward> rewards = [];
-
+            int added = 0;
             foreach (ChannelPointsCustomRewardsResponseData twitchReward in rewardsResponse.Data)
-                rewards.Add(
+            {
+                bool exists = await dbContext.Rewards.AnyAsync(r => r.Id == twitchReward.Id);
+                if (exists)
+                    continue;
+
+                dbContext.Rewards.Add(
                     new()
                     {
                         Id = twitchReward.Id,
                         Title = twitchReward.Title,
-                        Response = $"Thank you for redeeming {twitchReward.Title}! 🎉",
+                        Response = $"Thank you for redeeming {twitchReward.Title}!",
                         Permission = "everyone",
                         IsEnabled = twitchReward.IsEnabled,
                         Description = twitchReward.Prompt,
                     }
                 );
+                added++;
+            }
 
-            // Add fetched rewards to database
-            await dbContext.Rewards.AddRangeAsync(rewards);
-            await dbContext.SaveChangesAsync();
+            if (added > 0)
+                await dbContext.SaveChangesAsync();
 
-            Logger.Setup("Successfully seeded {rewards.Count} custom rewards from Twitch API");
+            Logger.Setup(
+                $"Reward seed: {added} new, {rewardsResponse.Data.Count - added} already existed"
+            );
         }
         catch (Exception ex)
         {
