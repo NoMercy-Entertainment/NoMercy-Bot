@@ -25,10 +25,17 @@ public class TwitchWebsocketHostedService : IHostedService
     private readonly ILogger<TwitchWebsocketHostedService> _logger;
     private CancellationTokenSource _cts = new();
     private readonly TwitchAPI _twitchApi = new();
+    private TaskCompletionSource<bool>? _connectTcs;
+    private bool _lastFailureWas429;
+    private TimeSpan? _lastRetryAfterFromTwitch;
     private readonly TwitchApiService _twitchApiService;
     private readonly TwitchEventSubService _twitchEventSubService;
+    private readonly TwitchChatService _twitchChatService;
+    private readonly RateLimitProbe _rateLimitProbe;
     private readonly List<ITwitchEventHandler> _eventHandlers = [];
     private bool _isConnected;
+
+    private const int MaxConnectAttempts = 8;
 
     // Event handlers
     private readonly UserEventHandler _userEventHandler;
@@ -56,7 +63,9 @@ public class TwitchWebsocketHostedService : IHostedService
         TwitchChatService twitchChatService,
         IWidgetEventService widgetEventService,
         LuckyFeatherTimerService luckyFeatherTimerService,
-        ShoutoutQueueService shoutoutQueueService
+        ShoutoutQueueService shoutoutQueueService,
+        WatchStreakService watchStreakService,
+        RateLimitProbe rateLimitProbe
     )
     {
         IServiceScope scope = serviceScopeFactory.CreateScope();
@@ -65,6 +74,8 @@ public class TwitchWebsocketHostedService : IHostedService
         _eventSubWebsocketClient = eventSubWebsocketClient;
         _twitchApiService = twitchApiService;
         _twitchEventSubService = twitchEventSubService;
+        _twitchChatService = twitchChatService;
+        _rateLimitProbe = rateLimitProbe;
 
         // Initialize event handlers
         _userEventHandler = new(
@@ -101,6 +112,7 @@ public class TwitchWebsocketHostedService : IHostedService
             widgetEventService,
             ttsService,
             shoutoutQueueService,
+            watchStreakService,
             _cts.Token
         );
         _streamEventHandler = new(
@@ -247,8 +259,126 @@ public class TwitchWebsocketHostedService : IHostedService
         _twitchApi.Settings.Secret = twitchService.ClientSecret;
         _twitchApi.Settings.AccessToken = twitchService.AccessToken;
 
-        // Connect to EventSub WebSocket
-        await _eventSubWebsocketClient.ConnectAsync();
+        // Connect in background so the web server isn't blocked by retries
+        _ = Task.Run(() => ConnectWithRetryAsync(_cts.Token), _cts.Token);
+    }
+
+    private static TimeSpan ComputeBackoff(int attempt, bool rateLimited)
+    {
+        // Decorrelated jitter: delay = base/2 + random*base/2 — guarantees a floor
+        // proportional to attempt, preventing consecutive sub-base retries.
+        //
+        // 429 path: start at 60s and double — empirically Twitch's WS rate-limit
+        // windows often clear within a few minutes, so a faster initial retry
+        // gets us back in quickly. Cap at 30min so a sustained window doesn't
+        // get pummeled.
+        // Non-429 path: shorter, since network blips usually self-heal fast.
+        double baseSeconds = rateLimited
+            ? Math.Min(60 * Math.Pow(2, attempt - 1), 1800) // 60s, 2m, 4m, 8m, 16m, cap 30m
+            : Math.Min(15 * Math.Pow(2, attempt - 1), 300); // 15s, 30s, 60s, cap 5m
+
+        double half = baseSeconds / 2.0;
+        double jittered = half + Random.Shared.NextDouble() * half;
+        return TimeSpan.FromSeconds(jittered);
+    }
+
+    /// <summary>
+    /// If Twitch told us when to retry (Retry-After / Ratelimit-Reset), respect that —
+    /// it's authoritative. Add a small random skew so multiple instances don't
+    /// stampede at the exact same moment, and clamp to [30s, 30min] as a safety net.
+    /// Otherwise fall back to the heuristic backoff.
+    /// </summary>
+    private static TimeSpan ChooseBackoff(int attempt, bool rateLimited, TimeSpan? retryAfter)
+    {
+        if (retryAfter is { } hint)
+        {
+            double seconds = hint.TotalSeconds + Random.Shared.NextDouble() * 5.0;
+            seconds = Math.Clamp(seconds, 30, 1800);
+            return TimeSpan.FromSeconds(seconds);
+        }
+        return ComputeBackoff(attempt, rateLimited);
+    }
+
+    private async Task ConnectWithRetryAsync(CancellationToken cancellationToken)
+    {
+        // Wait for either WebsocketConnected (success) or OnError (failure) event,
+        // instead of polling SessionId. Prevents false-negative retries.
+        int attempt = 0;
+        TimeSpan connectTimeout = TimeSpan.FromSeconds(20);
+
+        while (!cancellationToken.IsCancellationRequested && attempt < MaxConnectAttempts)
+        {
+            _connectTcs = new TaskCompletionSource<bool>(
+                TaskCreationOptions.RunContinuationsAsynchronously
+            );
+            _lastFailureWas429 = false;
+            _lastRetryAfterFromTwitch = null;
+
+            // Re-arm the inner ClientWebSocket on the existing WebsocketClient. The
+            // DI factory pre-armed instance #1, but TwitchLib reuses the same
+            // WebsocketClient for ConnectAsync and replaces its inner _webSocket
+            // with a vanilla one when the previous attempt failed.
+            _rateLimitProbe.ArmForNextConnect();
+
+            try
+            {
+                await _eventSubWebsocketClient.ConnectAsync();
+            }
+            catch (Exception ex)
+            {
+                _lastFailureWas429 = ex.Message.Contains("429");
+                _logger.LogError(
+                    ex,
+                    "ConnectAsync threw{RateLimit}",
+                    _lastFailureWas429 ? " (429 rate limit)" : ""
+                );
+                _connectTcs.TrySetResult(false);
+            }
+
+            // Wait for event signal, with timeout as safety net
+            Task completed = await Task.WhenAny(
+                _connectTcs.Task,
+                Task.Delay(connectTimeout, cancellationToken)
+            );
+            bool success = completed == _connectTcs.Task && _connectTcs.Task.Result;
+
+            if (success)
+            {
+                if (attempt > 0)
+                    _logger.LogInformation("EventSub connected after {Attempt} retries", attempt);
+                return;
+            }
+
+            // Read the response headers Twitch sent back. Done after WhenAny so
+            // OnError has had a chance to set _lastFailureWas429 too.
+            _rateLimitProbe.Capture();
+            _logger.LogWarning(
+                "Twitch upgrade response: {Headers}",
+                _rateLimitProbe.CurrentHeadersForLog()
+            );
+
+            _lastRetryAfterFromTwitch = _rateLimitProbe.GetRetryHint();
+
+            attempt++;
+            TimeSpan delay = ChooseBackoff(attempt, _lastFailureWas429, _lastRetryAfterFromTwitch);
+            _logger.LogWarning(
+                "EventSub connection failed ({Reason}). Retry {Attempt}/{Max} in {Delay:F0}s ({Source})...",
+                _lastFailureWas429 ? "429 rate limit" : "timeout or other error",
+                attempt,
+                MaxConnectAttempts,
+                delay.TotalSeconds,
+                _lastRetryAfterFromTwitch.HasValue ? "from Retry-After header" : "heuristic backoff"
+            );
+            await Task.Delay(delay, cancellationToken);
+        }
+
+        if (attempt >= MaxConnectAttempts)
+        {
+            _logger.LogError(
+                "EventSub connection exhausted {Max} retries. Stopping retries to avoid extending Twitch's rate-limit window. Manual restart required.",
+                MaxConnectAttempts
+            );
+        }
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
@@ -295,6 +425,7 @@ public class TwitchWebsocketHostedService : IHostedService
             _eventSubWebsocketClient.SessionId
         );
         _isConnected = true;
+        _connectTcs?.TrySetResult(true);
 
         if (!e.IsRequestedReconnect)
         {
@@ -444,6 +575,21 @@ public class TwitchWebsocketHostedService : IHostedService
                     );
 
                 await subDb.SaveChangesAsync(_cts.Token);
+
+                // Announce in chat that bot is ready
+                try
+                {
+                    string broadcasterLogin = TwitchConfig.Service().UserName ?? string.Empty;
+                    if (!string.IsNullOrEmpty(broadcasterLogin))
+                        await _twitchChatService.SendMessageAsBot(
+                            broadcasterLogin,
+                            "Bot is online and listening. Type !help for commands."
+                        );
+                }
+                catch (Exception announceEx)
+                {
+                    _logger.LogWarning(announceEx, "Failed to send online announcement to chat");
+                }
             }
             catch (Exception ex)
             {
@@ -454,13 +600,69 @@ public class TwitchWebsocketHostedService : IHostedService
 
     private async Task OnWebsocketDisconnected(object sender, EventArgs e)
     {
-        _logger.LogError($"Websocket {_eventSubWebsocketClient.SessionId} disconnected!");
+        _isConnected = false;
+        _logger.LogError(
+            "Websocket {SessionId} disconnected — reconnecting...",
+            _eventSubWebsocketClient.SessionId
+        );
 
-        // Don't do this in production. You should implement a better reconnect strategy
-        while (!await _eventSubWebsocketClient.ReconnectAsync())
+        int attempt = 0;
+        while (!_cts.IsCancellationRequested && attempt < MaxConnectAttempts)
         {
-            _logger.LogError("Websocket reconnect failed!");
-            await Task.Delay(1000);
+            bool reconnected = false;
+            _lastFailureWas429 = false;
+            _lastRetryAfterFromTwitch = null;
+
+            // Re-arm before each reconnect attempt — same reason as ConnectWithRetryAsync.
+            _rateLimitProbe.ArmForNextConnect();
+
+            try
+            {
+                reconnected = await _eventSubWebsocketClient.ReconnectAsync();
+            }
+            catch (Exception ex)
+            {
+                _lastFailureWas429 = ex.Message.Contains("429");
+                _logger.LogError(
+                    ex,
+                    "ReconnectAsync threw{RateLimit}",
+                    _lastFailureWas429 ? " (429 rate limit)" : ""
+                );
+            }
+
+            if (reconnected)
+            {
+                if (attempt > 0)
+                    _logger.LogInformation("EventSub reconnected after {Attempt} retries", attempt);
+                return;
+            }
+
+            _rateLimitProbe.Capture();
+            _logger.LogWarning(
+                "Twitch reconnect response: {Headers}",
+                _rateLimitProbe.CurrentHeadersForLog()
+            );
+            _lastRetryAfterFromTwitch = _rateLimitProbe.GetRetryHint();
+
+            attempt++;
+            TimeSpan delay = ChooseBackoff(attempt, _lastFailureWas429, _lastRetryAfterFromTwitch);
+            _logger.LogError(
+                "Websocket reconnect failed ({Reason}). Retry {Attempt}/{Max} in {Delay:F0}s ({Source})...",
+                _lastFailureWas429 ? "429 rate limit" : "other",
+                attempt,
+                MaxConnectAttempts,
+                delay.TotalSeconds,
+                _lastRetryAfterFromTwitch.HasValue ? "from Retry-After header" : "heuristic backoff"
+            );
+            await Task.Delay(delay, _cts.Token);
+        }
+
+        if (attempt >= MaxConnectAttempts)
+        {
+            _logger.LogError(
+                "EventSub reconnect exhausted {Max} retries. Stopping to avoid extending Twitch's rate-limit window. Manual restart required.",
+                MaxConnectAttempts
+            );
         }
     }
 
@@ -471,11 +673,20 @@ public class TwitchWebsocketHostedService : IHostedService
 
     private async Task OnError(object sender, ErrorOccuredArgs args)
     {
-        _logger.LogError($"Websocket {_eventSubWebsocketClient.SessionId} - Error occurred!");
+        bool is429 =
+            args.Exception is System.Net.WebSockets.WebSocketException
+            && args.Exception.Message.Contains("429");
+        _lastFailureWas429 = is429;
+
+        _logger.LogError(
+            args.Exception,
+            "Websocket {SessionId} - Error occurred!{RateLimit}",
+            _eventSubWebsocketClient.SessionId,
+            is429 ? " (Twitch rate-limited the connection — backing off long)" : ""
+        );
+        _connectTcs?.TrySetResult(false);
 
         await SaveChannelEvent(Guid.NewGuid().ToString(), "websocket.error", args.Exception);
-
-        await Task.CompletedTask;
     }
 
     // Method to handle event toggling - dynamically subscribe/unsubscribe when events are enabled/disabled
