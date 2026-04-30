@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using NoMercyBot.Database;
 using NoMercyBot.Database.Models;
 using NoMercyBot.Database.Models.ChatMessage;
@@ -14,6 +15,8 @@ namespace NoMercyBot.Services.Twitch;
 
 public class ShoutoutQueueService : IHostedService
 {
+    private const string AUTO_SHOUTOUT_RECORD = "ShoutoutSession";
+
     private static readonly TimeSpan MinGlobalCooldown = TimeSpan.FromMinutes(2);
     private static readonly TimeSpan PerUserCooldown = TimeSpan.FromHours(1);
     private static readonly TimeSpan ProcessingInterval = TimeSpan.FromSeconds(5);
@@ -33,14 +36,15 @@ public class ShoutoutQueueService : IHostedService
         "Behold! {displayname} has some solid {game} for you. Go give {object} a follow! {Subject} {tense} gracing us with {possessive} presence and questionable decision-making in {game}.",
     };
 
-    private record ShoutoutRequest(
-        string ChannelId,
-        string TargetUserId,
-        string ChannelName,
-        bool IsManual,
-        bool IsRaid,
-        DateTime EnqueuedAt
-    );
+    private record ShoutoutRequest
+    {
+        public required string ChannelId { get; init; }
+        public required string TargetUserId { get; init; }
+        public required string ChannelName { get; init; }
+        public bool IsManual { get; set; }
+        public bool IsRaid { get; init; }
+        public DateTime EnqueuedAt { get; init; }
+    }
 
     private readonly ConcurrentDictionary<string, ConcurrentQueue<ShoutoutRequest>> _channelQueues =
         new();
@@ -173,36 +177,53 @@ public class ShoutoutQueueService : IHostedService
             if (channel?.LastShoutout != null)
                 _lastGlobalShoutout[broadcasterId] = channel.LastShoutout.Value;
 
-            // Restore session chatters from chat messages in the current stream
-            Database.Models.Stream? currentStream = await dbContext
-                .Streams.AsNoTracking()
-                .Where(s => s.ChannelId == broadcasterId)
-                .OrderByDescending(s => s.CreatedAt)
-                .FirstOrDefaultAsync();
+            // Restore session chatters using a timestamp filter against the actual
+            // stream-start time from Twitch. This is way more robust than relying on
+            // ChatMessage.StreamId (which can be null/stale if the bot was started
+            // mid-stream or if the Stream record wasn't created yet when the chat hit).
+            DateTime sinceUtc = streamInfo.StartedAt;
 
-            if (currentStream != null)
-            {
-                List<string> chatterIds = await dbContext
-                    .ChatMessages.AsNoTracking()
-                    .Where(m => m.StreamId == currentStream.Id && m.BroadcasterId == broadcasterId)
-                    .Select(m => m.UserId)
-                    .Distinct()
-                    .ToListAsync();
+            ConcurrentDictionary<string, byte> chatters = _sessionChatters.GetOrAdd(
+                broadcasterId,
+                _ => new ConcurrentDictionary<string, byte>()
+            );
 
-                ConcurrentDictionary<string, byte> chatters = _sessionChatters.GetOrAdd(
-                    broadcasterId,
-                    _ => new ConcurrentDictionary<string, byte>()
-                );
-                foreach (string chatterId in chatterIds)
-                    chatters.TryAdd(chatterId, 0);
+            // Source 1: every user who's chatted since the stream started.
+            List<string> chatterIds = await dbContext
+                .ChatMessages.AsNoTracking()
+                .Where(m => m.BroadcasterId == broadcasterId && m.CreatedAt > sinceUtc)
+                .Select(m => m.UserId)
+                .Distinct()
+                .ToListAsync();
+            foreach (string id in chatterIds)
+                chatters.TryAdd(id, 0);
 
-                _logger.LogInformation(
-                    "Restored {Count} session chatters and {ShoutoutCount} shoutout cooldowns for {BroadcasterId}",
-                    chatterIds.Count,
-                    recentlyShoutedChannels.Count,
-                    broadcasterId
-                );
-            }
+            // Source 2: every user we've auto-shouted-out this session — written by
+            // ExecuteShoutoutAsync as a "AutoShoutoutSession" Record so this state
+            // survives even if ChatMessages persistence missed someone (bot crash,
+            // partial DB write, whatever).
+            string sinceIso = sinceUtc.ToString("o");
+            List<string> autoShoutedIds = await dbContext
+                .Records.AsNoTracking()
+                .Where(r =>
+                    r.RecordType == AUTO_SHOUTOUT_RECORD
+                    && r.Data.Contains($"\"BroadcasterId\":\"{broadcasterId}\"")
+                    && r.Data.Contains($"\"StreamStartedAt\":\"{sinceIso}\"")
+                )
+                .Select(r => r.UserId)
+                .Distinct()
+                .ToListAsync();
+            foreach (string id in autoShoutedIds)
+                chatters.TryAdd(id, 0);
+
+            _logger.LogInformation(
+                "Restored shoutout state for {BroadcasterId}: {Chatters} chatters, "
+                    + "{AutoShouted} auto-shouted, {Cooldowns} per-user cooldowns",
+                broadcasterId,
+                chatterIds.Count,
+                autoShoutedIds.Count,
+                recentlyShoutedChannels.Count
+            );
         }
         catch (Exception ex)
         {
@@ -250,8 +271,11 @@ public class ShoutoutQueueService : IHostedService
         {
             if (isManual && !existing.IsManual)
             {
+                // Promote auto to manual in place — bypasses auto-only delays
+                // (AutoShoutoutDelay, AutoShoutoutMessageDelay) on next loop tick.
+                existing.IsManual = true;
                 _logger.LogInformation(
-                    "Shoutout for {UserId} already queued (auto), manual request noted for {Channel}",
+                    "Shoutout for {UserId} promoted from auto to manual in {Channel}",
                     targetUserId,
                     channelName
                 );
@@ -263,19 +287,20 @@ public class ShoutoutQueueService : IHostedService
                     targetUserId,
                     channelName
                 );
-                return;
             }
+            return;
         }
 
         targetQueue.Enqueue(
-            new ShoutoutRequest(
-                channelId,
-                targetUserId,
-                channelName,
-                isManual,
-                isRaid,
-                DateTime.UtcNow
-            )
+            new ShoutoutRequest
+            {
+                ChannelId = channelId,
+                TargetUserId = targetUserId,
+                ChannelName = channelName,
+                IsManual = isManual,
+                IsRaid = isRaid,
+                EnqueuedAt = DateTime.UtcNow,
+            }
         );
         _logger.LogInformation(
             "Shoutout queued for {UserId} in {Channel} (manual: {IsManual}, raid: {IsRaid})",
@@ -571,6 +596,12 @@ public class ShoutoutQueueService : IHostedService
                 channel?.UsernamePronunciation
             );
 
+            // Fetch fresh access token from DB for API calls
+            Service? twitchService = await dbContext
+                .Services.AsNoTracking()
+                .FirstOrDefaultAsync(s => s.Name == "Twitch");
+            string? accessToken = twitchService?.AccessToken;
+
             // Send shoutout via Twitch API (skip when rate-limited manual re-shoutout)
             if (!skipApiCall)
             {
@@ -579,7 +610,8 @@ public class ShoutoutQueueService : IHostedService
                     await _twitchApiService.SendShoutoutAsync(
                         request.ChannelId,
                         request.ChannelId,
-                        user.Id
+                        user.Id,
+                        accessToken
                     );
                 }
                 catch (Exception e)
@@ -614,6 +646,29 @@ public class ShoutoutQueueService : IHostedService
             // Update rate-limit tracking
             _lastGlobalShoutout[request.ChannelId] = DateTime.UtcNow;
             _lastUserShoutout[$"{request.ChannelId}:{request.TargetUserId}"] = DateTime.UtcNow;
+
+            // Write a session-scoped record so a bot restart mid-stream remembers
+            // we've already shouted this user. Persisted to the same DB the
+            // CheckIfStreamIsLiveAsync restore reads from. Keyed on stream start
+            // time — robust without needing a Stream entity.
+            if (_streamOnlineTimes.TryGetValue(request.ChannelId, out DateTime streamStart))
+            {
+                Record sessionShout = new()
+                {
+                    UserId = request.TargetUserId,
+                    RecordType = AUTO_SHOUTOUT_RECORD,
+                    Data = JsonConvert.SerializeObject(
+                        new
+                        {
+                            BroadcasterId = request.ChannelId,
+                            StreamStartedAt = streamStart.ToString("o"),
+                            IsManual = request.IsManual,
+                        }
+                    ),
+                };
+                dbContext.Records.Add(sessionShout);
+                await dbContext.SaveChangesAsync(token);
+            }
 
             // Update the target user's channel LastShoutout
             await dbContext
