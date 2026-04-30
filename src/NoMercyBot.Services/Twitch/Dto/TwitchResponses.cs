@@ -218,6 +218,51 @@ public class StreamInfo
     public bool IsMature { get; set; }
 }
 
+public class FollowedChannelsResponse
+{
+    [JsonProperty("total")]
+    public int Total { get; set; }
+
+    [JsonProperty("data")]
+    public List<FollowedChannelDto> Data { get; set; } = [];
+
+    [JsonProperty("pagination")]
+    public Pagination Pagination { get; set; } = new();
+}
+
+public class FollowedChannelDto
+{
+    [JsonProperty("broadcaster_id")]
+    public string BroadcasterId { get; set; } = string.Empty;
+
+    [JsonProperty("broadcaster_login")]
+    public string BroadcasterLogin { get; set; } = string.Empty;
+
+    [JsonProperty("broadcaster_name")]
+    public string BroadcasterName { get; set; } = string.Empty;
+
+    [JsonProperty("followed_at")]
+    public DateTime FollowedAt { get; set; }
+}
+
+public class GameDataResponse
+{
+    [JsonProperty("data")]
+    public List<GameData> Data { get; set; } = [];
+}
+
+public class GameData
+{
+    [JsonProperty("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonProperty("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonProperty("box_art_url")]
+    public string BoxArtUrl { get; set; } = string.Empty;
+}
+
 public class TokenResponse
 {
     [JsonProperty("access_token")]

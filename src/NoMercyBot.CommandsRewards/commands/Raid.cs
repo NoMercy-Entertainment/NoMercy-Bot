@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using NoMercyBot.Database;
 using NoMercyBot.Database.Models;
 using NoMercyBot.Database.Models.ChatMessage;
@@ -26,22 +29,21 @@ public class RaidCommand: IBotCommand
 
     public async Task Callback(CommandScriptContext ctx)
     {
+        // No args → show ranked raid candidates instead of erroring out.
         if (ctx.Arguments.Length == 0)
         {
-            await ctx.TwitchChatService.SendReplyAsBot(
-                ctx.Message.Broadcaster.Username,
-                $"@{ctx.Message.User.DisplayName} You need to specify a channel to raid! Usage: !raid <username>",
-                ctx.Message.Id);
+            await ShowSuggestions(ctx);
             return;
         }
 
         string targetUsername = ctx.Arguments[0].Replace("@", "").ToLower();
         int raidDelaySeconds = 60; // Default 60 seconds
 
-        // Parse optional delay argument
+        // Parse optional delay argument. Capped at 60s — Twitch's raid window is
+        // only 90s, and we need buffer for OBS to actually stop the stream.
         if (ctx.Arguments.Length > 1 && int.TryParse(ctx.Arguments[1], out int customDelay))
         {
-            raidDelaySeconds = Math.Clamp(customDelay, 10, 300); // Between 10 seconds and 5 minutes
+            raidDelaySeconds = Math.Clamp(customDelay, 10, 60);
         }
 
         try
@@ -59,8 +61,13 @@ public class RaidCommand: IBotCommand
                 return;
             }
 
-            await SwitchToEndingScene(ctx);
-            await InitializeRaid(ctx, targetUser);
+            // Fire the Twitch raid IMMEDIATELY — its 90s commit window starts
+            // ticking the moment this returns, so the earlier the better. OBS
+            // scene switch is independent, run it in parallel.
+            Task initRaid = InitializeRaid(ctx, targetUser);
+            Task sceneSwitch = SwitchToEndingScene(ctx);
+            await Task.WhenAll(initRaid, sceneSwitch);
+
             await AnnounceRaid(ctx, targetUser, raidDelaySeconds);
             await RunCountdown(ctx, Math.Max(raidDelaySeconds - 3, 1));
             await CommitRaid(ctx, targetUser);
@@ -74,6 +81,79 @@ public class RaidCommand: IBotCommand
                 $"@{ctx.Message.User.DisplayName} An error occurred while setting up the raid. Please try again or raid manually!",
                 ctx.Message.Id);
         }
+    }
+
+    private async Task ShowSuggestions(CommandScriptContext ctx)
+    {
+        try
+        {
+            RaidSuggestionService service =
+                ctx.ServiceProvider.GetRequiredService<RaidSuggestionService>();
+
+            List<RaidCandidate> candidates = await service.GetSuggestionsAsync(max: 10);
+
+            if (candidates.Count == 0)
+            {
+                await ctx.TwitchChatService.SendReplyAsBot(
+                    ctx.Message.Broadcaster.Username,
+                    "No raid candidates right now — either no one's live or the API isn't cooperating.",
+                    ctx.Message.Id);
+                return;
+            }
+
+            StringBuilder sb = new();
+            sb.Append("Raid candidates: ");
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                if (i > 0) sb.Append(" | ");
+                RaidCandidate c = candidates[i];
+                string source = c.IsFollowed ? "F" : "N";
+                string category = AbbreviateCategory(c.GameName);
+                string lastRaid = FormatLastRaid(c.LastRaidedAt);
+                sb.Append($"{i + 1}) {c.UserName} ({source}, {category}, {c.ViewerCount}v, {lastRaid})");
+            }
+
+            await ctx.TwitchChatService.SendReplyAsBot(
+                ctx.Message.Broadcaster.Username,
+                sb.ToString(),
+                ctx.Message.Id);
+        }
+        catch (Exception ex)
+        {
+            Logger.Twitch($"Error fetching raid suggestions: {ex.Message}", LogEventLevel.Error);
+            await ctx.TwitchChatService.SendReplyAsBot(
+                ctx.Message.Broadcaster.Username,
+                $"Failed to fetch raid suggestions: {ex.Message}",
+                ctx.Message.Id);
+        }
+    }
+
+    private static string FormatLastRaid(DateTime? lastRaidedAt)
+    {
+        if (lastRaidedAt is null) return "never";
+        TimeSpan ago = DateTime.UtcNow - lastRaidedAt.Value;
+        if (ago.TotalDays >= 30) return $"{(int)(ago.TotalDays / 30)}mo ago";
+        if (ago.TotalDays >= 7) return $"{(int)(ago.TotalDays / 7)}w ago";
+        if (ago.TotalDays >= 1) return $"{(int)ago.TotalDays}d ago";
+        if (ago.TotalHours >= 1) return $"{(int)ago.TotalHours}h ago";
+        return "today";
+    }
+
+    private static string AbbreviateCategory(string gameName)
+    {
+        if (string.IsNullOrEmpty(gameName)) return "?";
+        return gameName switch
+        {
+            "Software and Game Development" => "Software",
+            "Science & Technology" => "Sci&Tech",
+            "Just Chatting" => "Chat",
+            "Music" => "Music",
+            "Talk Shows & Podcasts" => "Talk",
+            "Art" => "Art",
+            "Special Events" => "Event",
+            // Default: truncate long category names
+            _ => gameName.Length > 14 ? gameName.Substring(0, 12) + "…" : gameName,
+        };
     }
 
     private async Task SwitchToEndingScene(CommandScriptContext ctx)

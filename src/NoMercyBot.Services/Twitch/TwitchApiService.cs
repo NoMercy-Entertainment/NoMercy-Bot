@@ -233,6 +233,225 @@ public class TwitchApiService
         return channelResponse;
     }
 
+    /// <summary>
+    /// Returns the full list of channels the user follows. Paginates through all pages.
+    /// Requires user:read:follows scope on the user's token.
+    /// </summary>
+    public async Task<List<FollowedChannelDto>> GetFollowedChannels(string userId)
+    {
+        List<FollowedChannelDto> all = [];
+        string? cursor = null;
+
+        do
+        {
+            RestRequest request = new("channels/followed");
+            request.AddHeader("Authorization", $"Bearer {TwitchConfig.Service().AccessToken}");
+            request.AddHeader("Client-Id", TwitchConfig.Service().ClientId!);
+            request.AddHeader("Content-Type", "application/json");
+            request.AddQueryParameter("user_id", userId);
+            request.AddQueryParameter("first", "100");
+            if (!string.IsNullOrEmpty(cursor))
+                request.AddQueryParameter("after", cursor);
+
+            RestResponse response = await _apiClient.ExecuteAsync(request);
+            if (!response.IsSuccessful || string.IsNullOrEmpty(response.Content))
+            {
+                _logger.LogWarning(
+                    "GetFollowedChannels failed: {StatusCode} - {Content}",
+                    response.StatusCode,
+                    response.Content
+                );
+                break;
+            }
+
+            FollowedChannelsResponse? parsed =
+                response.Content.FromJson<FollowedChannelsResponse>();
+            if (parsed == null || parsed.Data.Count == 0)
+                break;
+
+            all.AddRange(parsed.Data);
+            cursor = parsed.Pagination?.Cursor;
+        } while (!string.IsNullOrEmpty(cursor));
+
+        return all;
+    }
+
+    /// <summary>
+    /// Returns live streams for a batch of user IDs (max 100 per call).
+    /// Only currently-live channels are included in the response.
+    /// </summary>
+    public async Task<List<StreamInfo>> GetStreamsByUserIds(IReadOnlyCollection<string> userIds)
+    {
+        if (userIds.Count == 0)
+            return [];
+
+        List<StreamInfo> all = [];
+
+        // Helix /streams accepts up to 100 user_id params per call.
+        foreach (var batch in userIds.Chunk(100))
+        {
+            RestRequest request = new("streams");
+            request.AddHeader("Authorization", $"Bearer {TwitchConfig.Service().AccessToken}");
+            request.AddHeader("Client-Id", TwitchConfig.Service().ClientId!);
+            request.AddHeader("Content-Type", "application/json");
+            request.AddQueryParameter("first", "100");
+            foreach (string id in batch)
+                request.AddQueryParameter("user_id", id);
+
+            RestResponse response = await _apiClient.ExecuteAsync(request);
+            if (!response.IsSuccessful || string.IsNullOrEmpty(response.Content))
+            {
+                _logger.LogWarning(
+                    "GetStreamsByUserIds failed: {StatusCode} - {Content}",
+                    response.StatusCode,
+                    response.Content
+                );
+                continue;
+            }
+
+            StreamInfoResponse? parsed = response.Content.FromJson<StreamInfoResponse>();
+            if (parsed != null)
+                all.AddRange(parsed.Data);
+        }
+
+        return all;
+    }
+
+    /// <summary>
+    /// Returns live streams in a category, optionally filtered by language. Single page.
+    /// </summary>
+    public async Task<List<StreamInfo>> GetStreamsByCategory(
+        string gameId,
+        string? language = null,
+        int first = 100
+    )
+    {
+        RestRequest request = new("streams");
+        request.AddHeader("Authorization", $"Bearer {TwitchConfig.Service().AccessToken}");
+        request.AddHeader("Client-Id", TwitchConfig.Service().ClientId!);
+        request.AddHeader("Content-Type", "application/json");
+        request.AddQueryParameter("game_id", gameId);
+        request.AddQueryParameter("first", Math.Clamp(first, 1, 100).ToString());
+        if (!string.IsNullOrEmpty(language))
+            request.AddQueryParameter("language", language);
+
+        RestResponse response = await _apiClient.ExecuteAsync(request);
+        if (!response.IsSuccessful || string.IsNullOrEmpty(response.Content))
+        {
+            _logger.LogWarning(
+                "GetStreamsByCategory failed: {StatusCode} - {Content}",
+                response.StatusCode,
+                response.Content
+            );
+            return [];
+        }
+
+        StreamInfoResponse? parsed = response.Content.FromJson<StreamInfoResponse>();
+        return parsed?.Data ?? [];
+    }
+
+    /// <summary>
+    /// Looks up a Twitch game/category by exact name. Cache the result on the caller side
+    /// — game IDs don't change.
+    /// </summary>
+    public async Task<GameData?> GetGameByName(string name)
+    {
+        RestRequest request = new("games");
+        request.AddHeader("Authorization", $"Bearer {TwitchConfig.Service().AccessToken}");
+        request.AddHeader("Client-Id", TwitchConfig.Service().ClientId!);
+        request.AddHeader("Content-Type", "application/json");
+        request.AddQueryParameter("name", name);
+
+        RestResponse response = await _apiClient.ExecuteAsync(request);
+        if (!response.IsSuccessful || string.IsNullOrEmpty(response.Content))
+        {
+            _logger.LogWarning(
+                "GetGameByName failed: {StatusCode} - {Content}",
+                response.StatusCode,
+                response.Content
+            );
+            return null;
+        }
+
+        GameDataResponse? parsed = response.Content.FromJson<GameDataResponse>();
+        return parsed?.Data.FirstOrDefault();
+    }
+
+    /// <summary>
+    /// Returns the broadcaster's upcoming-ad schedule, or null if the request fails
+    /// (missing scope, stream offline, etc.). Requires channel:read:ads on the broadcaster's token.
+    /// </summary>
+    public async Task<AdSchedule?> GetAdSchedule(string broadcasterId)
+    {
+        RestRequest request = new("channels/ads");
+        request.AddHeader("Authorization", $"Bearer {TwitchConfig.Service().AccessToken}");
+        request.AddHeader("Client-Id", TwitchConfig.Service().ClientId!);
+        request.AddHeader("Content-Type", "application/json");
+        request.AddQueryParameter("broadcaster_id", broadcasterId);
+
+        RestResponse response = await _apiClient.ExecuteAsync(request);
+        if (!response.IsSuccessful || string.IsNullOrEmpty(response.Content))
+        {
+            _logger.LogWarning(
+                "GetAdSchedule failed: {StatusCode} - {Content}",
+                response.StatusCode,
+                response.Content
+            );
+            return null;
+        }
+
+        AdScheduleResponse? parsed = response.Content.FromJson<AdScheduleResponse>();
+        AdScheduleDto? dto = parsed?.Data.FirstOrDefault();
+        if (dto == null)
+            return null;
+
+        return new AdSchedule
+        {
+            NextAdAt = dto.NextAdAt,
+            LastAdAt = dto.LastAdAt,
+            DurationSeconds = dto.Duration,
+            PrerollFreeTimeSeconds = dto.PrerollFreeTime,
+            SnoozeCount = dto.SnoozeCount,
+            SnoozeRefreshAt = dto.SnoozeRefreshAt,
+        };
+    }
+
+    /// <summary>
+    /// Pushes back the next mid-roll ad by 5 minutes if a snooze is available.
+    /// Requires channel:manage:ads. Returns the updated snooze state, or null on failure.
+    /// </summary>
+    public async Task<AdSchedule?> SnoozeNextAd(string broadcasterId)
+    {
+        RestRequest request = new("channels/ads/schedule/snooze", Method.Post);
+        request.AddHeader("Authorization", $"Bearer {TwitchConfig.Service().AccessToken}");
+        request.AddHeader("Client-Id", TwitchConfig.Service().ClientId!);
+        request.AddHeader("Content-Type", "application/json");
+        request.AddQueryParameter("broadcaster_id", broadcasterId);
+
+        RestResponse response = await _apiClient.ExecuteAsync(request);
+        if (!response.IsSuccessful || string.IsNullOrEmpty(response.Content))
+        {
+            _logger.LogWarning(
+                "SnoozeNextAd failed: {StatusCode} - {Content}",
+                response.StatusCode,
+                response.Content
+            );
+            return null;
+        }
+
+        AdScheduleResponse? parsed = response.Content.FromJson<AdScheduleResponse>();
+        AdScheduleDto? dto = parsed?.Data.FirstOrDefault();
+        if (dto == null)
+            return null;
+
+        return new AdSchedule
+        {
+            NextAdAt = dto.NextAdAt,
+            SnoozeCount = dto.SnoozeCount,
+            SnoozeRefreshAt = dto.SnoozeRefreshAt,
+        };
+    }
+
     public async Task<ChannelInfo?> GetChannelInfo(string broadcasterId)
     {
         RestRequest request = new($"channels");
@@ -466,10 +685,18 @@ public class TwitchApiService
         return followerResponse.Data.FirstOrDefault();
     }
 
-    public async Task SendShoutoutAsync(string broadcasterId, string moderatorId, string userId)
+    public async Task SendShoutoutAsync(
+        string broadcasterId,
+        string moderatorId,
+        string userId,
+        string? accessToken = null
+    )
     {
         RestRequest request = new("chat/shoutouts", Method.Post);
-        request.AddHeader("Authorization", $"Bearer {TwitchConfig.Service().AccessToken}");
+        request.AddHeader(
+            "Authorization",
+            $"Bearer {accessToken ?? TwitchConfig.Service().AccessToken}"
+        );
         request.AddHeader("Client-Id", TwitchConfig.Service().ClientId!);
         request.AddHeader("Content-Type", "application/json");
 
@@ -670,8 +897,8 @@ public class TwitchApiService
 
         request.AddQueryParameter("broadcaster_id", broadcasterId);
 
-        if (!Guid.Empty.Equals(rewardId))
-            request.AddQueryParameter("id", rewardId.ToString());
+        if (rewardId.HasValue && rewardId.Value != Guid.Empty)
+            request.AddQueryParameter("id", rewardId.Value.ToString());
 
         RestResponse response = await _apiClient.ExecuteAsync(request);
         if (!response.IsSuccessful || response.Content is null)
@@ -867,8 +1094,19 @@ public class TwitchApiService
         request.AddHeader("Content-Type", "application/json");
 
         object body = string.IsNullOrEmpty(replyId)
-            ? new { broadcaster_id = broadcasterId, sender_id = userId, message = message }
-            : new { broadcaster_id = broadcasterId, sender_id = userId, message = message, reply_parent_message_id = replyId };
+            ? new
+            {
+                broadcaster_id = broadcasterId,
+                sender_id = userId,
+                message = message,
+            }
+            : new
+            {
+                broadcaster_id = broadcasterId,
+                sender_id = userId,
+                message = message,
+                reply_parent_message_id = replyId,
+            };
         request.AddJsonBody(body);
 
         RestResponse response = await _apiClient.ExecuteAsync(request);
