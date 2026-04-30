@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 using NoMercyBot.Database;
 using NoMercyBot.Database.Models;
 using NoMercyBot.Globals.NewtonSoftConverters;
+using NoMercyBot.Globals.SystemCalls;
 using NoMercyBot.Services.Interfaces;
 using NoMercyBot.Services.Other;
 using NoMercyBot.Services.Widgets;
@@ -97,7 +98,8 @@ public class TtsReward : IReward
         }
         catch (Exception ex)
         {
-            await ctx.ReplyAsync($"@{ctx.UserDisplayName} TTS error: {ex.Message}. Points refunded.");
+            Logger.Twitch($"TTS Reward error for user {ctx.UserDisplayName} ({ctx.UserId}): {ex}");
+            await ctx.ReplyAsync($"@{ctx.UserDisplayName} TTS error. Points refunded.");
             await ctx.RefundAsync();
         }
     }

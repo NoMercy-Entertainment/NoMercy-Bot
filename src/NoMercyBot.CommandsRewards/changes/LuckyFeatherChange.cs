@@ -103,21 +103,14 @@ public class LuckyFeatherChange : IRewardChangeHandler
     private static readonly string _foundDescriptionTemplate =
         "The lucky feather is the most precious item in the stream! Steal it from {name} and hold onto it for as long as you can! But the price increases each time it's stolen!";
     
-    private static readonly string[] _featherFoundSsml = new[]
+    private static string BuildSsml(string text, string voice)
     {
-        @"<speak version=""1.0"" xmlns=""http://www.w3.org/2001/10/synthesis"" xml:lang=""en-US"" xmlns:mstts=""https://www.w3.org/2001/mstts""><voice name=""en-US-JennyNeural"">Heads up! The Lucky Feather has appeared. Grab it if you can!</voice></speak>",
-        @"<speak version=""1.0"" xmlns=""http://www.w3.org/2001/10/synthesis"" xml:lang=""en-US"" xmlns:mstts=""https://www.w3.org/2001/mstts""><voice name=""en-US-JennyNeural"">Sneaky alert! The feather is free for the taking!</voice></speak>",
-        @"<speak version=""1.0"" xmlns=""http://www.w3.org/2001/10/synthesis"" xml:lang=""en-US"" xmlns:mstts=""https://www.w3.org/2001/mstts""><voice name=""en-US-JennyNeural"">Attention! The Lucky Feather is out in the wild. Go get it!</voice></speak>",
-        @"<speak version=""1.0"" xmlns=""http://www.w3.org/2001/10/synthesis"" xml:lang=""en-US"" xmlns:mstts=""https://www.w3.org/2001/mstts""><voice name=""en-US-JennyNeural"">Look alive! The Lucky Feather can be stolen now!</voice></speak>"
-    };
-
-    private static readonly string[] _winnerCongratsSsml = new[]
-    {
-        @"<speak version=""1.0"" xmlns=""http://www.w3.org/2001/10/synthesis"" xml:lang=""en-US"" xmlns:mstts=""https://www.w3.org/2001/mstts""><voice name=""en-US-GuyNeural"">Bravo! You just stole the Lucky Feather. Enjoy your glory.</voice></speak>",
-        @"<speak version=""1.0"" xmlns=""http://www.w3.org/2001/10/synthesis"" xml:lang=""en-US"" xmlns:mstts=""https://www.w3.org/2001/mstts""><voice name=""en-US-GuyNeural"">Kudos, feather thief! You're officially the top pickpocket.</voice></speak>",
-        @"<speak version=""1.0"" xmlns=""http://www.w3.org/2001/10/synthesis"" xml:lang=""en-US"" xmlns:mstts=""https://www.w3.org/2001/mstts""><voice name=""en-US-GuyNeural"">Congratulations! The Lucky Feather now belongs to you. Smug time!</voice></speak>",
-        @"<speak version=""1.0"" xmlns=""http://www.w3.org/2001/10/synthesis"" xml:lang=""en-US"" xmlns:mstts=""https://www.w3.org/2001/mstts""><voice name=""en-US-GuyNeural"">Well played! You claimed the Lucky Feather. Bask in your victory.</voice></speak>"
-    };
+        // Strip @-mentions so TTS doesn't say "at username", and XML-escape the rest
+        string spoken = Regex.Replace(text, @"@(?=\w)", "");
+        string escaped = System.Security.SecurityElement.Escape(spoken) ?? string.Empty;
+        return $"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='en-US'>"
+             + $"<voice name='{voice}'>{escaped}</voice></speak>";
+    }
 
     public async Task Init(RewardChangeContext ctx)
     {
@@ -159,7 +152,7 @@ public class LuckyFeatherChange : IRewardChangeHandler
 
             if (ctx.NewIsPaused.Value)
             {
-                // Feather is being hidden
+                // Feather is being hidden — TTS reads the same snarky line as chat
                 string hiddenTemplate = _perfectlyHiddenReplies[Random.Shared.Next(_perfectlyHiddenReplies.Length)];
                 string hiddenText = hiddenTemplate.Replace("{name}", currentHolderName);
                 await ctx.ReplyAsync(hiddenText);
@@ -170,11 +163,11 @@ public class LuckyFeatherChange : IRewardChangeHandler
                     ctx.RewardId,
                     prompt: hiddenPrompt
                 );
-                
-                // Select random SSML for feather hidden - use congratulations sound for hiding
+
                 try
                 {
-                    string ssml = _winnerCongratsSsml[Random.Shared.Next(_winnerCongratsSsml.Length)];
+                    string spokenText = await ttsService.ApplyUsernamePronunciationsAsync(hiddenText);
+                    string ssml = BuildSsml(spokenText, "en-US-GuyNeural");
                     (string? audioBase64, int audioDurationMs) = await ttsService.SynthesizeSsmlAsync(ssml, speakerId, ctx.CancellationToken);
 
                     if (audioBase64 != null)
@@ -229,11 +222,11 @@ public class LuckyFeatherChange : IRewardChangeHandler
             TtsService ttsService = ctx.ServiceProvider.GetRequiredService<TtsService>();
             string speakerId = "en-US-JennyNeural"; // Default voice; SSML overrides
 
-            // Feather is becoming available
+            // Feather is becoming available — TTS reads the same snarky line as chat
             string appearedTemplate = _featherAppearedReplies[Random.Shared.Next(_featherAppearedReplies.Length)];
             string appearedText = appearedTemplate.Replace("{name}", currentHolderName);
             await ctx.ReplyAsync(appearedText);
-        
+
             string foundPrompt = _foundDescriptionTemplate.Replace("{name}", currentHolderName);
             await ctx.TwitchApiService.UpdateCustomReward(
                 ctx.BroadcasterId,
@@ -241,10 +234,10 @@ public class LuckyFeatherChange : IRewardChangeHandler
                 prompt: foundPrompt
             );
 
-            // Select random SSML for feather appeared
             try
             {
-                string ssml = _featherFoundSsml[Random.Shared.Next(_featherFoundSsml.Length)];
+                string spokenText = await ttsService.ApplyUsernamePronunciationsAsync(appearedText);
+                string ssml = BuildSsml(spokenText, "en-US-JennyNeural");
                 (string? audioBase64, int audioDurationMs) = await ttsService.SynthesizeSsmlAsync(ssml, speakerId, ctx.CancellationToken);
 
                 if (audioBase64 != null)
