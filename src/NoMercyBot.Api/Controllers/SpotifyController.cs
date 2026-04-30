@@ -160,6 +160,7 @@ public class SpotifyController : ControllerBase
         }
     }
 
+    [AllowAnonymous]
     [HttpGet("queue")]
     public async Task<IActionResult> GetQueue()
     {

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +9,7 @@ using NoMercyBot.Globals.Information;
 namespace NoMercyBot.Api.Controllers;
 
 [ApiController]
+[AllowAnonymous]
 [Route("overlay/widgets")]
 public class WidgetOverlayController : ControllerBase
 {
