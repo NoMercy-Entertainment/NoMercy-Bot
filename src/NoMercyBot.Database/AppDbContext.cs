@@ -208,6 +208,11 @@ public class AppDbContext : DbContext
             .Property(e => e.RefreshToken)
             .HasConversion(v => TokenStore.EncryptToken(v), v => TokenStore.DecryptToken(v));
 
+        modelBuilder
+            .Entity<BotAccount>()
+            .Property(e => e.AppAccessToken)
+            .HasConversion(v => TokenStore.EncryptToken(v), v => TokenStore.DecryptToken(v));
+
         modelBuilder.Entity<BotAccount>().Property(e => e.TokenExpiry).IsRequired(false);
 
         modelBuilder

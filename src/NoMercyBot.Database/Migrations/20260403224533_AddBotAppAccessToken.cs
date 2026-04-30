@@ -17,25 +17,23 @@ namespace NoMercyBot.Database.Migrations
                 type: "TEXT",
                 maxLength: 256,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: ""
+            );
 
             migrationBuilder.AddColumn<DateTime>(
                 name: "AppTokenExpiry",
                 table: "BotAccounts",
                 type: "TEXT",
-                nullable: true);
+                nullable: true
+            );
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "AppAccessToken",
-                table: "BotAccounts");
+            migrationBuilder.DropColumn(name: "AppAccessToken", table: "BotAccounts");
 
-            migrationBuilder.DropColumn(
-                name: "AppTokenExpiry",
-                table: "BotAccounts");
+            migrationBuilder.DropColumn(name: "AppTokenExpiry", table: "BotAccounts");
         }
     }
 }
