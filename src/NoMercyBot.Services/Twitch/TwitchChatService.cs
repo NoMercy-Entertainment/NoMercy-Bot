@@ -234,13 +234,31 @@ public class TwitchChatService : IDisposable
             _logger.LogWarning("Chat service not ready. Cannot send announcement.");
             return;
         }
-        await _twitchApiService.SendAnnouncement(
-            broadcasterId,
-            _botUserId,
-            message,
-            color,
-            _botAccessToken
-        );
+        try
+        {
+            await _twitchApiService.SendAnnouncement(
+                broadcasterId,
+                _botUserId,
+                message,
+                color,
+                _botAccessToken
+            );
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(
+                e,
+                "Failed to send announcement as bot. Attempting to refresh clients."
+            );
+            RefreshClients();
+            await _twitchApiService.SendAnnouncement(
+                broadcasterId,
+                _botUserId,
+                message,
+                color,
+                _botAccessToken
+            );
+        }
     }
 
     public async Task SendOneOffMessage(string channelId, string message)
