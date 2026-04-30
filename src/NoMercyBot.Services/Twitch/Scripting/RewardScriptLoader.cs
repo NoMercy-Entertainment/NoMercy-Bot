@@ -1,4 +1,3 @@
-using System.Net.Http.Json;
 using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
@@ -186,8 +185,12 @@ public class RewardScriptLoader
 
     private async Task EnsureTwitchRewardsExistAsync()
     {
-        string baseUrl = $"http://localhost:{Config.InternalServerPort}";
-        using HttpClient client = new();
+        string broadcasterId = _twitchApiService.Service?.UserId ?? string.Empty;
+        if (string.IsNullOrEmpty(broadcasterId))
+        {
+            _logger.LogWarning("No broadcaster ID available — skipping reward sync");
+            return;
+        }
 
         foreach (
             (
@@ -200,10 +203,9 @@ public class RewardScriptLoader
             // Check if this reward already exists on Twitch by its ID
             try
             {
-                HttpResponseMessage checkResponse = await client.GetAsync(
-                    $"{baseUrl}/api/rewards?rewardId={scriptReward.RewardId}"
-                );
-                if (checkResponse.IsSuccessStatusCode)
+                ChannelPointsCustomRewardsResponse? existing =
+                    await _twitchApiService.GetCustomRewards(broadcasterId, scriptReward.RewardId);
+                if (existing?.Data is { Count: > 0 })
                     continue; // Already exists, skip
             }
             catch
@@ -213,47 +215,33 @@ public class RewardScriptLoader
 
             try
             {
-                HttpResponseMessage createResponse = await client.PostAsJsonAsync(
-                    $"{baseUrl}/api/rewards",
-                    new
-                    {
-                        title = scriptReward.RewardTitle,
-                        cost = scriptReward.Cost,
-                        prompt = scriptReward.Prompt,
-                        isUserInputRequired = scriptReward.IsUserInputRequired,
-                        backgroundColor = scriptReward.BackgroundColor,
-                    }
-                );
+                ChannelPointsCustomRewardsResponseData? created =
+                    await _twitchApiService.CreateCustomReward(
+                        broadcasterId,
+                        scriptReward.RewardTitle,
+                        scriptReward.Cost,
+                        scriptReward.Prompt,
+                        scriptReward.IsUserInputRequired,
+                        backgroundColor: scriptReward.BackgroundColor
+                    );
 
-                if (createResponse.IsSuccessStatusCode)
+                if (created != null)
                 {
-                    string createJson = await createResponse.Content.ReadAsStringAsync();
-                    ChannelPointsCustomRewardsResponseData? created =
-                        JsonConvert.DeserializeObject<ChannelPointsCustomRewardsResponseData>(
-                            createJson
-                        );
+                    _logger.LogInformation(
+                        "Created Twitch reward '{Title}' with ID {Id}",
+                        created.Title,
+                        created.Id
+                    );
 
-                    if (created != null)
-                    {
-                        _logger.LogInformation(
-                            "Created Twitch reward '{Title}' with ID {Id}",
-                            created.Title,
-                            created.Id
-                        );
-
-                        twitchReward.RewardId = created.Id;
-                        _rewardService.RegisterReward(twitchReward);
-                        UpdateScriptRewardId(filePath, created.Id);
-                    }
+                    twitchReward.RewardId = created.Id;
+                    _rewardService.RegisterReward(twitchReward);
+                    UpdateScriptRewardId(filePath, created.Id);
                 }
                 else
                 {
-                    // Already exists or other error — title-based matching handles it
-                    string errorBody = await createResponse.Content.ReadAsStringAsync();
                     _logger.LogDebug(
-                        "Reward '{Title}' not created (may already exist): {Error}",
-                        scriptReward.RewardTitle,
-                        errorBody
+                        "Reward '{Title}' not created (may already exist)",
+                        scriptReward.RewardTitle
                     );
                 }
             }

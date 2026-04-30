@@ -3,7 +3,6 @@ using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using NoMercyBot.Database;
 using NoMercyBot.Globals.Information;
 using NoMercyBot.Services.Interfaces;
 using NoMercyBot.Services.Other;
@@ -18,14 +17,12 @@ public class CommandScriptLoader
     private readonly TtsService _ttsService;
     private readonly ILogger<CommandScriptLoader> _logger;
     private readonly IServiceProvider _serviceProvider;
-    private readonly AppDbContext _appDbContext;
 
     public CommandScriptLoader(
         TwitchCommandService commandService,
         TwitchChatService twitchChatService,
         TwitchApiService twitchApiService,
         TtsService ttsService,
-        AppDbContext appDbContext,
         ILogger<CommandScriptLoader> logger,
         IServiceScopeFactory scopeFactory
     )
@@ -34,7 +31,6 @@ public class CommandScriptLoader
         _twitchChatService = twitchChatService;
         _twitchApiService = twitchApiService;
         _ttsService = ttsService;
-        _appDbContext = appDbContext;
         _logger = logger;
         IServiceScope scope = scopeFactory.CreateScope();
         _serviceProvider = scope.ServiceProvider;
