@@ -55,8 +55,13 @@ public class VoiceCommand : IBotCommand
 
     private async Task HandleLanguagesCommand(CommandScriptContext ctx)
     {
+        List<string> enabledProviders = await ctx.DatabaseContext.TtsProviders
+            .Where(p => p.IsEnabled)
+            .Select(p => p.Name)
+            .ToListAsync(ctx.CancellationToken);
+
         List<string> availableLanguages = await ctx.DatabaseContext.TtsVoices
-            .Where(v => v.IsActive)
+            .Where(v => v.IsActive && enabledProviders.Contains(v.Provider))
             .Select(v => v.Locale)
             .Distinct()
             .OrderBy(locale => locale)
@@ -111,9 +116,14 @@ public class VoiceCommand : IBotCommand
 
         string searchLanguage = ctx.Arguments[1].ToLowerInvariant();
 
+        List<string> enabledProviders = await ctx.DatabaseContext.TtsProviders
+            .Where(p => p.IsEnabled)
+            .Select(p => p.Name)
+            .ToListAsync(ctx.CancellationToken);
+
         // Support both full locale (en-US) and language code (en) searches
         List<TtsVoice> matchingVoices = await ctx.DatabaseContext.TtsVoices
-            .Where(v => v.IsActive && (
+            .Where(v => v.IsActive && enabledProviders.Contains(v.Provider) && (
                 v.Locale.ToLower() == searchLanguage ||
                 v.Locale.ToLower().StartsWith(searchLanguage + "-")))
             .OrderBy(v => v.Provider)
@@ -158,9 +168,14 @@ public class VoiceCommand : IBotCommand
         string userId = ctx.Message.UserId;
         string search = voiceIdentifier.ToLowerInvariant();
 
+        List<string> enabledProviders = await ctx.DatabaseContext.TtsProviders
+            .Where(p => p.IsEnabled)
+            .Select(p => p.Name)
+            .ToListAsync(ctx.CancellationToken);
+
         // Try exact match: Id, SpeakerId, Name, DisplayName
         TtsVoice? targetVoice = await ctx.DatabaseContext.TtsVoices
-            .Where(v => v.IsActive && (
+            .Where(v => v.IsActive && enabledProviders.Contains(v.Provider) && (
                 v.Id == voiceIdentifier ||
                 v.SpeakerId.ToLower() == search ||
                 v.Name.ToLower() == search ||
@@ -172,7 +187,7 @@ public class VoiceCommand : IBotCommand
         {
             string dashSearch = "-" + search;
             List<TtsVoice> matches = await ctx.DatabaseContext.TtsVoices
-                .Where(v => v.IsActive && v.SpeakerId.ToLower().Contains(dashSearch))
+                .Where(v => v.IsActive && enabledProviders.Contains(v.Provider) && v.SpeakerId.ToLower().Contains(dashSearch))
                 .OrderBy(v => v.SpeakerId)
                 .ToListAsync(ctx.CancellationToken);
 
@@ -248,9 +263,14 @@ public class VoiceCommand : IBotCommand
     {
         string userId = ctx.Message.UserId;
 
-        // Get a random voice from all active voices
+        List<string> enabledProviders = await ctx.DatabaseContext.TtsProviders
+            .Where(p => p.IsEnabled)
+            .Select(p => p.Name)
+            .ToListAsync(ctx.CancellationToken);
+
+        // Get a random voice from active voices on enabled providers
         List<TtsVoice> allVoices = await ctx.DatabaseContext.TtsVoices
-            .Where(v => v.IsActive)
+            .Where(v => v.IsActive && enabledProviders.Contains(v.Provider))
             .ToListAsync(ctx.CancellationToken);
 
         if (allVoices.Count == 0)
