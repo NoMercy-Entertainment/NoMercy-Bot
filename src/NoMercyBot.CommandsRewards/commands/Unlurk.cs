@@ -10,6 +10,7 @@ using NoMercyBot.Services.Interfaces;
 using NoMercyBot.Services.Twitch;
 using NoMercyBot.Services.Twitch.Scripting;
 using NoMercyBot.Globals.NewtonSoftConverters;
+using Serilog.Events;
 
 public class UnlurkCommand: IBotCommand
 { 
@@ -121,7 +122,8 @@ public class UnlurkCommand: IBotCommand
        }
        catch (Exception ex)
        {
-           await ctx.TwitchChatService.SendReplyAsBot(ctx.Message.Broadcaster.Username, $"Something went wrong with the unlurk command. {ex.Message}", ctx.Message.Id);
+           Logger.Twitch($"Unlurk command error for {ctx.Message.Username}: {ex}", LogEventLevel.Error);
+           await ctx.TwitchChatService.SendReplyAsBot(ctx.Message.Broadcaster.Username, "Something went wrong with the unlurk command.", ctx.Message.Id);
        }
    }
 }
