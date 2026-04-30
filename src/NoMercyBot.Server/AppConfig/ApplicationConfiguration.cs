@@ -65,6 +65,7 @@ public static class ApplicationConfiguration
 
         app.UseMiddleware<LocalizationMiddleware>();
         app.UseMiddleware<TokenParamAuthMiddleware>();
+        app.UseMiddleware<AuthorizationLoggingMiddleware>();
         app.UseAuthentication();
         app.UseAuthorization();
 

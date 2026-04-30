@@ -36,6 +36,8 @@ public class CustomLogger<T> : ILogger<T>
     )
     {
         string message = formatter(state, exception);
+        if (exception != null)
+            message = $"{message}\n{exception}";
 
         // Filter out specific ASP.NET Core middleware messages
         if (ShouldFilterMessage(message))
