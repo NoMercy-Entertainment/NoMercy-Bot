@@ -25,7 +25,7 @@ public static class Program
         Console.CancelKeyPress += (_, eventArgs) =>
         {
             eventArgs.Cancel = true;
-            Logger.App("Shutting down gracefully...");
+            Logger.App("Shutting down gracefully (Ctrl+C)...");
             CancellationTokenSource.Cancel();
         };
 
@@ -33,6 +33,18 @@ public static class Program
         {
             CancellationTokenSource.Cancel();
         };
+
+        // SetConsoleCtrlHandler catches the close-button / `taskkill` (without /F) /
+        // `Stop-Process` (without -Force) cases that Console.CancelKeyPress misses.
+        // Without this, the bot is hard-killed before its hosted services'
+        // StopAsync runs — meaning the EventSub WS never sends its close frame and
+        // Twitch's edge keeps a phantom session for ~30s, which compounds across
+        // restarts into the 3-connections-per-client_id limit.
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            _ctrlHandlerKeepAlive = HandleConsoleCtrl;
+            SetConsoleCtrlHandler(_ctrlHandlerKeepAlive, true);
+        }
 
         await Parser
             .Default.ParseArguments<StartupOptions>(args)
@@ -44,6 +56,70 @@ public static class Program
             return Task.CompletedTask;
         }
     }
+
+    private delegate bool ConsoleCtrlHandler(int ctrlType);
+    private static ConsoleCtrlHandler? _ctrlHandlerKeepAlive;
+
+    [DllImport("kernel32.dll")]
+    private static extern bool SetConsoleCtrlHandler(ConsoleCtrlHandler handler, bool add);
+
+    private const int CTRL_C_EVENT = 0;
+    private const int CTRL_BREAK_EVENT = 1;
+    private const int CTRL_CLOSE_EVENT = 2;
+    private const int CTRL_LOGOFF_EVENT = 5;
+    private const int CTRL_SHUTDOWN_EVENT = 6;
+
+    private static bool HandleConsoleCtrl(int ctrlType)
+    {
+        // Second signal while shutdown is already in progress → user is mashing
+        // Ctrl+C because the host is hung. Force-exit immediately.
+        if (CancellationTokenSource.IsCancellationRequested)
+        {
+            Logger.App("Force-exiting (second signal received)");
+            Environment.Exit(1);
+            return true;
+        }
+
+        Logger.App($"Shutting down gracefully (signal: {ctrlType})...");
+        CancellationTokenSource.Cancel();
+
+        // Schedule a hard-exit fallback. If the host hasn't gracefully returned in
+        // 10s (some hosted service hung, or Kestrel waiting on widget WS clients),
+        // kill the process anyway so the user isn't stuck pressing Ctrl+C.
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(TimeSpan.FromSeconds(10));
+            if (_runTask?.IsCompleted != true)
+            {
+                Logger.App("Graceful shutdown took too long, force-exiting");
+                Environment.Exit(1);
+            }
+        });
+
+        switch (ctrlType)
+        {
+            case CTRL_CLOSE_EVENT:
+            case CTRL_LOGOFF_EVENT:
+            case CTRL_SHUTDOWN_EVENT:
+                // Windows force-terminates ~5s after these signals. Block here long
+                // enough to let hosted services stop + EventSub WS close-frame fly,
+                // then return true so we own the exit instead of being killed mid-flight.
+                try
+                {
+                    _runTask?.Wait(TimeSpan.FromSeconds(4));
+                }
+                catch { }
+                return true;
+
+            default:
+                // Ctrl+C / Ctrl+Break: returning true here would suppress .NET's
+                // normal exit path. Cancel the CTS (already done above) and return
+                // false so the default handler also runs and the process exits.
+                return false;
+        }
+    }
+
+    private static Task? _runTask;
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
@@ -60,14 +136,21 @@ public static class Program
 
     private static async Task Start(StartupOptions options)
     {
-        Console.Clear();
-        Console.Title = "NoMercyBot Server";
-
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        try
         {
-            IntPtr handle = GetForegroundWindow();
-            if (handle != IntPtr.Zero)
-                MoveWindow(handle, 0, 0, 1920, 1080, true);
+            Console.Clear();
+            Console.Title = "NoMercyBot Server";
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                IntPtr handle = GetForegroundWindow();
+                if (handle != IntPtr.Zero)
+                    MoveWindow(handle, 0, 0, 1920, 1080, true);
+            }
+        }
+        catch (IOException)
+        {
+            // No console attached (e.g. running from IDE or piped output)
         }
 
         options.ApplySettings();
@@ -80,7 +163,8 @@ public static class Program
 
         try
         {
-            await app.RunAsync(CancellationTokenSource.Token);
+            _runTask = app.RunAsync(CancellationTokenSource.Token);
+            await _runTask;
         }
         catch (OperationCanceledException)
         {
