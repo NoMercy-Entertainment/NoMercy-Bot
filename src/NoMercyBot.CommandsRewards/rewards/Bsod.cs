@@ -42,7 +42,7 @@ public class BsodReward : IReward
         // ---------------- WINDOWS 3.1 ----------------
         ["win31"] =
         [
-            @"<speak version=""1.0"" xml:lang=""en-US"">
+            @"<speak version=""1.0"" xmlns=""http://www.w3.org/2001/10/synthesis"" xml:lang=""en-US"">
               <voice name=""en-US-SteffanNeural"">
                 <prosody rate=""-40%"" pitch=""-10%"">
                   <break time=""300ms""/>
@@ -57,7 +57,7 @@ public class BsodReward : IReward
               </voice>
             </speak>",
 
-            @"<speak version=""1.0"" xml:lang=""en-US"">
+            @"<speak version=""1.0"" xmlns=""http://www.w3.org/2001/10/synthesis"" xml:lang=""en-US"">
               <voice name=""en-US-SteffanNeural"">
                 <prosody rate=""-35%"" pitch=""-15%"">
                   Warning.
@@ -73,7 +73,7 @@ public class BsodReward : IReward
               </voice>
             </speak>",
 
-            @"<speak version=""1.0"" xml:lang=""en-US"">
+            @"<speak version=""1.0"" xmlns=""http://www.w3.org/2001/10/synthesis"" xml:lang=""en-US"">
               <voice name=""en-US-SteffanNeural"">
                 <prosody rate=""-45%"" pitch=""-20%"">
                   Fatal error.
@@ -93,7 +93,7 @@ public class BsodReward : IReward
         // ---------------- WINDOWS 95 / 98 ----------------
         ["win95"] =
         [
-            @"<speak version=""1.0"" xml:lang=""en-US"">
+            @"<speak version=""1.0"" xmlns=""http://www.w3.org/2001/10/synthesis"" xml:lang=""en-US"">
               <voice name=""en-US-ChristopherNeural"">
                 <prosody rate=""-15%"" pitch=""-8%"">
                   A fatal exception zero E has occurred.
@@ -109,7 +109,7 @@ public class BsodReward : IReward
               </voice>
             </speak>",
 
-            @"<speak version=""1.0"" xml:lang=""en-US"">
+            @"<speak version=""1.0"" xmlns=""http://www.w3.org/2001/10/synthesis"" xml:lang=""en-US"">
               <voice name=""en-US-ChristopherNeural"">
                 <prosody rate=""-10%"" pitch=""-5%"">
                   Windows ninety five has encountered an error.
@@ -126,7 +126,7 @@ public class BsodReward : IReward
 
         ["win98"] =
         [
-            @"<speak version=""1.0"" xml:lang=""en-US"">
+            @"<speak version=""1.0"" xmlns=""http://www.w3.org/2001/10/synthesis"" xml:lang=""en-US"">
               <voice name=""en-US-ChristopherNeural"">
                 <prosody rate=""-15%"" pitch=""-6%"">
                   Windows ninety eight has experienced a critical failure.
@@ -142,7 +142,7 @@ public class BsodReward : IReward
               </voice>
             </speak>",
 
-            @"<speak version=""1.0"" xml:lang=""en-US"">
+            @"<speak version=""1.0"" xmlns=""http://www.w3.org/2001/10/synthesis"" xml:lang=""en-US"">
               <voice name=""en-US-ChristopherNeural"">
                 <prosody rate=""-20%"" pitch=""-10%"">
                   A fatal exception zero E occurred at memory address.
@@ -162,7 +162,7 @@ public class BsodReward : IReward
         // ---------------- WINDOWS 2000 ----------------
         ["win2000"] =
         [
-            @"<speak version=""1.0"" xml:lang=""en-US"">
+            @"<speak version=""1.0"" xmlns=""http://www.w3.org/2001/10/synthesis"" xml:lang=""en-US"">
               <voice name=""en-US-GuyNeural"">
                 <prosody rate=""-10%"" pitch=""-5%"">
                   Stop error.
@@ -180,7 +180,7 @@ public class BsodReward : IReward
               </voice>
             </speak>",
 
-            @"<speak version=""1.0"" xml:lang=""en-US"">
+            @"<speak version=""1.0"" xmlns=""http://www.w3.org/2001/10/synthesis"" xml:lang=""en-US"">
               <voice name=""en-US-GuyNeural"">
                 <prosody rate=""-8%"" pitch=""-5%"">
                   Windows two thousand has stopped to prevent damage
@@ -203,7 +203,7 @@ public class BsodReward : IReward
         // ---------------- WINDOWS XP ----------------
         ["winXp"] =
         [
-            @"<speak version=""1.0"" xml:lang=""en-US"">
+            @"<speak version=""1.0"" xmlns=""http://www.w3.org/2001/10/synthesis"" xml:lang=""en-US"">
               <voice name=""en-US-GuyNeural"">
                 <prosody rate=""-12%"" pitch=""-4%"">
                   A problem has been detected and Windows X P has been shut down
@@ -222,7 +222,7 @@ public class BsodReward : IReward
               </voice>
             </speak>",
 
-            @"<speak version=""1.0"" xml:lang=""en-US"">
+            @"<speak version=""1.0"" xmlns=""http://www.w3.org/2001/10/synthesis"" xml:lang=""en-US"">
               <voice name=""en-US-GuyNeural"">
                 <prosody rate=""-10%"" pitch=""-3%"">
                   Windows X P is trying its best.
@@ -244,7 +244,7 @@ public class BsodReward : IReward
         // ---------------- WINDOWS 10 ----------------
         ["win10"] =
         [
-            @"<speak version=""1.0"" xml:lang=""en-US"">
+            @"<speak version=""1.0"" xmlns=""http://www.w3.org/2001/10/synthesis"" xml:lang=""en-US"">
               <voice name=""en-US-JennyMultilingualNeural"">
                 <prosody rate=""-5%"" pitch=""-2%"">
                   Your P C ran into a problem and needs to restart.
@@ -260,7 +260,7 @@ public class BsodReward : IReward
               </voice>
             </speak>",
 
-            @"<speak version=""1.0"" xml:lang=""en-US"">
+            @"<speak version=""1.0"" xmlns=""http://www.w3.org/2001/10/synthesis"" xml:lang=""en-US"">
               <voice name=""en-US-JennyMultilingualNeural"">
                 <prosody rate=""-4%"" pitch=""-1%"">
                   Just so you know, your P C did not crash on its own.
@@ -389,8 +389,8 @@ public class BsodReward : IReward
         }
         catch (Exception ex)
         {
-            await ctx.ReplyAsync($"@{ctx.UserDisplayName} TTS error: {ex.Message}. Points refunded.");
             Logger.Twitch($"BSOD Reward TTS error for user {ctx.UserDisplayName} ({ctx.UserId}): {ex}");
+            await ctx.ReplyAsync($"@{ctx.UserDisplayName} TTS error. Points refunded.");
             await ctx.RefundAsync();
         }
     }
