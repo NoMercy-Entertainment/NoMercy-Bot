@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -34,6 +35,29 @@ public class SpotifyApiService
     public Service Service => SpotifyConfig.Service();
 
     public SpotifyState? SpotifyState { get; set; }
+
+    // Tracks queued via !sr that should be auto-skipped when they start playing.
+    // Spotify Web API has no remove-from-queue endpoint, so !wrongsong marks
+    // here and SpotifyWebsocketService consumes on PLAYER_STATE_CHANGED.
+    private readonly ConcurrentDictionary<string, byte> _pendingSkips = new();
+
+    public void MarkForSkip(string trackId)
+    {
+        if (string.IsNullOrEmpty(trackId))
+            return;
+        _pendingSkips[trackId] = 0;
+        _logger.LogInformation(
+            "Marked Spotify track {TrackId} for auto-skip on next play",
+            trackId
+        );
+    }
+
+    public bool TryConsumeSkip(string trackId)
+    {
+        if (string.IsNullOrEmpty(trackId))
+            return false;
+        return _pendingSkips.TryRemove(trackId, out _);
+    }
 
     public string ClientId =>
         Service.ClientId ?? throw new InvalidOperationException("Spotify ClientId is not set.");

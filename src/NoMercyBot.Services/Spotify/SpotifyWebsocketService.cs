@@ -20,6 +20,10 @@ public class SpotifyWebsocketService : IHostedService, IDisposable
     private readonly IWidgetEventService _widgetEventService;
     private ClientWebSocket? _socket;
     private CancellationTokenSource? _cts;
+
+    // Set true by StopAsync. Survives _cts being recreated by ConnectAsync,
+    // so reconnect logic can never re-fire after shutdown begins.
+    private volatile bool _stopping;
     private readonly IServiceScope _scope;
     private readonly AppDbContext _dbContext;
     private int _attempts = 0;
@@ -60,6 +64,7 @@ public class SpotifyWebsocketService : IHostedService, IDisposable
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
+        _stopping = true;
         Dispose();
         return Task.CompletedTask;
     }
@@ -116,8 +121,20 @@ public class SpotifyWebsocketService : IHostedService, IDisposable
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in Spotify websocket receive loop");
-                ReconnectWithBackoff();
+                // Cancellation / socket-disposed during shutdown is normal, not
+                // an error — log quietly and don't try to reconnect.
+                if (_stopping || ex is OperationCanceledException)
+                {
+                    _logger.LogDebug(
+                        "Spotify websocket receive loop ended ({Reason})",
+                        _stopping ? "shutdown" : "cancellation"
+                    );
+                }
+                else
+                {
+                    _logger.LogError(ex, "Error in Spotify websocket receive loop");
+                    ReconnectWithBackoff();
+                }
                 break;
             }
     }
@@ -165,6 +182,31 @@ public class SpotifyWebsocketService : IHostedService, IDisposable
                         );
 
                         _logger.LogInformation("Player state changed");
+
+                        // Auto-skip tracks marked by !wrongsong as soon as they start playing.
+                        string? playingTrackId = evt.Event.State.Item?.Id;
+                        if (
+                            !string.IsNullOrEmpty(playingTrackId)
+                            && _spotifyApiService.TryConsumeSkip(playingTrackId)
+                        )
+                        {
+                            try
+                            {
+                                await _spotifyApiService.NextTrack();
+                                _logger.LogInformation(
+                                    "Auto-skipped retracted track {TrackId}",
+                                    playingTrackId
+                                );
+                            }
+                            catch (Exception skipEx)
+                            {
+                                _logger.LogError(
+                                    skipEx,
+                                    "Failed to auto-skip retracted track {TrackId}",
+                                    playingTrackId
+                                );
+                            }
+                        }
                     }
 
                     return;
@@ -228,10 +270,24 @@ public class SpotifyWebsocketService : IHostedService, IDisposable
 
     private void ReconnectWithBackoff()
     {
+        // Hard guard: if shutdown started, never schedule a reconnect — flag is
+        // set BEFORE _cts is canceled/disposed, so this is reliable even when the
+        // receive loop's cancellation-induced exception fires concurrently with
+        // Dispose(). Also catches the case where ConnectAsync would otherwise
+        // create a fresh _cts and bypass any token-based check.
+        if (_stopping)
+            return;
+
         if (_attempts < MaxAttempts)
         {
             _attempts++;
-            Task.Delay(1000).ContinueWith(_ => ConnectAsync());
+            Task.Delay(1000)
+                .ContinueWith(_ =>
+                {
+                    if (_stopping)
+                        return Task.CompletedTask;
+                    return ConnectAsync();
+                });
         }
         else
         {
