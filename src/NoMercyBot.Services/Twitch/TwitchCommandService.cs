@@ -246,8 +246,16 @@ public class TwitchCommandService
                 if (command.Permission != CommandPermission.Everyone)
                 {
                     string reply = PermissionDeniedReplies.GetRandomReply(command.Permission);
-                    await _ttsService.SendCachedTts(reply, message.BroadcasterId, CancellationToken.None);
-                    await _twitchChatService.SendReplyAsBot(message.Broadcaster.Username, reply, message.Id);
+                    await _ttsService.SendCachedTts(
+                        reply,
+                        message.BroadcasterId,
+                        CancellationToken.None
+                    );
+                    await _twitchChatService.SendReplyAsBot(
+                        message.Broadcaster.Username,
+                        reply,
+                        message.Id
+                    );
                 }
                 return;
             }
@@ -317,8 +325,13 @@ public class TwitchCommandService
         {
             if (command.Permission != CommandPermission.Everyone)
             {
-                string reply = $"@{message.DisplayName} {PermissionDeniedReplies.GetRandomReply(command.Permission)}";
-                await _twitchChatService.SendReplyAsBot(message.Broadcaster.Username, reply, message.Id);
+                string reply =
+                    $"@{message.DisplayName} {PermissionDeniedReplies.GetRandomReply(command.Permission)}";
+                await _twitchChatService.SendReplyAsBot(
+                    message.Broadcaster.Username,
+                    reply,
+                    message.Id
+                );
             }
             return;
         }

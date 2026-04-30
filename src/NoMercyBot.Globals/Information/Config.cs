@@ -15,10 +15,12 @@ public static class Config
     /// Set via NOMERCY_BASE_URL environment variable for production.
     /// Example: "https://bot.nomercy.tv"
     /// </summary>
-    public static string? BaseUrl { get; set; } = Environment.GetEnvironmentVariable("NOMERCY_BASE_URL");
+    public static string? BaseUrl { get; set; } =
+        Environment.GetEnvironmentVariable("NOMERCY_BASE_URL");
     public static object InternalTtsPort { get; set; } = 6040;
 
-    public static bool Swagger { get; set; } = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
+    public static bool Swagger { get; set; } =
+        Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
 
     public static KeyValuePair<string, int> QueueWorkers { get; set; } = new("queue", 1);
     public static KeyValuePair<string, int> CronWorkers { get; set; } = new("cron", 1);

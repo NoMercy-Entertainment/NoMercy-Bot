@@ -1,5 +1,5 @@
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -143,13 +143,14 @@ public class BotAuthController : BaseController
                     if (!string.IsNullOrEmpty(botAccount.RefreshToken))
                     {
                         // User token - refresh with refresh token
-                        (User user, TokenResponse tokenResponse) = await _botAuthService.RefreshToken(
-                            botAccount.RefreshToken
-                        );
+                        (User user, TokenResponse tokenResponse) =
+                            await _botAuthService.RefreshToken(botAccount.RefreshToken);
 
                         botAccount.AccessToken = tokenResponse.AccessToken;
                         botAccount.RefreshToken = tokenResponse.RefreshToken;
-                        botAccount.TokenExpiry = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn);
+                        botAccount.TokenExpiry = DateTime.UtcNow.AddSeconds(
+                            tokenResponse.ExpiresIn
+                        );
                         username = user.DisplayName;
                     }
                     else
@@ -157,7 +158,9 @@ public class BotAuthController : BaseController
                         // Client credentials token - request a new one
                         TokenResponse tokenResponse = await _botAuthService.BotToken();
                         botAccount.AccessToken = tokenResponse.AccessToken;
-                        botAccount.TokenExpiry = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn);
+                        botAccount.TokenExpiry = DateTime.UtcNow.AddSeconds(
+                            tokenResponse.ExpiresIn
+                        );
                     }
 
                     await _dbContext.SaveChangesAsync();
@@ -198,12 +201,16 @@ public class BotAuthController : BaseController
 
             await _dbContext.SaveChangesAsync();
 
-            _logger.LogInformation(
-                "Bot badge app token stored for {BotName}",
-                botAccount.Username
-            );
+            _logger.LogInformation("Bot badge app token stored for {BotName}", botAccount.Username);
 
-            return Ok(new { success = true, username = botAccount.Username, appTokenExpiry = botAccount.AppTokenExpiry });
+            return Ok(
+                new
+                {
+                    success = true,
+                    username = botAccount.Username,
+                    appTokenExpiry = botAccount.AppTokenExpiry,
+                }
+            );
         }
         catch (Exception ex)
         {
@@ -224,7 +231,9 @@ public class BotAuthController : BaseController
             {
                 // Send to the bot's own channel (broadcaster)
                 await _twitchChatService.SendMessageAsBot(
-                    TwitchConfig.Service().UserName!, request.Message);
+                    TwitchConfig.Service().UserName!,
+                    request.Message
+                );
             }
             else
             {
@@ -249,8 +258,9 @@ public class BotAuthController : BaseController
     {
         try
         {
-            DeviceCodeResponse deviceCode =
-                await _twitchAuthService.AuthorizeWithScopes(new[] { "channel:bot" });
+            DeviceCodeResponse deviceCode = await _twitchAuthService.AuthorizeWithScopes(
+                new[] { "channel:bot" }
+            );
 
             return Ok(deviceCode);
         }
@@ -279,12 +289,14 @@ public class BotAuthController : BaseController
             // Get the user who authorized so we know which channel
             User? user = await _twitchApiService.FetchUser(accessToken: tokenResponse.AccessToken);
 
-            return Ok(new
-            {
-                success = true,
-                channel = user?.DisplayName ?? "Unknown",
-                channelId = user?.Id,
-            });
+            return Ok(
+                new
+                {
+                    success = true,
+                    channel = user?.DisplayName ?? "Unknown",
+                    channelId = user?.Id,
+                }
+            );
         }
         catch (Exception ex)
         {

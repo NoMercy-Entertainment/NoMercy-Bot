@@ -165,9 +165,14 @@ public class TokenRefreshService : BackgroundService
         try
         {
             // Renew app access token (for bot badge) if it's near expiry
-            if (!string.IsNullOrEmpty(botAccount.AppAccessToken) && botAccount.AppTokenExpiry != null)
+            if (
+                !string.IsNullOrEmpty(botAccount.AppAccessToken)
+                && botAccount.AppTokenExpiry != null
+            )
             {
-                DateTime appRefreshTime = botAccount.AppTokenExpiry.Value.AddMinutes(-_refreshThreshold.TotalMinutes);
+                DateTime appRefreshTime = botAccount.AppTokenExpiry.Value.AddMinutes(
+                    -_refreshThreshold.TotalMinutes
+                );
                 if (DateTime.UtcNow >= appRefreshTime)
                 {
                     await RenewClientCredentialsBotToken(botAccount, scope, cancellationToken);

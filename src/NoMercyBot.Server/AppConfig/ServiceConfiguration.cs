@@ -293,7 +293,9 @@ public static class ServiceConfiguration
                         PermitLimit = 200,
                         Window = TimeSpan.FromMinutes(1),
                         QueueLimit = 0,
-                    }));
+                    }
+                )
+            );
         });
     }
 
