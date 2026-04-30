@@ -37,9 +37,11 @@ public static class UserSettings
         Dictionary<string, (string value, string secureValue)> settings
     )
     {
+        string configSummary = string.Join(", ", settings.Select(s => $"{s.Key}={s.Value.value}"));
+        Logger.App($"Configuration loaded: {configSummary}");
+
         foreach (KeyValuePair<string, (string value, string secureValue)> setting in settings)
         {
-            Logger.App($"Configuration: {setting.Key} = {setting.Value.value}");
             switch (setting.Key)
             {
                 case "internalPort":
