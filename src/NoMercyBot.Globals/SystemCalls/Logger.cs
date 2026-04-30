@@ -60,11 +60,11 @@ public static class Logger
         // System category
         { "_", new("_", "System", Color.DimGray, "spacer") },
         { "app", new("app", "App", Color.MediumPurple, "System") },
-        { "access", new("access", "Access", Color.MediumPurple, "System") },
-        { "configuration", new("configuration", "Configuration", Color.MediumPurple, "System") },
-        { "setup", new("setup", "Setup", Color.CornflowerBlue, "System") },
-        { "system", new("system", "System", Color.CornflowerBlue, "System") },
-        { "service", new("service", "Service", Color.CornflowerBlue, "System") },
+        { "access", new("access", "Access", Color.Orchid, "System") },
+        { "configuration", new("configuration", "Configuration", Color.MediumSlateBlue, "System") },
+        { "setup", new("setup", "Setup", Color.SteelBlue, "System") },
+        { "system", new("system", "System", Color.FromArgb(220, 220, 220), "System") },
+        { "service", new("service", "Service", Color.MediumAquamarine, "System") },
         { "debug", new("debug", "Debug", Color.Gray, "System", LogEventLevel.Debug) },
         { "info", new("info", "Info", Color.White, "System") },
         { "warning", new("warning", "Warning", Color.Yellow, "System", LogEventLevel.Warning) },
@@ -75,20 +75,23 @@ public static class Logger
         // Networking category
         { "___", new("___", "Networking", Color.DimGray, "spacer") },
         { "http", new("http", "Http", Color.Orange, "Networking") },
-        { "notify", new("notify", "Notify", Color.Orange, "Networking") },
-        { "ping", new("ping", "Ping", Color.Orange, "Networking") },
-        { "socket", new("socket", "Socket", Color.Orange, "Networking") },
-        { "request", new("request", "Request", Color.Orange, "Networking", LogEventLevel.Debug) },
+        { "notify", new("notify", "Notify", Color.SandyBrown, "Networking") },
+        { "ping", new("ping", "Ping", Color.Goldenrod, "Networking") },
+        { "socket", new("socket", "Socket", Color.Coral, "Networking") },
+        {
+            "request",
+            new("request", "Request", Color.DarkOrange, "Networking", LogEventLevel.Debug)
+        },
         // Providers category
         { "____", new("____", "Providers", Color.DimGray, "spacer") },
-        { "youtube", new("youtube", "YouTube", Color.DodgerBlue, "Providers") },
-        // Notifications category
-        { "_____", new("_____", "Notifications", Color.DimGray, "spacer") },
-        { "discord", new("discord", "Discord", Color.Green, "Notifications") },
-        { "twitch", new("twitch", "Twitch", Color.Green, "Notifications") },
-        { "spotify", new("spotify", "Spotify", Color.Green, "Notifications") },
-        { "twitter", new("twitter", "Twitter", Color.Green, "Notifications") },
-        { "webhook", new("webhook", "Webhook", Color.Green, "Notifications") },
+        { "youtube", new("youtube", "YouTube", Color.FromArgb(255, 0, 0), "Providers") },
+        // Platforms category
+        { "_____", new("_____", "Platforms", Color.DimGray, "spacer") },
+        { "discord", new("discord", "Discord", Color.FromArgb(88, 101, 242), "Platforms") },
+        { "twitch", new("twitch", "Twitch", Color.FromArgb(145, 70, 255), "Platforms") },
+        { "spotify", new("spotify", "Spotify", Color.FromArgb(29, 185, 84), "Platforms") },
+        { "twitter", new("twitter", "Twitter", Color.FromArgb(29, 155, 240), "Platforms") },
+        { "webhook", new("webhook", "Webhook", Color.FromArgb(235, 172, 52), "Platforms") },
     };
 
     static Logger()
