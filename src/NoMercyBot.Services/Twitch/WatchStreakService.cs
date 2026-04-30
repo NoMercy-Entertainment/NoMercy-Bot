@@ -1,11 +1,11 @@
-// TODO: Remove this service once Twitch adds watch streak support to EventSub.
-// Tracking issue: https://discuss.dev.twitch.com/t/watch-streaks-via-eventsub/64429
-// This uses TwitchLib IRC client to capture USERNOTICE viewermilestone events
-// which are not yet available through the EventSub websocket API.
+// Watch streak handler.
+// Receives data from channel.chat.notification (notice_type: "watch_streak")
+// dispatched by ChatEventHandler. The IRC client previously used to capture
+// USERNOTICE viewermilestone events has been removed — Twitch now exposes
+// watch streaks through EventSub directly.
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercyBot.Database;
@@ -13,12 +13,6 @@ using NoMercyBot.Database.Models;
 using NoMercyBot.Globals.NewtonSoftConverters;
 using NoMercyBot.Services.Other;
 using NoMercyBot.Services.Widgets;
-using TwitchLib.Client;
-using TwitchLib.Client.Enums;
-using TwitchLib.Client.Events;
-using TwitchLib.Client.Models;
-using TwitchLib.Communication.Clients;
-using TwitchLib.Communication.Models;
 
 namespace NoMercyBot.Services.Twitch;
 
@@ -34,13 +28,12 @@ public class WatchStreakRecord
     public int ChannelPointsReward { get; set; }
 }
 
-public class WatchStreakService : IHostedService
+public class WatchStreakService
 {
     private readonly ILogger<WatchStreakService> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly TwitchChatService _twitchChatService;
     private readonly TtsService _ttsService;
-    private TwitchClient? _ircClient;
 
     private const string RECORD_TYPE = "WatchStreak";
     private const string BOT_VOICE = "en-US-GuyNeural";
@@ -56,6 +49,22 @@ public class WatchStreakService : IHostedService
         "{name} has achieved a {streak} stream watch streak! Their monitor has permanent burn-in of this channel.",
         "Breaking news! {name} has watched {streak} streams straight. The Big Bird is honored. And slightly concerned.",
         "{streak} consecutive streams for {name}! At this point they should be on the payroll.",
+        "{name} has now watched {streak} streams in a row. HR has been notified.",
+        "{streak} streams deep, {name}. We can stop. We have to stop. We won't.",
+        "{name} just hit {streak} streams. The Twitch algorithm is calling it stalking.",
+        "Local viewer {name} now has a {streak} stream streak. Doctors hate this one trick.",
+        "{name} clocked in for the {streak}th consecutive stream. Time-and-a-half kicks in next week.",
+        "{streak} streams without a miss. {name}, your commitment is unmatched, your weekends concerning.",
+        "{name} hit {streak} in a row. Even the IRS thinks you're a dependent of this channel.",
+        "Streak update: {name} is at {streak}. The Big Bird has filed a noise complaint with reality.",
+        "{name} has been here {streak} streams running. Spotify Wrapped is going to be embarrassing.",
+        "{streak} streams for {name}. We are now legally each other's emergency contact.",
+        "{name} just renewed for {streak} streams. The lease is now month to month, which is to say, every stream.",
+        "{streak} streams in a row from {name}. The chair has formed an indent. Take that as you will.",
+        "{name} is on a {streak} stream streak. Twitch sent flowers.",
+        "Day {streak} of {name} not missing a stream. Day 1 of us pretending this is normal.",
+        "{name} hit {streak} consecutive streams. Their browser bookmarked this channel out of habit.",
+        "{streak} streams. {name} could have learned a language by now. Instead, they learned my chat commands.",
     };
 
     // Messages when someone shares a streak with a custom message
@@ -65,6 +74,12 @@ public class WatchStreakService : IHostedService
         "{name} reached {streak} consecutive streams and dropped this message:",
         "After {streak} streams in a row, {name} felt compelled to share:",
         "{streak} stream streak! {name} has a statement for the chat:",
+        "{name} took the mic at {streak} consecutive streams to say:",
+        "Live, from {streak} streams deep, {name} delivers a personal message:",
+        "{name} hit {streak} streams and immediately gave a press conference:",
+        "Following the {streak} stream milestone, {name} graced us with the following:",
+        "{name} is {streak} streams in and apparently has notes:",
+        "{streak} streams! {name} prepared remarks. They are as follows:",
     };
 
     // Messages when someone's streak is lower than their record (they lost it and rebuilt)
@@ -74,6 +89,12 @@ public class WatchStreakService : IHostedService
         "Look who's rebuilding! {name} had a {record} streak, lost it, and is crawling back at {streak}. Respect the grind.",
         "{name} used to have a legendary {record} stream streak. Now it's {streak}. We don't talk about what happened in between.",
         "The phoenix rises! {name} had a {record} stream record but is back from the ashes with {streak}. Never forget.",
+        "{name} is back at {streak}, but the ghost of that {record} streak still haunts this chat.",
+        "{streak} streaks for {name}. We all remember the glorious {record}-streak era. Better days. Sadder times.",
+        "{name} grinding back from the abyss. {record} once. {streak} now. Recovery is non-linear.",
+        "{streak}? Cute, {name}. We saw you peak at {record}. We saw it all.",
+        "{name} has been demoted from {record} streams to {streak}. The stockholders are nervous.",
+        "Rebuild watch: {name} is {streak} streams in, climbing back toward the legendary {record} mark. Pace yourself.",
     };
 
     // Messages when someone beats their own record
@@ -83,6 +104,12 @@ public class WatchStreakService : IHostedService
         "HISTORY HAS BEEN MADE! {name} broke their own record of {record} streams with {streak}! Someone give this person a trophy!",
         "{name} is on a RAMPAGE! {streak} streams straight, smashing their old record of {record}! The Big Bird salutes you!",
         "New high score! {name} went from {record} to {streak} consecutive streams! The dedication is frankly alarming!",
+        "{name} just shattered their {record} ceiling and landed on {streak}. Speedrunners are taking notes.",
+        "New PR for {name}: {streak} streams. The previous record of {record} has been retired with honors.",
+        "{name} unlocked the {streak}-streak achievement. Reward: more streams. Punishment: also more streams.",
+        "{record} was the floor, {streak} is the new ceiling. {name} keeps moving the goalposts on themselves.",
+        "RECORD BROKEN! {name} blew past {record} and is now at {streak}. Their other hobbies have filed for divorce.",
+        "{name} just promoted from {record} streams to {streak}. Salary stays the same. The grind continues.",
     };
 
     public WatchStreakService(
@@ -98,154 +125,7 @@ public class WatchStreakService : IHostedService
         _ttsService = ttsService;
     }
 
-    public Task StartAsync(CancellationToken cancellationToken)
-    {
-        if (!_twitchChatService.IsReady)
-        {
-            _logger.LogWarning("TwitchChatService not ready, WatchStreakService will not start");
-            return Task.CompletedTask;
-        }
-
-        _ = Task.Run(
-            async () =>
-            {
-                // Wait briefly for auth to be fully ready
-                await Task.Delay(5000, cancellationToken);
-                await ConnectIrcClient(cancellationToken);
-            },
-            cancellationToken
-        );
-
-        return Task.CompletedTask;
-    }
-
-    public async Task StopAsync(CancellationToken cancellationToken)
-    {
-        if (_ircClient is { IsConnected: true })
-        {
-            await _ircClient.DisconnectAsync();
-        }
-    }
-
-    private async Task ConnectIrcClient(CancellationToken cancellationToken)
-    {
-        try
-        {
-            using IServiceScope scope = _scopeFactory.CreateScope();
-            AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-            BotAccount? botAccount = await dbContext.BotAccounts.FirstOrDefaultAsync(
-                cancellationToken
-            );
-            Service? twitchService = await dbContext.Services.FirstOrDefaultAsync(
-                s => s.Name == "Twitch",
-                cancellationToken
-            );
-
-            if (botAccount == null || twitchService == null)
-            {
-                _logger.LogWarning("Missing bot account or Twitch service for IRC client");
-                return;
-            }
-
-            string channel = twitchService.UserName;
-            string botUsername = botAccount.Username;
-            string botToken = botAccount.AccessToken;
-
-            ClientOptions clientOptions = new();
-            WebSocketClient wsClient = new(clientOptions);
-            _ircClient = new TwitchClient(wsClient);
-
-            ConnectionCredentials credentials = new(botUsername, botToken);
-            _ircClient.Initialize(credentials, channel);
-
-            _ircClient.OnSendReceiveData += OnSendReceiveData;
-            _ircClient.OnConnected += (_, _) =>
-            {
-                _logger.LogInformation(
-                    "WatchStreak IRC client connected to #{Channel} (temporary until EventSub support)",
-                    channel
-                );
-                return Task.CompletedTask;
-            };
-            _ircClient.OnDisconnected += async (_, _) =>
-            {
-                _logger.LogWarning("WatchStreak IRC client disconnected, reconnecting in 5s...");
-                await Task.Delay(5000);
-                try
-                {
-                    await _ircClient.ConnectAsync();
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError("WatchStreak IRC reconnect failed: {Error}", ex.Message);
-                }
-            };
-
-            await _ircClient.ConnectAsync();
-            _logger.LogInformation("WatchStreak IRC client starting for #{Channel}", channel);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to start WatchStreak IRC client");
-        }
-    }
-
-    private async Task OnSendReceiveData(object? sender, OnSendReceiveDataArgs e)
-    {
-        // Only process incoming data that contains viewermilestone
-        if (e.Direction != SendReceiveDirection.Received)
-            return;
-        if (!e.Data.Contains("msg-id=viewermilestone"))
-            return;
-
-        try
-        {
-            string rawIrc = e.Data;
-
-            string? category = GetTagValue(rawIrc, "msg-param-category");
-            if (category != "watch-streak")
-                return;
-
-            string? streakValueStr = GetTagValue(rawIrc, "msg-param-value");
-            string? rewardStr = GetTagValue(rawIrc, "msg-param-copoReward");
-            string? userId = GetTagValue(rawIrc, "user-id");
-            string? displayName = GetTagValue(rawIrc, "display-name");
-            string? channel = ExtractChannel(rawIrc);
-            string? customMessage = ExtractTrailingMessage(rawIrc);
-
-            if (userId == null || displayName == null || channel == null)
-                return;
-
-            if (!int.TryParse(streakValueStr, out int streak))
-                return;
-
-            int.TryParse(rewardStr, out int channelPointsReward);
-
-            _logger.LogInformation(
-                "Watch streak: {User} has {Streak} consecutive streams (reward: {Points}cp, message: {Message})",
-                displayName,
-                streak,
-                channelPointsReward,
-                customMessage ?? "(none)"
-            );
-
-            await HandleWatchStreak(
-                userId,
-                displayName,
-                channel,
-                streak,
-                channelPointsReward,
-                customMessage
-            );
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error handling watch streak event");
-        }
-    }
-
-    private async Task HandleWatchStreak(
+    public async Task HandleWatchStreak(
         string userId,
         string displayName,
         string channel,
@@ -254,6 +134,14 @@ public class WatchStreakService : IHostedService
         string? customMessage
     )
     {
+        _logger.LogInformation(
+            "Watch streak: {User} has {Streak} consecutive streams (reward: {Points}cp, message: {Message})",
+            displayName,
+            streak,
+            channelPointsReward,
+            customMessage ?? "(none)"
+        );
+
         using IServiceScope scope = _scopeFactory.CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
@@ -384,63 +272,5 @@ public class WatchStreakService : IHostedService
             // Single voice - just bot announcing
             await _ttsService.SendCachedTts(processedText, userId, CancellationToken.None);
         }
-    }
-
-    private static string? GetTagValue(string rawIrc, string tagName)
-    {
-        // Parse IRC tags: @key=value;key2=value2 :rest
-        if (!rawIrc.StartsWith('@'))
-            return null;
-
-        int spaceIndex = rawIrc.IndexOf(' ');
-        if (spaceIndex < 0)
-            return null;
-
-        string tagsSection = rawIrc[1..spaceIndex];
-        foreach (string tag in tagsSection.Split(';'))
-        {
-            int eqIndex = tag.IndexOf('=');
-            if (eqIndex < 0)
-                continue;
-
-            string key = tag[..eqIndex];
-            if (key == tagName)
-            {
-                string value = tag[(eqIndex + 1)..];
-                // Unescape IRC tag values (\s = space, \\ = backslash)
-                return value.Replace("\\s", " ").Replace("\\\\", "\\");
-            }
-        }
-
-        return null;
-    }
-
-    private static string? ExtractChannel(string rawIrc)
-    {
-        // Format: ... USERNOTICE #channel ...
-        int noticeIndex = rawIrc.IndexOf("USERNOTICE #", StringComparison.Ordinal);
-        if (noticeIndex < 0)
-            return null;
-
-        string afterNotice = rawIrc[(noticeIndex + 12)..];
-        int spaceOrEnd = afterNotice.IndexOfAny([' ', '\r', '\n']);
-        return spaceOrEnd >= 0 ? afterNotice[..spaceOrEnd] : afterNotice.Trim();
-    }
-
-    private static string? ExtractTrailingMessage(string rawIrc)
-    {
-        // Format: @tags :user USERNOTICE #channel :custom message here
-        // The custom message is after "USERNOTICE #channel :"
-        int noticeIndex = rawIrc.IndexOf("USERNOTICE #", StringComparison.Ordinal);
-        if (noticeIndex < 0)
-            return null;
-
-        string afterNotice = rawIrc[noticeIndex..];
-        int colonIndex = afterNotice.IndexOf(" :", StringComparison.Ordinal);
-        if (colonIndex < 0)
-            return null;
-
-        string message = afterNotice[(colonIndex + 2)..].Trim();
-        return string.IsNullOrWhiteSpace(message) ? null : message;
     }
 }

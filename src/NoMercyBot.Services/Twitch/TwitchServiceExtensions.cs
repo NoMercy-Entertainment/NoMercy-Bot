@@ -22,14 +22,17 @@ public static class TwitchServiceExtensions
         services.AddTransient<TwitchCommandService>();
         services.AddSingleton<TwitchRewardService>();
         services.AddSingleton<TwitchRewardChangeService>();
+        services.AddSingleton<RaidSuggestionService>();
         services.AddSingleton<RewardScriptLoader>();
         services.AddSingleton<RewardChangeScriptLoader>();
 
         services.AddSingletonHostedService<TwitchBadgeService>();
         services.AddSingletonHostedService<ShoutoutQueueService>();
+        services.AddSingletonHostedService<AdScheduleService>();
         services.AddHostedService<ClaudeIpcService>();
 
-        // TODO: Remove once Twitch adds watch streak support to EventSub
-        services.AddHostedService<WatchStreakService>();
+        // Watch streaks now arrive via channel.chat.notification (notice_type: "watch_streak");
+        // ChatEventHandler dispatches to this service. No IRC connection.
+        services.AddSingleton<WatchStreakService>();
     }
 }

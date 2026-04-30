@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NoMercyBot.Database;
@@ -20,8 +21,14 @@ public class ChatEventHandler : TwitchEventHandlerBase
     private readonly IWidgetEventService _widgetEventService;
     private readonly TtsService _ttsService;
     private readonly ShoutoutQueueService _shoutoutQueueService;
+    private readonly WatchStreakService _watchStreakService;
     private readonly CancellationToken _cancellationToken;
     private Stream? _currentStream;
+
+    private static readonly Regex StreakCountRegex = new(
+        @"watched\s+(\d+)\s+consecutive",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled
+    );
 
     public ChatEventHandler(
         IDbContextFactory<AppDbContext> dbContextFactory,
@@ -33,6 +40,7 @@ public class ChatEventHandler : TwitchEventHandlerBase
         IWidgetEventService widgetEventService,
         TtsService ttsService,
         ShoutoutQueueService shoutoutQueueService,
+        WatchStreakService watchStreakService,
         CancellationToken cancellationToken = default
     )
         : base(dbContextFactory, logger, twitchApiService)
@@ -43,6 +51,7 @@ public class ChatEventHandler : TwitchEventHandlerBase
         _widgetEventService = widgetEventService;
         _ttsService = ttsService;
         _shoutoutQueueService = shoutoutQueueService;
+        _watchStreakService = watchStreakService;
         _cancellationToken = cancellationToken;
 
         // Initialize current stream reference
@@ -295,5 +304,54 @@ public class ChatEventHandler : TwitchEventHandlerBase
             args.Payload.Event,
             args.Payload.Event.BroadcasterUserId
         );
+
+        // Watch streaks ride on this notification (notice_type: "watch_streak").
+        // TwitchLib v0.8 doesn't deserialize the watch_streak object, but the streak
+        // count is in SystemMessage and everything else we need is on the event.
+        if (
+            string.Equals(
+                args.Payload.Event.NoticeType,
+                "watch_streak",
+                StringComparison.OrdinalIgnoreCase
+            )
+        )
+        {
+            await DispatchWatchStreakAsync(args);
+        }
+    }
+
+    private async Task DispatchWatchStreakAsync(ChannelChatNotificationArgs args)
+    {
+        try
+        {
+            var evt = args.Payload.Event;
+
+            Match m = StreakCountRegex.Match(evt.SystemMessage ?? string.Empty);
+            if (!m.Success || !int.TryParse(m.Groups[1].Value, out int streak))
+            {
+                Logger.LogWarning(
+                    "Watch streak notification but couldn't parse streak count from SystemMessage: {Sys}",
+                    evt.SystemMessage
+                );
+                return;
+            }
+
+            string? customMessage = string.IsNullOrWhiteSpace(evt.Message?.Text)
+                ? null
+                : evt.Message.Text;
+
+            await _watchStreakService.HandleWatchStreak(
+                userId: evt.ChatterUserId,
+                displayName: evt.ChatterUserName,
+                channel: evt.BroadcasterUserLogin,
+                streak: streak,
+                channelPointsReward: 0, // not surfaced by TwitchLib v0.8
+                customMessage: customMessage
+            );
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to dispatch watch streak notification");
+        }
     }
 }
