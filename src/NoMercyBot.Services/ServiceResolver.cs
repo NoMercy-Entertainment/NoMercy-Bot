@@ -263,11 +263,15 @@ public class ServiceResolver
                 deviceCode.UserCode
             );
             Console.WriteLine();
-            Console.WriteLine("=== Bot Account Authorization ===");
-            Console.WriteLine($"Visit: {deviceCode.VerificationUri}");
-            Console.WriteLine($"Enter code: {deviceCode.UserCode}");
-            Console.WriteLine("(Open this URL in the browser where your bot account is logged in)");
-            Console.WriteLine("=================================");
+            Console.WriteLine("========== BOT ACCOUNT AUTHORIZATION ==========");
+            Console.WriteLine(">>> LOG IN WITH THE *BOT* TWITCH ACCOUNT <<<");
+            Console.WriteLine(">>> NOT your broadcaster/streamer account   <<<");
+            Console.WriteLine();
+            Console.WriteLine($"  1. Log out of Twitch in your browser first");
+            Console.WriteLine($"  2. Log in as the bot account");
+            Console.WriteLine($"  3. Visit: {deviceCode.VerificationUri}");
+            Console.WriteLine($"  4. Enter code: {deviceCode.UserCode}");
+            Console.WriteLine("===============================================");
             Console.WriteLine();
 
             TokenResponse tokenResponse = await PollForDeviceToken(
@@ -310,12 +314,20 @@ public class ServiceResolver
                 BrowserHelper.OpenUrl(deviceCode.VerificationUri);
             }
 
+            string accountHint = providerName.Equals("Twitch", StringComparison.OrdinalIgnoreCase)
+                ? ">>> LOG IN WITH YOUR *BROADCASTER/STREAMER* ACCOUNT <<<"
+                : $">>> LOG IN WITH YOUR *{providerName.ToUpperInvariant()}* ACCOUNT <<<";
+
             Console.WriteLine();
-            Console.WriteLine($"=== {providerName} Authorization ===");
-            Console.WriteLine($"Visit: {deviceCode.VerificationUri}");
-            Console.WriteLine($"Enter code: {deviceCode.UserCode}");
-            Console.WriteLine($"Waiting for authorization...");
-            Console.WriteLine(new string('=', providerName.Length + 22));
+            Console.WriteLine(
+                $"========== {providerName.ToUpperInvariant()} AUTHORIZATION =========="
+            );
+            Console.WriteLine(accountHint);
+            Console.WriteLine();
+            Console.WriteLine($"  Visit: {deviceCode.VerificationUri}");
+            Console.WriteLine($"  Enter code: {deviceCode.UserCode}");
+            Console.WriteLine($"  Waiting for authorization...");
+            Console.WriteLine(new string('=', providerName.Length + 30));
             Console.WriteLine();
 
             TokenResponse tokenResponse = await PollForDeviceToken(
