@@ -22,7 +22,7 @@ public class SevenTvGlobalResponse
     [JsonProperty("privileged")]
     public bool Privileged { get; set; }
 
-    [JsonProperty("emote_set")]
+    [JsonProperty("emotes")]
     public SevenTvEmote[] Emotes { get; set; } = [];
 
     [JsonProperty("emote_count")]
