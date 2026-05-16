@@ -1,17 +1,20 @@
 {
   "dependencies": {
-    "@microsoft/signalr": "^8.0.7",
-    "@tailwindcss/vite": "^4.1.11",
-    "@tanstack/vue-query": "^5.81.5",
-    "axios": "1.14.0",
-    "i18next": "^25.3.1",
-    "i18next-http-backend": "^3.0.2",
-    "i18next-vue": "^5.3.0",
-    "postcss-selector-parser": "^7.1.0",
-    "ua-parser-js": "^2.0.4",
-    "vue-i18n": "^11.1.9"
+  "@microsoft/signalr": "^8.0.7",
+  "@tailwindcss/vite": "^4.1.11",
+  "@tanstack/vue-query": "^5.81.5",
+  "axios": "1.14.0",
+  "i18next": "^25.3.1",
+  "i18next-http-backend": "^3.0.2",
+  "i18next-vue": "^5.3.0",
+  "postcss-selector-parser": "^7.1.0",
+  "ua-parser-js": "^2.0.4",
+  "vue-i18n": "^11.1.9"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^4.16.2"
+  "@antfu/eslint-config": "^4.16.2"
+  },
+  "overrides": {
+  "form-data": "^4.0.4"
   }
 }
